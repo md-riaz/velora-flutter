@@ -53,7 +53,7 @@ class VeloraAttachmentChip extends StatelessWidget {
                   right: 0,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: scheme.surface.withOpacity(0.85),
+                      color: scheme.surface.withValues(alpha: 0.85),
                       shape: BoxShape.circle,
                     ),
                     child: IconButton(
@@ -166,7 +166,7 @@ class _Thumbnail extends StatelessWidget {
         width: 112,
         height: 72,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) =>
+        errorBuilder: (_, _, _) =>
             _FilePlaceholder(icon: Icons.broken_image_outlined, scheme: scheme),
       );
     }

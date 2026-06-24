@@ -49,7 +49,7 @@ class VeloraEmptyState extends StatelessWidget {
             Icon(
               icon,
               size: iconSize,
-              color: iconColor ?? scheme.onSurfaceVariant.withOpacity(0.5),
+              color: iconColor ?? scheme.onSurfaceVariant.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 16),
             Text(
