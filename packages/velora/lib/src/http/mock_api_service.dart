@@ -62,9 +62,10 @@ class VeloraMockApi {
   }) async {
     await _delay(delayMs);
     final tot = total ?? items.length;
-    final lastPage = (tot / perPage).ceil().clamp(1, 999999);
-    final start = (page - 1) * perPage;
-    final end = (start + perPage).clamp(0, items.length);
+    final limit = perPage < 1 ? 1 : perPage;
+    final lastPage = (tot / limit).ceil().clamp(1, 999999);
+    final start = (page - 1) * limit;
+    final end = (start + limit).clamp(0, items.length);
     final pageItems = items.sublist(
       start.clamp(0, items.length),
       end,

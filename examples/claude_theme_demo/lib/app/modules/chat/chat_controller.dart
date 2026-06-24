@@ -12,6 +12,7 @@ class ChatController extends VeloraController {
   final isTyping = false.obs;
   final inputController = TextEditingController();
   final scrollController = ScrollController();
+  bool _isDisposed = false;
 
   late final ConversationModel conversation;
 
@@ -27,6 +28,7 @@ class ChatController extends VeloraController {
 
   @override
   void onClose() {
+    _isDisposed = true;
     inputController.dispose();
     scrollController.dispose();
     super.onClose();
@@ -69,7 +71,7 @@ class ChatController extends VeloraController {
 
   void _scrollToBottom() {
     Future<void>.delayed(const Duration(milliseconds: 80), () {
-      if (scrollController.hasClients) {
+      if (!_isDisposed && scrollController.hasClients) {
         scrollController.animateTo(
           scrollController.position.maxScrollExtent,
           duration: const Duration(milliseconds: 300),

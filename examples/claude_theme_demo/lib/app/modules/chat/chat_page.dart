@@ -268,7 +268,7 @@ class _RichMessageContent extends StatelessWidget {
 
   static List<_ContentPart> _splitCodeBlocks(String text) {
     final result = <_ContentPart>[];
-    final regex = RegExp(r'```(?:\w+)?\n([\s\S]*?)```', multiLine: true);
+    final regex = RegExp(r'```(?:\w+)?\r?\n([\s\S]*?)```', multiLine: true);
     int lastEnd = 0;
     for (final match in regex.allMatches(text)) {
       if (match.start > lastEnd) {

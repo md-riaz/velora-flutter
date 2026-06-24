@@ -65,7 +65,7 @@ class VeloraFormField extends StatelessWidget {
       autofocus: autofocus,
       enabled: enabled,
       maxLines: obscureText ? 1 : maxLines,
-      minLines: minLines,
+      minLines: obscureText ? 1 : minLines,
       inputFormatters: inputFormatters,
       focusNode: focusNode,
       decoration: InputDecoration(

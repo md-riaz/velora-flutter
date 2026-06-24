@@ -49,7 +49,7 @@ abstract class VeloraPaginatedController<T> extends VeloraController {
   }
 
   Future<void> refresh() async {
-    if (isRefreshing.value) return;
+    if (isRefreshing.value || loading.value) return;
     isRefreshing.value = true;
     _currentPage = 1;
     _lastPage = 1;

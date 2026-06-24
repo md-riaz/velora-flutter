@@ -52,12 +52,14 @@ class VeloraLoadingOutlinedButton extends StatelessWidget {
   final bool loading;
   final VoidCallback? onPressed;
   final Widget child;
+  final Widget? loadingChild;
   final ButtonStyle? style;
 
   const VeloraLoadingOutlinedButton({
     required this.onPressed,
     required this.child,
     this.loading = false,
+    this.loadingChild,
     this.style,
     super.key,
   });
@@ -70,11 +72,12 @@ class VeloraLoadingOutlinedButton extends StatelessWidget {
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 150),
         child: loading
-            ? const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator.adaptive(strokeWidth: 2.5),
-              )
+            ? loadingChild ??
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator.adaptive(strokeWidth: 2.5),
+                )
             : child,
       ),
     );

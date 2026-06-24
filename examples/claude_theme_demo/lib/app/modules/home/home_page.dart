@@ -124,17 +124,22 @@ class HomePage extends GetView<HomeController> {
                 ),
               );
             }
-            return SliverList.separated(
+            return SliverList.builder(
               itemCount: items.length,
-              separatorBuilder: (_, __) => Divider(
-                height: 1,
-                indent: 72,
-                color: scheme.outlineVariant,
-              ),
-              itemBuilder: (context, index) => _ConversationTile(
-                conversation: items[index],
-                onTap: () => Velora.nav.to('/chat', arguments: items[index]),
-              ),
+              itemBuilder: (context, index) {
+                final tile = _ConversationTile(
+                  conversation: items[index],
+                  onTap: () => Velora.nav.to('/chat', arguments: items[index]),
+                );
+                if (index == items.length - 1) return tile;
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    tile,
+                    Divider(height: 1, indent: 72, color: scheme.outlineVariant),
+                  ],
+                );
+              },
             );
           }),
 
