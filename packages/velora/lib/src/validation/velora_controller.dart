@@ -12,6 +12,7 @@ abstract class VeloraController extends GetxController {
     String? successMessage,
     String? errorMessage,
   }) async {
+    clearError();
     try {
       loading.value = true;
       if (showLoader) Velora.loader.show();
@@ -28,4 +29,6 @@ abstract class VeloraController extends GetxController {
       if (showLoader) Velora.loader.hide();
     }
   }
+
+  void clearError() => error.value = '';
 }

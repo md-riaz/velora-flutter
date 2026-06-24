@@ -1,0 +1,81 @@
+import 'package:flutter/widgets.dart';
+import 'package:velora/velora.dart';
+
+import '../home/conversation_model.dart';
+import 'chat_message.dart';
+import 'messages_datasource.dart';
+
+class ChatController extends VeloraController {
+  final MessagesDataSource _dataSource;
+
+  final messages = <ChatMessage>[].obs;
+  final isTyping = false.obs;
+  final inputController = TextEditingController();
+  final scrollController = ScrollController();
+
+  late final ConversationModel conversation;
+
+  ChatController({MessagesDataSource? dataSource})
+      : _dataSource = dataSource ?? MockMessagesDataSource();
+
+  @override
+  void onInit() {
+    super.onInit();
+    conversation = Get.arguments as ConversationModel;
+    _loadMessages();
+  }
+
+  @override
+  void onClose() {
+    inputController.dispose();
+    scrollController.dispose();
+    super.onClose();
+  }
+
+  Future<void> _loadMessages() async {
+    await run(() async {
+      final loaded = await _dataSource.getMessages(conversation.id);
+      messages.assignAll(loaded);
+      _scrollToBottom();
+    });
+  }
+
+  Future<void> sendMessage() async {
+    final text = inputController.text.trim();
+    if (text.isEmpty) return;
+
+    inputController.clear();
+    clearError();
+
+    messages.add(ChatMessage(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      content: text,
+      role: MessageRole.user,
+      createdAt: DateTime.now(),
+    ));
+    _scrollToBottom();
+
+    isTyping.value = true;
+    try {
+      final reply = await _dataSource.sendMessage(conversation.id, text);
+      messages.add(reply);
+    } catch (e) {
+      error.value = e.toString();
+    } finally {
+      isTyping.value = false;
+      _scrollToBottom();
+    }
+  }
+
+  void _scrollToBottom() {
+    Future<void>.delayed(const Duration(milliseconds: 80), () {
+      if (scrollController.hasClients) {
+        scrollController.animateTo(
+          scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+}

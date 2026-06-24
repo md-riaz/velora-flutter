@@ -91,7 +91,8 @@ class Velora {
     final feature = FeatureService();
     Get.put<FeatureService>(feature, permanent: true);
     lifecycle.register(feature);
-    Get.put<ThemeService>(ThemeService(), permanent: true);
+    final themeService = await ThemeService(storage: storage).init();
+    Get.put<ThemeService>(themeService, permanent: true);
     Get.put<VeloraNav>(VeloraNav(), permanent: true);
     Get.put<VeloraToast>(VeloraToast(), permanent: true);
     Get.put<VeloraDialog>(VeloraDialog(), permanent: true);
