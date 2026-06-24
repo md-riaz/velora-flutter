@@ -1,3 +1,5 @@
+export 'package:get/get.dart';
+
 export 'src/auth/auth_service.dart';
 export 'src/auth/auth_user.dart';
 export 'src/auth/logout_coordinator.dart';
