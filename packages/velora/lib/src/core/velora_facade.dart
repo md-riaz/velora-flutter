@@ -20,6 +20,7 @@ import '../theme/theme_service.dart';
 import '../ui/velora_dialog.dart';
 import '../ui/velora_loader.dart';
 import '../ui/velora_toast.dart';
+import '../media/velora_media_service.dart';
 import '../validation/velora_validator.dart';
 import 'velora_lifecycle.dart';
 
@@ -39,6 +40,7 @@ class Velora {
   static PermissionService get permission => Get.find<PermissionService>();
   static FeatureService get feature => Get.find<FeatureService>();
   static ThemeService get theme => Get.find<ThemeService>();
+  static VeloraMediaService get media => Get.find<VeloraMediaService>();
   static const VeloraValidator validator = VeloraValidator();
 
   static Future<void> logout() => auth.logout();
@@ -91,10 +93,12 @@ class Velora {
     final feature = FeatureService();
     Get.put<FeatureService>(feature, permanent: true);
     lifecycle.register(feature);
-    Get.put<ThemeService>(ThemeService(), permanent: true);
+    final themeService = await ThemeService(storage: storage).init();
+    Get.put<ThemeService>(themeService, permanent: true);
     Get.put<VeloraNav>(VeloraNav(), permanent: true);
     Get.put<VeloraToast>(VeloraToast(), permanent: true);
     Get.put<VeloraDialog>(VeloraDialog(), permanent: true);
     Get.put<VeloraLoader>(VeloraLoader(), permanent: true);
+    Get.put<VeloraMediaService>(VeloraMediaService(), permanent: true);
   }
 }

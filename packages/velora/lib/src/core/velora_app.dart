@@ -7,6 +7,11 @@ class VeloraApp extends StatelessWidget {
   final List<GetPage<dynamic>> routes;
   final ThemeData? theme;
   final ThemeData? darkTheme;
+
+  /// Override the initial [ThemeMode]. When null, falls back to
+  /// [ThemeService.current] (which may be a previously-persisted value)
+  /// or [ThemeMode.system] if the service is not yet available.
+  final ThemeMode? themeMode;
   final Widget? home;
 
   const VeloraApp({
@@ -15,9 +20,19 @@ class VeloraApp extends StatelessWidget {
     this.routes = const [],
     this.theme,
     this.darkTheme,
+    this.themeMode,
     this.home,
     super.key,
   });
+
+  ThemeMode _resolveThemeMode() {
+    if (themeMode != null) return themeMode!;
+    try {
+      return Get.find<ThemeService>().current;
+    } catch (_) {
+      return ThemeMode.system;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,6 +42,7 @@ class VeloraApp extends StatelessWidget {
       getPages: routes,
       theme: theme,
       darkTheme: darkTheme,
+      themeMode: _resolveThemeMode(),
       home: home,
       debugShowCheckedModeBanner: false,
     );
