@@ -5,7 +5,7 @@ import '../home/conversation_model.dart';
 import 'chat_message.dart';
 import 'messages_datasource.dart';
 
-class ChatController extends VeloraController {
+class ChatController extends VeloraController with VeloraAttachmentsMixin {
   final MessagesDataSource _dataSource;
 
   final messages = <ChatMessage>[].obs;
@@ -49,6 +49,10 @@ class ChatController extends VeloraController {
     inputController.clear();
     clearError();
 
+    // Upload any staged attachments before sending
+    if (hasAttachments) await uploadAll();
+    final urls = uploadedUrls;
+
     messages.add(ChatMessage(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       content: text,
@@ -59,8 +63,9 @@ class ChatController extends VeloraController {
 
     isTyping.value = true;
     try {
-      final reply = await _dataSource.sendMessage(conversation.id, text);
+      final reply = await _dataSource.sendMessage(conversation.id, text, attachmentUrls: urls);
       messages.add(reply);
+      attachments.clear();
     } catch (e) {
       error.value = e.toString();
     } finally {

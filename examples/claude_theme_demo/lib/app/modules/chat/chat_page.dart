@@ -503,7 +503,17 @@ class _InputBar extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
 
-    return Container(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Attachment strip — hides itself when empty
+        Obx(() => VeloraAttachmentStrip(
+              attachments: controller.attachments,
+              onPickTap: () => controller.showAttachmentPicker(),
+              onRemove: controller.removeAttachment,
+              onRetry: controller.retryAttachment,
+            )),
+        Container(
       decoration: BoxDecoration(
         color: scheme.surface,
         border: Border(top: BorderSide(color: scheme.outlineVariant, width: 0.5)),
@@ -523,7 +533,7 @@ class _InputBar extends StatelessWidget {
                   IconButton(
                     icon: Icon(Icons.add_circle_outline, color: scheme.onSurfaceVariant),
                     iconSize: 22,
-                    onPressed: () {},
+                    onPressed: () => controller.showAttachmentPicker(),
                   ),
                   Expanded(
                     child: TextField(
@@ -568,6 +578,8 @@ class _InputBar extends StatelessWidget {
           }),
         ],
       ),
+        ),
+      ],
     );
   }
 }

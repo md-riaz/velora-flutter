@@ -4,7 +4,11 @@ import 'chat_message.dart';
 
 abstract class MessagesDataSource {
   Future<List<ChatMessage>> getMessages(String conversationId);
-  Future<ChatMessage> sendMessage(String conversationId, String content);
+  Future<ChatMessage> sendMessage(
+    String conversationId,
+    String content, {
+    List<String> attachmentUrls = const [],
+  });
 }
 
 /// In-memory mock that simulates `GET /api/conversations/{id}/messages`
@@ -24,14 +28,15 @@ class MockMessagesDataSource implements MessagesDataSource {
   @override
   Future<ChatMessage> sendMessage(
     String conversationId,
-    String content,
-  ) async {
+    String content, {
+    List<String> attachmentUrls = const [],
+  }) async {
     // Simulate assistant thinking delay (separate from network latency).
     await Future<void>.delayed(const Duration(milliseconds: 900));
     return VeloraMockApi.ok<ChatMessage>(
       ChatMessage(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        content: _generateReply(content),
+        content: _generateReply(content, attachmentUrls: attachmentUrls),
         role: MessageRole.assistant,
         createdAt: DateTime.now(),
       ).toJson(),
@@ -40,7 +45,14 @@ class MockMessagesDataSource implements MessagesDataSource {
     );
   }
 
-  static String _generateReply(String input) {
+  static String _generateReply(
+    String input, {
+    List<String> attachmentUrls = const [],
+  }) {
+    if (attachmentUrls.isNotEmpty) {
+      final count = attachmentUrls.length;
+      return 'I can see you\'ve shared ${count == 1 ? 'a file' : '$count files'}. In a real integration I\'d analyse the content with Claude\'s vision and document-understanding capabilities. The attachment URLs were uploaded via `VeloraAttachmentsMixin.uploadAll()` and are now available in your controller\'s `uploadedUrls` getter.';
+    }
     final lower = input.toLowerCase();
     if (lower.contains('hello') || lower.contains('hi')) {
       return 'Hello! I\'m Claude, made by Anthropic. How can I help you today?';
