@@ -13,12 +13,13 @@ import 'velora_upload_adapter.dart';
 /// class PostController extends VeloraController with VeloraAttachmentsMixin {
 ///   // Override to use your real upload endpoint in production.
 ///   @override
-///   VeloraUploadAdapter get uploadAdapter => MyUploadAdapter();
+///   VeloraUploadAdapter get uploadAdapter => LaravelMediaAdapter();
 ///
 ///   Future<void> submit() async {
 ///     await uploadAll();                              // upload pending files
-///     final urls = uploadedUrls;                     // grab remote URLs
-///     await _api.createPost(text: body.value, mediaUrls: urls);
+///     await _api.createPost(text: body.value, data: {
+///       'media_ids': mediaIds,                       // server-assigned IDs
+///     });
 ///     attachments.clear();
 ///   }
 /// }
@@ -84,7 +85,7 @@ mixin VeloraAttachmentsMixin {
     );
 
     try {
-      final url = await uploadAdapter.upload(
+      final result = await uploadAdapter.upload(
         attachments[idx],
         onProgress: (p) {
           final i = attachments.indexWhere((a) => a.id == id);
@@ -95,7 +96,9 @@ mixin VeloraAttachmentsMixin {
       if (i >= 0) {
         attachments[i] = attachments[i].copyWith(
           status: AttachmentStatus.done,
-          remoteUrl: url,
+          remoteUrl: result.url,
+          mediaId: result.mediaId,
+          mediaUuid: result.mediaUuid,
           progress: 1,
         );
       }
@@ -145,6 +148,21 @@ mixin VeloraAttachmentsMixin {
   List<String> get uploadedUrls => attachments
       .where((a) => a.remoteUrl != null)
       .map((a) => a.remoteUrl!)
+      .toList();
+
+  /// Server-assigned media IDs for all successfully uploaded attachments.
+  ///
+  /// Use this with Laravel Media Library to associate uploaded files with a
+  /// model: `await api.post('/posts', data: {'media_ids': mediaIds})`.
+  List<String> get mediaIds => attachments
+      .where((a) => a.mediaId != null)
+      .map((a) => a.mediaId!)
+      .toList();
+
+  /// Server-assigned UUIDs for all successfully uploaded attachments.
+  List<String> get mediaUuids => attachments
+      .where((a) => a.mediaUuid != null)
+      .map((a) => a.mediaUuid!)
       .toList();
 }
 

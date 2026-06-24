@@ -41,6 +41,14 @@ class VeloraAttachment {
   final String? mimeType;
   final int? sizeBytes;
   final String? remoteUrl;
+
+  /// Server-assigned numeric media ID (e.g. from Spatie Laravel Media Library).
+  /// Available after a successful upload via [LaravelMediaAdapter].
+  final String? mediaId;
+
+  /// Server-assigned UUID (e.g. `uuid` field from Spatie Laravel Media Library).
+  final String? mediaUuid;
+
   final AttachmentStatus status;
   final double progress;
   final String? errorMessage;
@@ -52,6 +60,8 @@ class VeloraAttachment {
     this.mimeType,
     this.sizeBytes,
     this.remoteUrl,
+    this.mediaId,
+    this.mediaUuid,
     required this.status,
     required this.progress,
     this.errorMessage,
@@ -79,6 +89,8 @@ class VeloraAttachment {
     required String url,
     String? mimeType,
     int? sizeBytes,
+    String? mediaId,
+    String? mediaUuid,
   }) =>
       VeloraAttachment._(
         id: id,
@@ -86,6 +98,8 @@ class VeloraAttachment {
         remoteUrl: url,
         mimeType: mimeType ?? _mimeOf(name),
         sizeBytes: sizeBytes,
+        mediaId: mediaId,
+        mediaUuid: mediaUuid,
         status: AttachmentStatus.done,
         progress: 1,
       );
@@ -119,6 +133,8 @@ class VeloraAttachment {
     String? mimeType,
     int? sizeBytes,
     String? remoteUrl,
+    String? mediaId,
+    String? mediaUuid,
     AttachmentStatus? status,
     double? progress,
     String? errorMessage,
@@ -130,6 +146,8 @@ class VeloraAttachment {
         mimeType: mimeType ?? this.mimeType,
         sizeBytes: sizeBytes ?? this.sizeBytes,
         remoteUrl: remoteUrl ?? this.remoteUrl,
+        mediaId: mediaId ?? this.mediaId,
+        mediaUuid: mediaUuid ?? this.mediaUuid,
         status: status ?? this.status,
         progress: progress ?? this.progress,
         errorMessage: errorMessage,
