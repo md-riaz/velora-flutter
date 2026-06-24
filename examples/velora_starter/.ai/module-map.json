@@ -1,0 +1,7 @@
+{
+  "modules": [
+    {"name": "auth", "path": "lib/app/modules/auth"},
+    {"name": "dashboard", "path": "lib/app/modules/dashboard"},
+    {"name": "users", "path": "lib/app/modules/users"}
+  ]
+}

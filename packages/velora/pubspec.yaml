@@ -1,0 +1,26 @@
+name: velora
+description: Laravel-like productivity for Flutter apps.
+version: 0.0.1
+homepage:
+
+environment:
+  sdk: ^3.11.1
+  flutter: '>=3.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  dio: ^5.9.0
+  equatable: ^2.0.7
+  flutter_secure_storage: ^10.0.0-beta.4
+  get: ^4.7.2
+  intl: ^0.20.2
+  logger: ^2.6.2
+  shared_preferences: ^2.5.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
