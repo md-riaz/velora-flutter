@@ -33,13 +33,23 @@ class MockMessagesDataSource implements MessagesDataSource {
   }) async {
     // Simulate assistant thinking delay (separate from network latency).
     await Future<void>.delayed(const Duration(milliseconds: 900));
+    final bucket =
+        _seedMessages.putIfAbsent(conversationId, () => <ChatMessage>[]);
+    bucket.add(ChatMessage(
+      id: '${DateTime.now().millisecondsSinceEpoch}-u',
+      content: content,
+      role: MessageRole.user,
+      createdAt: DateTime.now(),
+    ));
+    final assistantMsg = ChatMessage(
+      id: '${DateTime.now().millisecondsSinceEpoch}-a',
+      content: _generateReply(content, attachmentUrls: attachmentUrls),
+      role: MessageRole.assistant,
+      createdAt: DateTime.now(),
+    );
+    bucket.add(assistantMsg);
     return VeloraMockApi.ok<ChatMessage>(
-      ChatMessage(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        content: _generateReply(content, attachmentUrls: attachmentUrls),
-        role: MessageRole.assistant,
-        createdAt: DateTime.now(),
-      ).toJson(),
+      assistantMsg.toJson(),
       parser: (v) => ChatMessage.fromJson(v as Map<String, dynamic>),
       delayMs: 100,
     );

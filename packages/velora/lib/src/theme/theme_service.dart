@@ -56,6 +56,7 @@ class VeloraTheme {
   static ThemeData fromScheme({
     required ColorScheme colorScheme,
     TextTheme? textTheme,
+    Color? scaffoldBackgroundColor,
     double inputBorderRadius = 8,
     double cardBorderRadius = 12,
     double buttonBorderRadius = 8,
@@ -65,6 +66,7 @@ class VeloraTheme {
       colorScheme: colorScheme,
       useMaterial3: true,
       textTheme: textTheme,
+      scaffoldBackgroundColor: scaffoldBackgroundColor,
       extensions: extensions,
       inputDecorationTheme: InputDecorationTheme(
         filled: true,

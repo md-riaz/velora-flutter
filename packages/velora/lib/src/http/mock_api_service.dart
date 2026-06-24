@@ -61,10 +61,11 @@ class VeloraMockApi {
     int delayMs = _defaultDelayMs,
   }) async {
     await _delay(delayMs);
-    final tot = total ?? items.length;
+    final tot = math.max(0, total ?? items.length);
+    final currentPage = page < 1 ? 1 : page;
     final limit = perPage < 1 ? 1 : perPage;
     final lastPage = (tot / limit).ceil().clamp(1, 999999);
-    final start = (page - 1) * limit;
+    final start = (currentPage - 1) * limit;
     final end = (start + limit).clamp(0, items.length);
     final pageItems = items.sublist(
       start.clamp(0, items.length),
@@ -73,9 +74,9 @@ class VeloraMockApi {
     return {
       'data': pageItems,
       'meta': {
-        'current_page': page,
+        'current_page': currentPage,
         'last_page': lastPage,
-        'per_page': perPage,
+        'per_page': limit,
         'total': tot,
       },
     };

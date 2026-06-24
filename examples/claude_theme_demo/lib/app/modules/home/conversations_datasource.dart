@@ -30,13 +30,15 @@ class MockConversationsDataSource implements ConversationsDataSource {
 
   @override
   Future<ConversationModel> create(String title) async {
+    final created = ConversationModel(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      title: title,
+      lastMessage: '',
+      updatedAt: DateTime.now(),
+    );
+    _store.insert(0, created);
     return VeloraMockApi.ok<ConversationModel>(
-      ConversationModel(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        title: title,
-        lastMessage: '',
-        updatedAt: DateTime.now(),
-      ).toJson(),
+      created.toJson(),
       parser: (v) => ConversationModel.fromJson(v as Map<String, dynamic>),
     );
   }

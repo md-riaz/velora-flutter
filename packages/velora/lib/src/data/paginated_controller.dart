@@ -45,10 +45,14 @@ abstract class VeloraPaginatedController<T> extends VeloraController {
   @override
   void onInit() {
     super.onInit();
-    refresh();
+    reload();
   }
 
-  Future<void> refresh() async {
+  /// Clears and reloads from page 1.  Safe to call on pull-to-refresh.
+  ///
+  /// Named `reload` (not `refresh`) to avoid shadowing
+  /// `ListNotifier.refresh()` inherited from GetX.
+  Future<void> reload() async {
     if (isRefreshing.value || loading.value) return;
     isRefreshing.value = true;
     _currentPage = 1;

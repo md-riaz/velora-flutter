@@ -1,8 +1,7 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 
 import '../../media/velora_attachment.dart';
+import '_file_image_stub.dart' if (dart.library.io) '_file_image_io.dart';
 
 /// A thumbnail-style chip for a single [VeloraAttachment].
 ///
@@ -47,21 +46,23 @@ class VeloraAttachmentChip extends StatelessWidget {
                     const BorderRadius.vertical(top: Radius.circular(11)),
                 child: _Thumbnail(attachment: attachment),
               ),
-              // Remove button
+              // Remove button — uses IconButton for keyboard focus and a11y semantics
               if (onRemove != null)
                 Positioned(
-                  top: 4,
-                  right: 4,
-                  child: GestureDetector(
-                    onTap: onRemove,
-                    child: Container(
+                  top: 0,
+                  right: 0,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: scheme.surface.withOpacity(0.85),
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      onPressed: onRemove,
+                      iconSize: 14,
                       padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        color: scheme.surface.withValues(alpha: 0.85),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(Icons.close,
-                          size: 14, color: scheme.onSurface),
+                      constraints: const BoxConstraints(),
+                      tooltip: 'Remove',
+                      icon: Icon(Icons.close, size: 14, color: scheme.onSurface),
                     ),
                   ),
                 ),
@@ -108,10 +109,13 @@ class VeloraAttachmentChip extends StatelessWidget {
                       ),
                     ),
                     if (isError && onRetry != null)
-                      GestureDetector(
-                        onTap: onRetry,
-                        child: Icon(Icons.refresh,
-                            size: 13, color: scheme.error),
+                      IconButton(
+                        onPressed: onRetry,
+                        iconSize: 13,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        tooltip: 'Retry upload',
+                        icon: Icon(Icons.refresh, size: 13, color: scheme.error),
                       )
                     else if (attachment.status == AttachmentStatus.done)
                       Icon(Icons.check_circle_outline,
@@ -135,7 +139,7 @@ class VeloraAttachmentChip extends StatelessWidget {
       case AttachmentStatus.done:
         return attachment.displaySize.isEmpty ? 'Uploaded' : attachment.displaySize;
       case AttachmentStatus.error:
-        return 'Failed — tap to retry';
+        return 'Failed — use ↺ to retry';
     }
   }
 }
@@ -153,14 +157,7 @@ class _Thumbnail extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
 
     if (attachment.isImage && attachment.localPath != null) {
-      return Image.file(
-        File(attachment.localPath!),
-        width: 112,
-        height: 72,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) =>
-            _FilePlaceholder(icon: Icons.broken_image_outlined, scheme: scheme),
-      );
+      return buildFileImagePreview(attachment, scheme);
     }
 
     if (attachment.isImage && attachment.remoteUrl != null) {

@@ -78,20 +78,21 @@ class _AddMoreButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 48,
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: scheme.outlineVariant,
-            style: BorderStyle.solid,
+    return SizedBox(
+      width: 48,
+      child: Tooltip(
+        message: 'Add attachment',
+        child: IconButton.outlined(
+          onPressed: onTap,
+          style: IconButton.styleFrom(
+            backgroundColor: scheme.surfaceContainerHighest,
+            side: BorderSide(color: scheme.outlineVariant),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            minimumSize: const Size(48, double.infinity),
           ),
-        ),
-        child: Center(
-          child: Icon(Icons.add, color: scheme.onSurfaceVariant),
+          icon: Icon(Icons.add, color: scheme.onSurfaceVariant),
         ),
       ),
     );

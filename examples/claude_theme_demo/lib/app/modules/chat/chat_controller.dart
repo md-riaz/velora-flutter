@@ -43,26 +43,27 @@ class ChatController extends VeloraController with VeloraAttachmentsMixin {
   }
 
   Future<void> sendMessage() async {
+    if (isTyping.value) return;
     final text = inputController.text.trim();
     if (text.isEmpty) return;
 
     inputController.clear();
     clearError();
-
-    // Upload any staged attachments before sending
-    if (hasAttachments) await uploadAll();
-    final urls = uploadedUrls;
-
-    messages.add(ChatMessage(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      content: text,
-      role: MessageRole.user,
-      createdAt: DateTime.now(),
-    ));
-    _scrollToBottom();
-
     isTyping.value = true;
+
     try {
+      // Upload any staged attachments before sending
+      if (hasAttachments) await uploadAll();
+      final urls = uploadedUrls;
+
+      messages.add(ChatMessage(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        content: text,
+        role: MessageRole.user,
+        createdAt: DateTime.now(),
+      ));
+      _scrollToBottom();
+
       final reply = await _dataSource.sendMessage(conversation.id, text, attachmentUrls: urls);
       messages.add(reply);
       attachments.clear();

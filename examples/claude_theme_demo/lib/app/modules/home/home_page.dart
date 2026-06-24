@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:velora/velora.dart';
 
 import '../../../resources/theme/claude_colors.dart';
+import '../../routes/app_routes.dart';
 import 'conversation_model.dart';
 import 'home_controller.dart';
 
@@ -97,7 +98,7 @@ class HomePage extends GetView<HomeController> {
             return SliverToBoxAdapter(
               child: VeloraErrorView(
                 message: err,
-                onRetry: controller.refresh,
+                onRetry: () => controller.reload(),
               ),
             );
           }),
@@ -111,6 +112,16 @@ class HomePage extends GetView<HomeController> {
             }
             final items = controller.filtered;
             if (items.isEmpty) {
+              // Distinguish a search-filtered empty state from a truly empty list
+              if (controller.items.isNotEmpty) {
+                return const SliverFillRemaining(
+                  child: VeloraEmptyState(
+                    icon: Icons.search_off,
+                    title: 'No results',
+                    description: 'Try a different search term.',
+                  ),
+                );
+              }
               return SliverFillRemaining(
                 child: VeloraEmptyState(
                   icon: Icons.chat_bubble_outline,
@@ -127,9 +138,12 @@ class HomePage extends GetView<HomeController> {
             return SliverList.builder(
               itemCount: items.length,
               itemBuilder: (context, index) {
+                if (index >= items.length - 3) {
+                  controller.loadMore();
+                }
                 final tile = _ConversationTile(
                   conversation: items[index],
-                  onTap: () => Velora.nav.to('/chat', arguments: items[index]),
+                  onTap: () => Velora.nav.to(AppRoutes.chat, arguments: items[index]),
                 );
                 if (index == items.length - 1) return tile;
                 return Column(

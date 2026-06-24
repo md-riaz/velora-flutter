@@ -5,7 +5,7 @@ homepage:
 
 environment:
   sdk: ^3.11.1
-  flutter: '>=3.0.0'
+  flutter: '>=3.27.0'
 
 dependencies:
   flutter:

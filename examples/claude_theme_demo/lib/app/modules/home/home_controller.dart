@@ -1,5 +1,6 @@
 import 'package:velora/velora.dart';
 
+import '../../routes/app_routes.dart';
 import 'conversation_model.dart';
 import 'conversations_datasource.dart';
 
@@ -28,8 +29,10 @@ class HomeController extends VeloraPaginatedController<ConversationModel> {
   void search(String query) => searchQuery.value = query;
 
   Future<void> startNewChat() async {
-    final conv = await _dataSource.create('New conversation');
-    items.insert(0, conv);
-    Velora.nav.to('/chat', arguments: conv);
+    await run(() async {
+      final conv = await _dataSource.create('New conversation');
+      items.insert(0, conv);
+      Velora.nav.to(AppRoutes.chat, arguments: conv);
+    });
   }
 }

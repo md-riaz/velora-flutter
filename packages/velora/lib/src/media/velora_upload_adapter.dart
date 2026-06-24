@@ -150,8 +150,15 @@ class LaravelMediaAdapter implements VeloraUploadAdapter {
       },
     );
     final body = response.data ?? <String, dynamic>{};
+    final url = _firstNonEmpty(body, const ['original_url', 'url', 'path']);
+    if (url.isEmpty) {
+      throw Exception(
+        'LaravelMediaAdapter: upload response contained no usable URL. '
+        'Expected one of: original_url, url, path. Response: $body',
+      );
+    }
     return VeloraUploadResult(
-      url: _firstNonEmpty(body, const ['original_url', 'url', 'path']),
+      url: url,
       mediaId: body['id']?.toString(),
       mediaUuid: body['uuid'] as String?,
       meta: Map<String, dynamic>.from(body),
