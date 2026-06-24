@@ -32,7 +32,12 @@ jobs:
 
       - name: Run velora tests
         working-directory: packages/velora
-        run: flutter test --coverage || echo "No tests found"
+        run: |
+          if [ -d "test" ] && find test -name '*_test.dart' -print -quit | grep -q .; then
+            flutter test --coverage
+          else
+            echo "No test files found — skipping"
+          fi
 
       - name: Install dependencies (claude_theme_demo)
         working-directory: examples/claude_theme_demo

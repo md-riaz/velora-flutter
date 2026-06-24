@@ -53,6 +53,10 @@ jobs:
           search_artifacts: true
           if_no_artifact_found: warn
 
+      - name: Fix demo base href for Pages
+        if: steps.demo-check.outcome == 'success'
+        run: sed -i 's|<base href="/claude_theme_demo/">|<base href="/velora-flutter/demo/">|' _site/demo/index.html
+
       - name: Create landing page
         run: |
           cat > _site/index.html << 'LANDING'
