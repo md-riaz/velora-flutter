@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'velora_attachment.dart';
+import 'velora_media_service.dart';
 import 'velora_upload_adapter.dart';
 
 /// Mix into any [GetxController] subclass to add reactive attachment
