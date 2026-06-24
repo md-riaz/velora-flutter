@@ -39,7 +39,9 @@ class _LoginPageState extends State<LoginPage> {
     }
 
     Velora.toast.success('Demo session started');
-    Velora.nav.offAll(AppRoutes.dashboard);
+    await Future<void>.delayed(Duration.zero);
+    if (!mounted) return;
+    await Velora.nav.offAll<void>(AppRoutes.dashboard);
   }
 
   @override

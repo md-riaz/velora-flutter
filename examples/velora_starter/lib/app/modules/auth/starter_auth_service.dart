@@ -42,7 +42,7 @@ class StarterAuthService extends GetxService {
     await Velora.storage.setToken(token);
     await Velora.storage.setJson(_userKey, user.toJson());
     Velora.auth.currentUser.value = user;
-    Velora.auth.isAuthenticated.value = true;
+    Velora.auth.state.value = SessionState.authenticated;
     await Velora.notify.initForUser();
     _syncFeatureAccess(user);
 
@@ -75,7 +75,7 @@ class StarterAuthService extends GetxService {
     final user = AuthUser.fromJson(Map<String, dynamic>.from(rawUser as Map));
     await Velora.storage.setJson(_userKey, user.toJson());
     Velora.auth.currentUser.value = user;
-    Velora.auth.isAuthenticated.value = true;
+    Velora.auth.state.value = SessionState.authenticated;
     _syncFeatureAccess(user);
     await Velora.notify.initForUser();
     return ApiResponse(success: true, data: user, message: response.message);
