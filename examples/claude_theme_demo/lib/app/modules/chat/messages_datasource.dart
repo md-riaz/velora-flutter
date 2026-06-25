@@ -165,6 +165,11 @@ class MockMessagesDataSource implements MessagesDataSource {
     '1': _seedQuantum(),
     '2': _seedPython(),
     '3': _seedReact(),
+    '4': _seedJapan(),
+    '5': _seedTypeScript(),
+    '6': _seedCoverLetter(),
+    '7': _seedSql(),
+    '8': _seedMonads(),
   };
 
   static List<ChatMessage> _seedQuantum() {
@@ -335,6 +340,184 @@ class MockMessagesDataSource implements MessagesDataSource {
               '**3. Initialiser functions in useState**\n'
               '```js\n// ❌ Runs every render\nconst [s] = useState(heavyComputation());\n'
               '// ✅ Runs once\nconst [s] = useState(() => heavyComputation());\n```'),
+    ];
+  }
+
+  static List<ChatMessage> _seedJapan() {
+    DateTime t(int s) => _t0.add(Duration(seconds: s));
+    return [
+      ChatMessage(id: 'j1', role: MessageRole.user, createdAt: t(0),
+          content: "I'm planning a 2-week trip to Japan. What's the best time to go "
+              'and which cities should I prioritise?'),
+      ChatMessage(id: 'j2', role: MessageRole.assistant, createdAt: t(4),
+          content: 'For cherry blossom season, **March–April in Tokyo** is perfect — '
+              'typically peak bloom is late March to early April.\n\n'
+              'A solid 2-week itinerary:\n\n'
+              '**Days 1–5 — Tokyo**\nShinjuku, Shibuya, Asakusa, Akihabara, Harajuku. '
+              'Day trip to Nikko or Kamakura.\n\n'
+              '**Days 6–8 — Kyoto**\nFushimi Inari, Arashiyama, Nishiki Market, '
+              'geisha districts in Gion.\n\n'
+              '**Days 9–10 — Osaka**\nDotonbori street food, Osaka Castle, day trip '
+              'to Nara (free-roaming deer!).\n\n'
+              '**Days 11–12 — Hiroshima & Miyajima**\nPeace Memorial Museum and the '
+              'iconic floating torii gate.\n\n'
+              '**Days 13–14 — back to Tokyo** for shopping and final meals.'),
+      ChatMessage(id: 'j3', role: MessageRole.user, createdAt: t(8),
+          content: 'What JR pass options should I consider?'),
+      ChatMessage(id: 'j4', role: MessageRole.assistant, createdAt: t(11),
+          content: 'For the Tokyo → Kyoto → Osaka → Hiroshima → Tokyo loop, the '
+              '**14-day JR Pass** (¥50,000 / ~\$330) covers:\n\n'
+              '- All Shinkansen (bullet train) legs\n'
+              '- Most JR local lines\n'
+              '- Miyajima ferry\n\n'
+              'Break-even calculation: Tokyo–Kyoto Shinkansen alone is ¥14,000 each '
+              'way → two legs = ¥28,000. Add Kyoto–Hiroshima, Hiroshima–Tokyo and '
+              'you easily exceed the pass cost.\n\n'
+              'Buy online before you travel — prices increased 60% in 2023 for '
+              'in-country purchases. IC cards (Suica/Pasmo) still needed for '
+              'subway and bus inside each city.'),
+    ];
+  }
+
+  static List<ChatMessage> _seedTypeScript() {
+    DateTime t(int s) => _t0.add(Duration(seconds: s));
+    return [
+      ChatMessage(id: 'ts1', role: MessageRole.user, createdAt: t(0),
+          content: "I'm confused why my conditional type isn't distributing "
+              'correctly over a union. Can you explain?'),
+      ChatMessage(id: 'ts2', role: MessageRole.assistant, createdAt: t(4),
+          content: "Conditional types **don't distribute over union types** the way "
+              "you'd expect when the checked type is a naked type parameter.\n\n"
+              '```ts\ntype IsString<T> = T extends string ? "yes" : "no";\n\n'
+              '// Distributes — each member checked separately:\ntype R1 = IsString<string | number>;\n'
+              '// → "yes" | "no"\n\n'
+              '// No distribution — T is wrapped, not naked:\ntype IsStringArr<T> = [T] extends [string] ? "yes" : "no";\n'
+              'type R2 = IsStringArr<string | number>;\n// → "no"\n```\n\n'
+              'Use `[T]` wrapping to **disable distribution** when you want to treat '
+              'the union as a whole.'),
+      ChatMessage(id: 'ts3', role: MessageRole.user, createdAt: t(8),
+          content: 'How do I extract only the string keys from an object type?'),
+      ChatMessage(id: 'ts4', role: MessageRole.assistant, createdAt: t(11),
+          content: '```ts\ntype StringKeys<T> = {\n  [K in keyof T]: T[K] extends string ? K : never;\n}[keyof T];\n\n'
+              'type User = { id: number; name: string; email: string; age: number };\ntype StringFields = StringKeys<User>;\n'
+              '// → "name" | "email"\n```\n\n'
+              'The `[keyof T]` at the end is a **lookup type** that collapses the '
+              'mapped object into a union — the `never` values are automatically '
+              'removed from the union.'),
+    ];
+  }
+
+  static List<ChatMessage> _seedCoverLetter() {
+    DateTime t(int s) => _t0.add(Duration(seconds: s));
+    return [
+      ChatMessage(id: 'cl1', role: MessageRole.user, createdAt: t(0),
+          content: 'Can you help me write a cover letter for a senior software '
+              'engineer role at a Series B fintech startup?'),
+      ChatMessage(id: 'cl2', role: MessageRole.assistant, createdAt: t(5),
+          content: "Here's a strong opening — leading with impact rather than "
+              '"I am applying for…":\n\n'
+              '---\n'
+              'Over the past six years I have scaled two payment platforms from '
+              'prototype to millions of transactions per day, cutting p99 latency '
+              'by 40% at one and reducing infrastructure cost by \$1.2 M/year at the '
+              'other. When I read about [Company]\'s mission to democratise '
+              'cross-border payments for SMEs, I recognised the same problem I\'ve '
+              'been obsessed with solving.\n\n'
+              'In my current role at [Current Company] I lead a six-engineer team '
+              'responsible for the core transaction engine…\n'
+              '---\n\n'
+              "What's your current role and the specific company? I'll tailor this "
+              'further with your real metrics.'),
+      ChatMessage(id: 'cl3', role: MessageRole.user, createdAt: t(9),
+          content: 'That opening paragraph is much better. Can you revise it to '
+              'lead with the impact metric more boldly?'),
+      ChatMessage(id: 'cl4', role: MessageRole.assistant, createdAt: t(12),
+          content: "I've revised the opening paragraph to lead with impact:\n\n"
+              '---\n'
+              '\$1.2 M in annual infrastructure savings. 40% p99 latency reduction. '
+              'Two payment platforms scaled to millions of daily transactions. '
+              "These aren't lines from a résumé — they're the outcomes I delivered "
+              'in my last two engineering roles, and exactly the kind of impact I '
+              'want to bring to [Company].\n'
+              '---\n\n'
+              "This version opens with numbers, which immediately signals you're "
+              'results-oriented. The rhetorical turn ("These aren\'t lines…") keeps '
+              'it from feeling like a bullet-point dump.'),
+    ];
+  }
+
+  static List<ChatMessage> _seedSql() {
+    DateTime t(int s) => _t0.add(Duration(seconds: s));
+    return [
+      ChatMessage(id: 'sql1', role: MessageRole.user, createdAt: t(0),
+          content: 'My JOIN query is taking 4 seconds on a table with 5M rows. '
+              'Here\'s the query:\n\n'
+              '```sql\nSELECT o.id, o.total, u.name\nFROM orders o\nJOIN users u ON u.id = o.user_id\n'
+              "WHERE o.created_at > '2024-01-01'\nORDER BY o.created_at DESC;\n```"),
+      ChatMessage(id: 'sql2', role: MessageRole.assistant, createdAt: t(5),
+          content: 'A composite index on `(user_id, created_at)` should cut that '
+              'from 4 s to **under 50 ms**.\n\n'
+              '```sql\nCREATE INDEX idx_orders_user_created\n  ON orders (user_id, created_at DESC);\n```\n\n'
+              'Why this helps:\n'
+              '- The `WHERE created_at > …` filter can now use the index range scan '
+              'instead of a full table scan.\n'
+              '- The `ORDER BY created_at DESC` matches the index direction — '
+              'no sort step needed.\n'
+              '- The JOIN to `users` only runs on the already-filtered result set.\n\n'
+              'Run `EXPLAIN ANALYZE` before and after to confirm. If `created_at` '
+              'cardinality is low (e.g. millions of rows per day), add a partial '
+              "index: `WHERE created_at > '2023-01-01'`."),
+      ChatMessage(id: 'sql3', role: MessageRole.user, createdAt: t(9),
+          content: 'EXPLAIN ANALYZE shows a Seq Scan on orders even with the index. Why?'),
+      ChatMessage(id: 'sql4', role: MessageRole.assistant, createdAt: t(12),
+          content: 'The planner chose a sequential scan because it estimated it would '
+              'be cheaper — likely one of:\n\n'
+              '**1. Stale statistics**\n'
+              '`ANALYZE orders;` — the planner may think far fewer rows match the '
+              'filter than actually do.\n\n'
+              '**2. Low selectivity**\n'
+              'If `created_at > 2024-01-01` matches > ~20% of rows, a seq scan + '
+              'sort is often faster than random I/O through an index.\n\n'
+              '**3. Index not yet used due to fill factor**\n'
+              'Force the planner to test the index: '
+              '`SET enable_seqscan = off;` then re-run. If it\'s dramatically '
+              'faster, run `ANALYZE` and the planner should pick it naturally.'),
+    ];
+  }
+
+  static List<ChatMessage> _seedMonads() {
+    DateTime t(int s) => _t0.add(Duration(seconds: s));
+    return [
+      ChatMessage(id: 'm1', role: MessageRole.user, createdAt: t(0),
+          content: "I keep hearing about monads in functional programming but I can't "
+              "wrap my head around them. I'm a JavaScript dev."),
+      ChatMessage(id: 'm2', role: MessageRole.assistant, createdAt: t(5),
+          content: "Here's the thing: **you've been using monads already** — "
+              '`Promise` is one.\n\n'
+              'A monad is just a design pattern with three rules:\n\n'
+              '1. **Wrap a value**: `Promise.resolve(42)`\n'
+              '2. **Chain transformations**: `.then(x => x * 2)` — '
+              'the callback returns either a plain value or another Promise, '
+              'and `.then` "flattens" nested Promises automatically.\n'
+              '3. **Preserve structure**: chaining never double-wraps '
+              '(`Promise<Promise<T>>` becomes `Promise<T>`).\n\n'
+              'Array is also monad-like: `flatMap` is the monadic "bind".\n\n'
+              '```js\n[1, 2, 3].flatMap(x => [x, x * 2])\n// → [1, 2, 2, 4, 3, 6]\n```\n\n'
+              'The formal definition adds nothing useful until you need to compose '
+              'many of these patterns — then the laws (left identity, right '
+              'identity, associativity) are what guarantee your chains work '
+              'predictably.'),
+      ChatMessage(id: 'm3', role: MessageRole.user, createdAt: t(9),
+          content: 'What about the Maybe monad? When would I use that in JS?'),
+      ChatMessage(id: 'm4', role: MessageRole.assistant, createdAt: t(13),
+          content: 'The **Maybe monad** handles nullable values without nested `if` checks.\n\n'
+              'In modern JS you get it for free with **optional chaining**:\n\n'
+              '```js\n// Without Maybe:\nconst street = user && user.address && user.address.street;\n\n'
+              '// With optional chaining (Maybe semantics built into the language):\nconst street = user?.address?.street;\n```\n\n'
+              'If any step is `null`/`undefined`, the whole expression short-circuits '
+              'to `undefined` — exactly like a Maybe chain returning `Nothing`.\n\n'
+              'Libraries like `fp-ts` give you an explicit `Option<T>` type if you '
+              'want the full type-safe version with `map`, `chain`, and `fold`.'),
     ];
   }
 }
