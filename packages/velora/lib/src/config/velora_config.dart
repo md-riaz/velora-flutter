@@ -1,5 +1,38 @@
 import '../notifications/notification_config.dart';
 
+/// Configures how [ApiResponse.fromJson] unwraps your API's JSON envelope.
+///
+/// Override the defaults to match your backend's response shape:
+///
+/// ```dart
+/// // Backend returns: {"ok": true, "payload": {...}, "error": "..."}
+/// VeloraResponseConfig(
+///   successKey: 'ok',
+///   dataKey: 'payload',
+///   messageKey: 'error',
+/// )
+/// ```
+class VeloraResponseConfig {
+  /// JSON key whose boolean value signals success. Defaults to `'success'`.
+  final String successKey;
+
+  /// JSON key that holds the response payload. Defaults to `'data'`.
+  final String dataKey;
+
+  /// JSON key that holds a human-readable message. Defaults to `'message'`.
+  final String messageKey;
+
+  /// JSON key that holds field-level validation errors. Defaults to `'errors'`.
+  final String errorsKey;
+
+  const VeloraResponseConfig({
+    this.successKey = 'success',
+    this.dataKey = 'data',
+    this.messageKey = 'message',
+    this.errorsKey = 'errors',
+  });
+}
+
 /// Marker base class for typed config extensions.
 ///
 /// Create a subclass to attach custom configuration to [VeloraConfig] without
@@ -30,6 +63,10 @@ class VeloraConfig {
   final VeloraAuthConfig auth;
   final VeloraNotificationConfig notifications;
 
+  /// Controls how API responses are unwrapped. Override when your backend
+  /// uses different envelope keys than the defaults.
+  final VeloraResponseConfig response;
+
   /// Typed config extensions. Retrieve with [extension<T>()].
   final List<VeloraConfigExtension> extensions;
 
@@ -38,6 +75,7 @@ class VeloraConfig {
     required this.apiBaseUrl,
     this.auth = const VeloraAuthConfig(),
     this.notifications = const VeloraNotificationConfig(),
+    this.response = const VeloraResponseConfig(),
     this.extensions = const [],
   });
 
@@ -56,10 +94,42 @@ class VeloraAuthConfig {
   final String meEndpoint;
   final String logoutRedirectRoute;
 
+  /// Extracts the bearer token from the login response payload.
+  ///
+  /// Override when your API uses a different token field name:
+  /// ```dart
+  /// VeloraAuthConfig(
+  ///   tokenExtractor: (payload) => payload['jwt']?.toString(),
+  /// )
+  /// ```
+  /// Defaults to checking `token` then `access_token`.
+  final String? Function(Map<String, dynamic> payload)? tokenExtractor;
+
+  /// Extracts the user map from the login response payload.
+  ///
+  /// Override when your API nests the user under a different key:
+  /// ```dart
+  /// VeloraAuthConfig(
+  ///   userExtractor: (payload) => payload['account'] as Map<String, dynamic>?,
+  /// )
+  /// ```
+  /// Defaults to reading the `user` key, falling back to the whole payload.
+  final Map<String, dynamic>? Function(Map<String, dynamic> payload)?
+      userExtractor;
+
+  /// Extracts the user map from the /me endpoint response payload.
+  ///
+  /// Defaults to reading the `user` key, falling back to the whole payload.
+  final Map<String, dynamic>? Function(Map<String, dynamic> payload)?
+      meUserExtractor;
+
   const VeloraAuthConfig({
     this.loginEndpoint = '/auth/login',
     this.logoutEndpoint = '/auth/logout',
     this.meEndpoint = '/auth/me',
     this.logoutRedirectRoute = '/login',
+    this.tokenExtractor,
+    this.userExtractor,
+    this.meUserExtractor,
   });
 }

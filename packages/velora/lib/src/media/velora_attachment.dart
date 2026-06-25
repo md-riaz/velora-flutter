@@ -42,11 +42,11 @@ class VeloraAttachment {
   final int? sizeBytes;
   final String? remoteUrl;
 
-  /// Server-assigned numeric media ID (e.g. from Spatie Laravel Media Library).
-  /// Available after a successful upload via [LaravelMediaAdapter].
+  /// Server-assigned numeric or string ID returned by your upload endpoint.
+  /// Populated after a successful upload via [MultipartUploadAdapter].
   final String? mediaId;
 
-  /// Server-assigned UUID (e.g. `uuid` field from Spatie Laravel Media Library).
+  /// Server-assigned UUID returned by your upload endpoint, if any.
   final String? mediaUuid;
 
   final AttachmentStatus status;

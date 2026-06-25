@@ -71,13 +71,19 @@ class AuthService extends GetxService {
         userScoped: false,
       );
       final payload = response.data ?? const <String, dynamic>{};
-      final token =
-          payload['token']?.toString() ?? payload['access_token']?.toString();
-      final rawUser = payload['user'];
-      if (token == null || token.isEmpty || rawUser is! Map) {
-        throw StateError('Login response must include token and user.');
+      final token = config.tokenExtractor != null
+          ? config.tokenExtractor!(payload)
+          : payload['token']?.toString() ??
+              payload['access_token']?.toString();
+      final rawUser = config.userExtractor != null
+          ? config.userExtractor!(payload)
+          : (payload['user'] is Map
+              ? Map<String, dynamic>.from(payload['user'] as Map)
+              : null);
+      if (token == null || token.isEmpty || rawUser == null) {
+        throw StateError('Login response must include a token and user data.');
       }
-      final user = AuthUser.fromJson(Map<String, dynamic>.from(rawUser));
+      final user = AuthUser.fromJson(rawUser);
       await storage.setToken(token);
       await storage.setJson(_userKey, user.toJson());
       currentUser.value = user;
@@ -145,7 +151,11 @@ class AuthService extends GetxService {
     );
     final payload = response.data;
     if (payload == null) return null;
-    final rawUser = payload['user'] is Map ? payload['user'] : payload;
+    final rawUser = config.meUserExtractor != null
+        ? config.meUserExtractor!(payload)
+        : (payload['user'] is Map
+            ? Map<String, dynamic>.from(payload['user'] as Map)
+            : payload);
     final user = AuthUser.fromJson(Map<String, dynamic>.from(rawUser as Map));
     currentUser.value = user;
     state.value = SessionState.authenticated;

@@ -48,8 +48,8 @@ class VeloraMockApi {
     return response.data as T;
   }
 
-  /// Returns a [PaginatedData]-shaped response — the standard Laravel
-  /// pagination envelope used by [PaginatedData.fromJson].
+  /// Returns a [PaginatedData]-shaped response using the default
+  /// `{data: [], meta: {current_page, last_page, per_page, total}}` envelope.
   ///
   /// [items] is the raw list. [page] / [perPage] / [total] are used to build
   /// the meta block.

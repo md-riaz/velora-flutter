@@ -15,18 +15,42 @@ class PaginatedData<T> {
 
   bool get hasMore => currentPage < lastPage;
 
+  /// Parses a paginated API response into [PaginatedData].
+  ///
+  /// The default key names match the common `{data: [], meta: {current_page,
+  /// last_page, per_page, total}}` envelope. Override them for your backend:
+  ///
+  /// ```dart
+  /// // Django REST Framework: {"count": 73, "results": [...]}
+  /// PaginatedData.fromJson(json, parser,
+  ///   dataKey: 'results',
+  ///   metaKey: null,        // meta is top-level
+  ///   totalKey: 'count',
+  ///   currentPageKey: 'page',
+  ///   lastPageKey: 'total_pages',
+  ///   perPageKey: 'page_size',
+  /// )
+  /// ```
   factory PaginatedData.fromJson(
     Map<String, dynamic> json,
-    T Function(Object? value) parser,
-  ) {
-    final meta = json['meta'] as Map<String, dynamic>? ?? const {};
-    final items = json['data'] as List? ?? const [];
+    T Function(Object? value) parser, {
+    String dataKey = 'data',
+    String? metaKey = 'meta',
+    String currentPageKey = 'current_page',
+    String lastPageKey = 'last_page',
+    String perPageKey = 'per_page',
+    String totalKey = 'total',
+  }) {
+    final meta = metaKey != null
+        ? (json[metaKey] as Map<String, dynamic>? ?? const {})
+        : json;
+    final items = json[dataKey] as List? ?? const [];
     return PaginatedData<T>(
       data: items.map(parser).toList(growable: false),
-      currentPage: (meta['current_page'] as num?)?.toInt() ?? 1,
-      lastPage: (meta['last_page'] as num?)?.toInt() ?? 1,
-      perPage: (meta['per_page'] as num?)?.toInt() ?? items.length,
-      total: (meta['total'] as num?)?.toInt() ?? items.length,
+      currentPage: (meta[currentPageKey] as num?)?.toInt() ?? 1,
+      lastPage: (meta[lastPageKey] as num?)?.toInt() ?? 1,
+      perPage: (meta[perPageKey] as num?)?.toInt() ?? items.length,
+      total: (meta[totalKey] as num?)?.toInt() ?? items.length,
     );
   }
 }

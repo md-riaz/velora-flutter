@@ -147,10 +147,15 @@ class VeloraApiService extends GetxService {
   ) async {
     try {
       final response = await request();
+      final r = config.response;
       return ApiResponse<T>.fromJson(
         response.data,
         statusCode: response.statusCode,
         parser: parser,
+        successKey: r.successKey,
+        dataKey: r.dataKey,
+        messageKey: r.messageKey,
+        errorsKey: r.errorsKey,
       );
     } on DioException catch (error) {
       throw _normalize(error);
@@ -160,12 +165,18 @@ class VeloraApiService extends GetxService {
   ApiException _normalize(DioException error) {
     final response = error.response;
     final data = response?.data;
+    final r = config.response;
     if (data is Map<String, dynamic>) {
       return ApiException(
-        message:
-            data['message']?.toString() ?? error.message ?? 'Request failed',
+        message: data[r.messageKey]?.toString() ??
+            error.message ??
+            'Request failed',
         statusCode: response?.statusCode,
-        errors: ApiResponse<Object?>.fromJson(data).errors,
+        errors: ApiResponse<Object?>.fromJson(
+          data,
+          messageKey: r.messageKey,
+          errorsKey: r.errorsKey,
+        ).errors,
       );
     }
     return ApiException(

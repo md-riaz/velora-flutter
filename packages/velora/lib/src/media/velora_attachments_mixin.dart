@@ -13,7 +13,9 @@ import 'velora_upload_adapter.dart';
 /// class PostController extends VeloraController with VeloraAttachmentsMixin {
 ///   // Override to use your real upload endpoint in production.
 ///   @override
-///   VeloraUploadAdapter get uploadAdapter => LaravelMediaAdapter();
+///   VeloraUploadAdapter get uploadAdapter => MultipartUploadAdapter(
+///     endpoint: '/api/uploads',
+///   );
 ///
 ///   Future<void> submit() async {
 ///     await uploadAll();                              // upload pending files
@@ -148,10 +150,10 @@ mixin VeloraAttachmentsMixin {
       .map((a) => a.remoteUrl!)
       .toList();
 
-  /// Server-assigned media IDs for all successfully uploaded attachments.
+  /// Server-assigned IDs for all successfully uploaded attachments.
   ///
-  /// Use this with Laravel Media Library to associate uploaded files with a
-  /// model: `await api.post('/posts', data: {'media_ids': mediaIds})`.
+  /// Use these to associate uploaded files with a server-side model:
+  /// `await api.post('/posts', data: {'attachment_ids': mediaIds})`.
   List<String> get mediaIds => attachments
       .where((a) => a.mediaId != null)
       .map((a) => a.mediaId!)

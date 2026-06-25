@@ -17,14 +17,18 @@ class ApiResponse<T> {
     Object? json, {
     int? statusCode,
     T Function(Object? value)? parser,
+    String successKey = 'success',
+    String dataKey = 'data',
+    String messageKey = 'message',
+    String errorsKey = 'errors',
   }) {
     if (json is Map<String, dynamic>) {
-      final rawData = json.containsKey('data') ? json['data'] : json;
+      final rawData = json.containsKey(dataKey) ? json[dataKey] : json;
       return ApiResponse<T>(
-        success: json['success'] is bool ? json['success'] as bool : true,
+        success: json[successKey] is bool ? json[successKey] as bool : true,
         data: parser == null ? rawData as T? : parser(rawData),
-        message: json['message'] as String?,
-        errors: _parseErrors(json['errors']),
+        message: json[messageKey] as String?,
+        errors: _parseErrors(json[errorsKey]),
         statusCode: statusCode,
       );
     }

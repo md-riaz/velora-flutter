@@ -1,39 +1,194 @@
-<!--
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
+# Velora
 
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/tools/pub/writing-package-pages).
+Laravel-inspired productivity for Flutter apps — works with **any JSON API**.
 
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/to/develop-packages).
--->
+Velora is a batteries-included DX framework that gives Flutter apps the same
+convention-over-configuration feel that makes Laravel enjoyable on the backend.
+It wires up auth, routing, storage, permissions, notifications, HTTP, and media
+attachments with sensible defaults — but every default is overridable.
 
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
+---
 
 ## Features
 
-TODO: List what your package can do. Maybe include images, gifs, or videos.
+- **Auth** — bearer-token login/logout with reactive session state, persistent
+  storage, and safe concurrent-logout coordination
+- **HTTP** — Dio-backed API service with automatic Bearer token injection,
+  composable interceptors, retry logic, and normalised error handling
+- **Response parsing** — configurable JSON envelope keys so you can match any
+  backend's response shape, not just a specific one
+- **Routing guards** — `Velora.authOnly` / `Velora.guestOnly` middleware
+  shorthands for GetX routes; bring your own guard logic via `VeloraRouteGuard`
+- **Permissions** — reactive role/permission helpers backed by whatever your
+  server returns in the user payload
+- **Features** — runtime feature-flag toggling, permission-gated menu items,
+  per-user scope flushing on logout
+- **Notifications** — push (FCM or custom adapter), local, and in-app
+  notification centre with a no-op adapter for dev/testing
+- **Media attachments** — pick → upload → submit flow with progress, retry, and
+  a built-in `MultipartUploadAdapter` for any multipart endpoint
+- **Theme** — `ThemeService` for light/dark/system toggle with persistence
+- **Storage** — `VeloraStorageService` wrapping `SharedPreferences` and
+  `FlutterSecureStorage` with typed JSON helpers
+- **Validation** — `VeloraValidator` rule set for forms
+- **Responsive** — breakpoint helpers and layout utilities
+
+---
 
 ## Getting started
 
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
-
-## Usage
-
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder.
-
-```dart
-const like = 'sample';
+```yaml
+dependencies:
+  velora:
+    path: packages/velora   # local monorepo reference
 ```
 
-## Additional information
+Boot Velora once in `main.dart` before `runApp`:
 
-TODO: Tell users more about the package: where to find more information, how to
-contribute to the package, how to file issues, what response they can expect
-from the package authors, and more.
+```dart
+await Velora.boot(
+  config: VeloraConfig(
+    appName: 'My App',
+    apiBaseUrl: 'https://api.example.com',
+    auth: VeloraAuthConfig(
+      loginEndpoint: '/auth/login',
+      logoutEndpoint: '/auth/logout',
+      meEndpoint: '/auth/me',
+    ),
+  ),
+);
+```
+
+---
+
+## Adapting to your API's response shape
+
+Velora uses a `{success, data, message, errors}` envelope by default. Override
+any key via `VeloraResponseConfig`:
+
+```dart
+VeloraConfig(
+  apiBaseUrl: 'https://api.example.com',
+  // Backend returns: {"ok": true, "payload": {...}, "error": "..."}
+  response: VeloraResponseConfig(
+    successKey: 'ok',
+    dataKey: 'payload',
+    messageKey: 'error',
+  ),
+)
+```
+
+### Custom login response shape
+
+If your API returns the token or user under different keys:
+
+```dart
+VeloraAuthConfig(
+  tokenExtractor: (payload) => payload['jwt']?.toString(),
+  userExtractor: (payload) => payload['account'] as Map<String, dynamic>?,
+)
+```
+
+### Custom pagination shape
+
+`PaginatedData.fromJson` accepts named key overrides:
+
+```dart
+// Django REST Framework: {"count": 73, "results": [...]}
+PaginatedData.fromJson(
+  json,
+  parser,
+  dataKey: 'results',
+  metaKey: null,          // meta fields are top-level
+  totalKey: 'count',
+  currentPageKey: 'page',
+  lastPageKey: 'total_pages',
+  perPageKey: 'page_size',
+)
+```
+
+---
+
+## Route guards
+
+```dart
+GetPage(
+  name: '/dashboard',
+  page: () => DashboardPage(),
+  middlewares: Velora.authOnly,        // redirect unauthenticated users
+),
+GetPage(
+  name: '/login',
+  page: () => LoginPage(),
+  middlewares: Velora.guestOnly(),     // redirect already-authenticated users
+),
+```
+
+---
+
+## HTTP interceptors
+
+```dart
+await Velora.boot(
+  config: config,
+  interceptors: [
+    VeloraLogInterceptor(),
+    VeloraRetryInterceptor(maxAttempts: 3),
+  ],
+);
+```
+
+Implement `VeloraApiInterceptor` for custom logic:
+
+```dart
+class MyInterceptor extends VeloraApiInterceptor {
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    options.headers['X-App-Version'] = '1.0.0';
+    handler.next(options);
+  }
+}
+```
+
+---
+
+## File attachments
+
+```dart
+class PostController extends VeloraController with VeloraAttachmentsMixin {
+  @override
+  VeloraUploadAdapter get uploadAdapter => MultipartUploadAdapter(
+    endpoint: '/api/uploads',
+  );
+
+  Future<void> submit() async {
+    await uploadAll();
+    await Velora.api.post('/posts', data: {
+      'body': body.value,
+      'attachment_ids': mediaIds,
+    });
+  }
+}
+```
+
+---
+
+## Typed config extensions
+
+Attach your own configuration without untyped maps:
+
+```dart
+class AnalyticsConfig extends VeloraConfigExtension {
+  final String writeKey;
+  const AnalyticsConfig({required this.writeKey});
+}
+
+final config = VeloraConfig(
+  appName: 'My App',
+  apiBaseUrl: 'https://api.example.com',
+  extensions: [const AnalyticsConfig(writeKey: 'abc123')],
+);
+
+// Access anywhere:
+final analytics = Velora.config.extension<AnalyticsConfig>();
+```
