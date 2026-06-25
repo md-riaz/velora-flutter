@@ -59,6 +59,21 @@ await Velora.boot(
 );
 ```
 
+## Auth
+
+```dart
+// Any credential shape — email/password, username/OTP, SSO token, etc.
+await Velora.login({'email': email, 'password': password});
+await Velora.login({'username': username, 'otp': otp});
+
+// Reactive state
+Velora.auth.check;           // bool
+Velora.auth.user;            // AuthUser?
+Velora.auth.isAuthenticated; // RxBool
+
+await Velora.logout();
+```
+
 ---
 
 ## Adapting to your API's response shape

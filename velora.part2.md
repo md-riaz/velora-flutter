@@ -129,7 +129,7 @@ class AuthService extends GetxService {
 
 Then the facade becomes:
 
-Velora.auth.login(email: email, password: password);
+Velora.auth.login({'email': email, 'password': password});
 Velora.auth.user;
 Velora.auth.check;
 

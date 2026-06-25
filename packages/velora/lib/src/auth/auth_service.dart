@@ -58,15 +58,12 @@ class AuthService extends GetxService {
     return this;
   }
 
-  Future<AuthUser> login({
-    required String email,
-    required String password,
-  }) async {
+  Future<AuthUser> login(Map<String, dynamic> credentials) async {
     state.value = SessionState.authenticating;
     try {
       final response = await api.post<Map<String, dynamic>>(
         config.loginEndpoint,
-        data: {'email': email, 'password': password},
+        data: credentials,
         parser: (value) => Map<String, dynamic>.from(value as Map),
         userScoped: false,
       );

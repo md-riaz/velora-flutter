@@ -89,7 +89,7 @@ Common operations should be accessible through one consistent API.
 Example:
 
 Velora.api.get('/users');
-Velora.auth.login(email: email, password: password);
+Velora.auth.login({'email': email, 'password': password});
 Velora.auth.logout();
 Velora.auth.user;
 Velora.storage.set('token', token);
@@ -1440,7 +1440,7 @@ await Velora.api.get('/health');
 
 Must support:
 
-await Velora.auth.login(email: email, password: password);
+await Velora.auth.login({'email': email, 'password': password});
 Velora.auth.check;
 Velora.auth.user;
 await Velora.auth.logout();

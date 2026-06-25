@@ -1,10 +1,9 @@
 import 'package:velora/velora.dart';
 
 abstract class StarterAuthRemoteDataSource {
-  Future<ApiResponse<Map<String, dynamic>>> login({
-    required String email,
-    required String password,
-  });
+  Future<ApiResponse<Map<String, dynamic>>> login(
+    Map<String, dynamic> credentials,
+  );
 
   Future<ApiResponse<Map<String, dynamic>>> me(String token);
 
@@ -16,10 +15,11 @@ class MockStarterAuthRemoteDataSource implements StarterAuthRemoteDataSource {
   static const _demoToken = 'demo-token';
 
   @override
-  Future<ApiResponse<Map<String, dynamic>>> login({
-    required String email,
-    required String password,
-  }) async {
+  Future<ApiResponse<Map<String, dynamic>>> login(
+    Map<String, dynamic> credentials,
+  ) async {
+    final email = credentials['email']?.toString() ?? '';
+    final password = credentials['password']?.toString() ?? '';
     if (email.trim().isEmpty || password != _demoPassword) {
       return ApiResponse<Map<String, dynamic>>(
         success: false,
@@ -32,7 +32,7 @@ class MockStarterAuthRemoteDataSource implements StarterAuthRemoteDataSource {
     }
 
     return ApiResponse.fromJson(
-      _loginPayload(email.trim()),
+      _loginPayload(email),
       parser: (value) => Map<String, dynamic>.from(value as Map),
     );
   }

@@ -44,6 +44,9 @@ class Velora {
   static VeloraMediaService get media => Get.find<VeloraMediaService>();
   static const VeloraValidator validator = VeloraValidator();
 
+  static Future<AuthUser> login(Map<String, dynamic> credentials) =>
+      auth.login(credentials);
+
   static Future<void> logout() => auth.logout();
 
   // ---------------------------------------------------------------------------

@@ -391,7 +391,7 @@ void main() {
         notifications: VeloraNotificationConfig(provider: PushProvider.none),
       );
 
-      await auth.login(email: 'admin@example.test', password: 'secret');
+      await auth.login({'email': 'admin@example.test', 'password': 'secret'});
 
       expect(auth.check, isTrue);
       expect(notify.initialized.value, isTrue);

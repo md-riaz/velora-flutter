@@ -1,17 +1,17 @@
 # Auth
 
-Velora targets Laravel Sanctum bearer tokens. `AuthService` is a `GetxService` and owns session state, the current user, and token persistence.
+`AuthService` is a `GetxService` and owns session state, the current user, and token persistence. It works with any bearer-token API — configure endpoints and credential/user extraction via `VeloraAuthConfig`.
 
 Default endpoints are configurable through `VeloraAuthConfig` and default to `/auth/login`, `/auth/logout`, and `/auth/me`.
 
 ```dart
-await Velora.auth.login(email: email, password: password);
+await Velora.auth.login({'email': email, 'password': password});
 Velora.auth.check;
 Velora.auth.user;
 await Velora.auth.logout();
 ```
 
-The starter app includes a mock mode for UI/API testing without a Laravel backend: demo login stores a Sanctum-like token plus user roles, permissions, and features, then reboots Velora services. Real apps should replace that with the Laravel Sanctum login endpoint.
+The starter app includes a mock mode for UI/API testing without a real backend: demo login stores a token plus user roles, permissions, and features, then boots Velora services. Real apps replace the mock data source with their actual login endpoint.
 
 ## Logout Safety Contract
 
@@ -22,7 +22,7 @@ Safe order:
 1. `AuthService.logout()` delegates to `LogoutCoordinator.run()`.
 2. Coordinator locks logout and sets `SessionState.loggingOut` before teardown.
 3. Stop incoming user event sources: sockets, notification streams, timers, polling jobs, uploads, background sync, and user stream subscriptions.
-4. Call Laravel `/auth/logout` while the bearer token and API client still exist.
+4. Call the configured logout endpoint while the bearer token and API client still exist.
 5. Continue local logout even if remote logout fails.
 6. Navigate to a safe unauthenticated route such as `/login` or `/goodbye`.
 7. Wait one Flutter frame after navigation so feature widgets/controllers can dispose.

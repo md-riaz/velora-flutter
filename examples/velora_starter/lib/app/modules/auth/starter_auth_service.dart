@@ -13,11 +13,8 @@ class StarterAuthService extends GetxService {
 
   StarterAuthService(this.repository);
 
-  Future<ApiResponse<AuthUser>> login({
-    required String email,
-    required String password,
-  }) async {
-    final response = await repository.login(email: email, password: password);
+  Future<ApiResponse<AuthUser>> login(Map<String, dynamic> credentials) async {
+    final response = await repository.login(credentials);
     if (!response.success || response.data == null) {
       return ApiResponse(
         success: false,
