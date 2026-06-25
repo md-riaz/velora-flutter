@@ -28,9 +28,10 @@ class AccountController extends VeloraController {
       message: 'Are you sure you want to sign out?',
     );
     if (!confirmed) return;
-    if (isAuthenticated) {
-      await run(() => Velora.logout());
-    }
+    // Direct state reset — no HTTP call. The session was created by mock login,
+    // so there is no real token to revoke and no remote endpoint to call.
+    Velora.auth.currentUser.value = null;
+    Velora.auth.state.value = SessionState.guest;
     Velora.nav.offAll(AppRoutes.login);
   }
 }
