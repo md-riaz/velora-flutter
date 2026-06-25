@@ -8,7 +8,6 @@ import '../features/feature_service.dart';
 import '../http/velora_api_interceptor.dart';
 import '../http/velora_api_service.dart';
 import '../media/velora_media_service.dart';
-import '../notifications/adapters/fcm_push_adapter.dart';
 import '../notifications/adapters/local_notification_adapter.dart';
 import '../notifications/adapters/noop_push_adapter.dart';
 import '../notifications/adapters/push_adapter.dart';
@@ -89,8 +88,9 @@ class Velora {
     /// HTTP interceptors applied (in order) after the built-in auth injector.
     List<VeloraApiInterceptor> interceptors = const [],
 
-    /// Custom push adapter. Defaults to [FcmPushAdapter] when provider is FCM,
-    /// [NoopPushAdapter] otherwise.
+    /// Custom push adapter. Pass an [FcmPushAdapter] (with your Firebase
+    /// closures) or any other [PushAdapter] implementation. Defaults to
+    /// [NoopPushAdapter] when omitted.
     PushAdapter? pushAdapter,
   }) async {
     Velora.config = config;
@@ -134,10 +134,7 @@ class Velora {
     final notificationRepository = NotificationRepositoryImpl(notificationRemote);
     Get.put<NotificationRepository>(notificationRepository, permanent: true);
 
-    final resolvedPushAdapter = pushAdapter ??
-        (config.notifications.provider == PushProvider.fcm
-            ? FcmPushAdapter()
-            : NoopPushAdapter());
+    final resolvedPushAdapter = pushAdapter ?? NoopPushAdapter();
 
     final notify = VeloraNotify(
       repository: notificationRepository,
