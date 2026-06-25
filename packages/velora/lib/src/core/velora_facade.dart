@@ -11,7 +11,6 @@ import '../media/velora_media_service.dart';
 import '../notifications/adapters/local_notification_adapter.dart';
 import '../notifications/adapters/noop_push_adapter.dart';
 import '../notifications/adapters/push_adapter.dart';
-import '../notifications/notification_config.dart';
 import '../notifications/notification_remote_datasource.dart';
 import '../notifications/notification_repository.dart';
 import '../notifications/notification_service.dart';
