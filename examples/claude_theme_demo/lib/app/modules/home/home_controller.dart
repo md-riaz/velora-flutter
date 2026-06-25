@@ -26,6 +26,9 @@ class HomeController extends VeloraPaginatedController<ConversationModel> {
     return items.where((c) => c.title.toLowerCase().contains(q)).toList();
   }
 
+  List<ConversationModel> get starred =>
+      items.where((c) => c.isStarred).toList();
+
   void search(String query) => searchQuery.value = query;
 
   Future<void> startNewChat() async {
@@ -33,5 +36,32 @@ class HomeController extends VeloraPaginatedController<ConversationModel> {
     if (conv == null) return;
     await Velora.nav.to(AppRoutes.chat, arguments: conv);
     await reload();
+  }
+
+  Future<void> toggleStar(String id) async {
+    await run(() => _dataSource.toggleStar(id));
+    final idx = items.indexWhere((c) => c.id == id);
+    if (idx != -1) {
+      items[idx] = items[idx].copyWith(isStarred: !items[idx].isStarred);
+    }
+  }
+
+  Future<void> renameConversation(String id, String title) async {
+    await run(() => _dataSource.rename(id, title));
+    final idx = items.indexWhere((c) => c.id == id);
+    if (idx != -1) {
+      items[idx] = items[idx].copyWith(title: title);
+    }
+  }
+
+  Future<void> deleteConversation(String id) async {
+    final confirmed = await Velora.dialog.confirm(
+      title: 'Delete conversation',
+      message: 'This will permanently delete the conversation.',
+    );
+    if (!confirmed) return;
+    await run(() => _dataSource.delete(id));
+    items.removeWhere((c) => c.id == id);
+    Velora.toast.success('Conversation deleted');
   }
 }

@@ -13,6 +13,20 @@ class ConversationModel {
     this.isStarred = false,
   });
 
+  ConversationModel copyWith({
+    String? title,
+    String? lastMessage,
+    bool? isStarred,
+  }) {
+    return ConversationModel(
+      id: id,
+      title: title ?? this.title,
+      lastMessage: lastMessage ?? this.lastMessage,
+      updatedAt: updatedAt,
+      isStarred: isStarred ?? this.isStarred,
+    );
+  }
+
   factory ConversationModel.fromJson(Map<String, dynamic> json) {
     return ConversationModel(
       id: json['id'].toString(),

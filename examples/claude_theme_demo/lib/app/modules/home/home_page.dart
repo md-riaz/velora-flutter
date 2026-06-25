@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:velora/velora.dart';
 
 import '../../../resources/theme/claude_colors.dart';
@@ -19,12 +18,19 @@ class HomePage extends GetView<HomeController> {
 
     return Scaffold(
       backgroundColor: scheme.surface,
+      drawer: _AppDrawer(controller: controller),
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
             pinned: true,
             floating: true,
             centerTitle: false,
+            leading: Builder(
+              builder: (ctx) => IconButton(
+                icon: const Icon(Icons.menu),
+                onPressed: () => Scaffold.of(ctx).openDrawer(),
+              ),
+            ),
             title: Row(
               children: [
                 _ClaudeLogo(size: 28),
@@ -46,7 +52,9 @@ class HomePage extends GetView<HomeController> {
                   icon: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 250),
                     child: Icon(
-                      isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                      isDark
+                          ? Icons.light_mode_outlined
+                          : Icons.dark_mode_outlined,
                       key: ValueKey(isDark),
                     ),
                   ),
@@ -73,7 +81,9 @@ class HomePage extends GetView<HomeController> {
                   scheme.surfaceContainerHighest,
                 ),
                 shape: WidgetStatePropertyAll(
-                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),
@@ -96,7 +106,9 @@ class HomePage extends GetView<HomeController> {
           // Error banner
           Obx(() {
             final err = controller.error.value;
-            if (err.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+            if (err.isEmpty) {
+              return const SliverToBoxAdapter(child: SizedBox.shrink());
+            }
             return SliverToBoxAdapter(
               child: VeloraErrorView(
                 message: err,
@@ -114,7 +126,6 @@ class HomePage extends GetView<HomeController> {
             }
             final items = controller.filtered;
             if (items.isEmpty) {
-              // Distinguish a search-filtered empty state from a truly empty list
               if (controller.items.isNotEmpty) {
                 return const SliverFillRemaining(
                   child: VeloraEmptyState(
@@ -146,14 +157,19 @@ class HomePage extends GetView<HomeController> {
                 }
                 final tile = _ConversationTile(
                   conversation: items[index],
-                  onTap: () => Velora.nav.to(AppRoutes.chat, arguments: items[index]),
+                  onTap: () =>
+                      Velora.nav.to(AppRoutes.chat, arguments: items[index]),
                 );
                 if (index == items.length - 1) return tile;
                 return Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     tile,
-                    Divider(height: 1, indent: _kDividerIndent, color: scheme.outlineVariant),
+                    Divider(
+                      height: 1,
+                      indent: _kDividerIndent,
+                      color: scheme.outlineVariant,
+                    ),
                   ],
                 );
               },
@@ -171,6 +187,191 @@ class HomePage extends GetView<HomeController> {
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Navigation drawer
+// ---------------------------------------------------------------------------
+
+class _AppDrawer extends StatelessWidget {
+  final HomeController controller;
+  const _AppDrawer({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Drawer(
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            _DrawerHeader(scheme: scheme, textTheme: textTheme),
+            const Divider(height: 1),
+
+            // New chat
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: const Text('New chat'),
+              onTap: () {
+                Navigator.pop(context);
+                controller.startNewChat();
+              },
+            ),
+
+            // Starred section
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: Text(
+                'Starred',
+                style: textTheme.labelSmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                  letterSpacing: 0.6,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Obx(() {
+              final starred = controller.starred;
+              if (starred.isEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Text(
+                    'No starred conversations',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                );
+              }
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: starred.map((conv) {
+                  return ListTile(
+                    leading: Icon(
+                      Icons.star_outlined,
+                      size: 18,
+                      color: ClaudeColors.primary,
+                    ),
+                    title: Text(
+                      conv.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: textTheme.bodyMedium,
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Velora.nav.to(AppRoutes.chat, arguments: conv);
+                    },
+                    dense: true,
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 16),
+                  );
+                }).toList(),
+              );
+            }),
+
+            const Spacer(),
+            const Divider(height: 1),
+
+            // Settings
+            ListTile(
+              leading: const Icon(Icons.settings_outlined),
+              title: const Text('Settings'),
+              onTap: () {
+                Navigator.pop(context);
+                Velora.nav.to(AppRoutes.settings);
+              },
+            ),
+
+            // Account
+            ListTile(
+              leading: const Icon(Icons.person_outline),
+              title: const Text('Account'),
+              onTap: () {
+                Navigator.pop(context);
+                Velora.nav.to(AppRoutes.account);
+              },
+            ),
+
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DrawerHeader extends StatelessWidget {
+  final ColorScheme scheme;
+  final TextTheme textTheme;
+  const _DrawerHeader({required this.scheme, required this.textTheme});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: ClaudeColors.primary,
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: const Center(
+              child: Text(
+                'C',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  height: 1,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Claude',
+                style: textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: ClaudeColors.primary.withAlpha(26),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  'Free plan',
+                  style: textTheme.labelSmall?.copyWith(
+                    color: ClaudeColors.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Conversation tile
+// ---------------------------------------------------------------------------
 
 class _ConversationTile extends StatelessWidget {
   final ConversationModel conversation;
@@ -192,7 +393,6 @@ class _ConversationTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
-            // Icon tile
             Container(
               width: 42,
               height: 42,
@@ -211,7 +411,6 @@ class _ConversationTile extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-            // Text content
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -237,7 +436,6 @@ class _ConversationTile extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            // Time ago
             Text(
               conversation.timeAgo,
               style: textTheme.labelSmall?.copyWith(
@@ -251,7 +449,10 @@ class _ConversationTile extends StatelessWidget {
   }
 }
 
-/// Claude's distinctive "C" logo mark rendered as a widget.
+// ---------------------------------------------------------------------------
+// Claude logo widget
+// ---------------------------------------------------------------------------
+
 class _ClaudeLogo extends StatelessWidget {
   final double size;
   const _ClaudeLogo({required this.size});
