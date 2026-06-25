@@ -1,4 +1,4 @@
-import 'package:get/get.dart';
+
 import 'package:velora/velora.dart';
 
 import '../notifications/notifications_feature.dart';

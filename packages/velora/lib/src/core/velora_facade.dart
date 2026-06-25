@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 
 import '../auth/auth_service.dart';
+import '../auth/auth_user.dart';
 import '../auth/logout_coordinator.dart';
 import '../config/velora_config.dart';
 import '../features/feature_service.dart';
