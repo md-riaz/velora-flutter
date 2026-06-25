@@ -4,11 +4,6 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'Release version tag (e.g. v1.0.0)'
-        required: true
-        default: 'v0.1.0'
 
 concurrency:
   group: build-${{ github.ref }}
@@ -94,21 +89,47 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version from pubspec
+        id: version
+        run: |
+          VERSION=$(grep '^version:' packages/velora/pubspec.yaml | awk '{print $2}' | tr -d '\r')
+          echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Check if tag already exists
+        id: tag_check
+        run: |
+          if git ls-remote --tags origin "refs/tags/${{ steps.version.outputs.tag }}" | grep -q .; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip if tag exists
+        if: steps.tag_check.outputs.exists == 'true'
+        run: |
+          echo "Tag ${{ steps.version.outputs.tag }} already exists — skipping release."
+          exit 0
+
       - name: Download all APKs
+        if: steps.tag_check.outputs.exists == 'false'
         uses: actions/download-artifact@v4
         with:
           pattern: '*-apk'
           path: artifacts
 
       - name: Rename APKs
+        if: steps.tag_check.outputs.exists == 'false'
         run: |
           mv artifacts/claude_theme_demo-apk/app-release.apk artifacts/claude-theme-demo.apk
           mv artifacts/velora_starter-apk/app-release.apk artifacts/velora-starter.apk
 
       - name: Create GitHub Release
+        if: steps.tag_check.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.inputs.version }}
+          tag_name: ${{ steps.version.outputs.tag }}
           generate_release_notes: true
           files: |
             artifacts/claude-theme-demo.apk
