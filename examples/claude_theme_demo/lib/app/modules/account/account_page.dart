@@ -135,7 +135,7 @@ class _ProfileCardContent extends StatelessWidget {
             ),
             child: Center(
               child: Text(
-                name.substring(0, 1).toUpperCase(),
+                name.isNotEmpty ? name.substring(0, 1).toUpperCase() : '?',
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 26,

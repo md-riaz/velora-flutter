@@ -17,7 +17,7 @@ class AppPages {
     GetPage(
       name: AppRoutes.login,
       page: () => const LoginPage(),
-      binding: BindingsBuilder(() => Get.lazyPut(() => LoginController())),
+      binding: BindingsBuilder(() => Get.lazyPut(() => LoginController(), fenix: true)),
     ),
     GetPage(
       name: AppRoutes.home,
