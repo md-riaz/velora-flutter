@@ -35,7 +35,10 @@ class AuthService extends GetxService {
   final RxBool isAuthenticated = false.obs;
 
   VeloraUser? get user => currentUser.value;
-  T? userAs<T extends VeloraUser>() => currentUser.value as T?;
+  T? userAs<T extends VeloraUser>() {
+    final u = currentUser.value;
+    return u is T ? u : null;
+  }
   bool get check => state.value == SessionState.authenticated;
   bool get isLoggingOut => state.value == SessionState.loggingOut;
 
@@ -51,9 +54,14 @@ class AuthService extends GetxService {
     final token = await storage.getToken();
     final json = storage.getJson(_userKey);
     if (token != null && token.isNotEmpty && json != null) {
-      final parse = config.userParser ?? AuthUser.fromJson;
-      currentUser.value = parse(json);
-      state.value = SessionState.authenticated;
+      try {
+        final parse = config.userParser ?? AuthUser.fromJson;
+        currentUser.value = parse(json);
+        state.value = SessionState.authenticated;
+      } catch (_) {
+        await _clearLocalSession();
+        state.value = SessionState.guest;
+      }
     } else {
       state.value = SessionState.guest;
     }
@@ -81,7 +89,7 @@ class AuthService extends GetxService {
           ? userExtractor(payload)
           : (payload['user'] is Map
               ? Map<String, dynamic>.from(payload['user'] as Map)
-              : null);
+              : Map<String, dynamic>.from(payload));
 
       if (token == null || token.isEmpty || rawUser == null) {
         throw StateError('Login response must include token and user.');
@@ -160,8 +168,10 @@ class AuthService extends GetxService {
     final meUserExtractor = config.meUserExtractor;
     final rawUser = meUserExtractor != null
         ? meUserExtractor(payload)
-        : (payload['user'] is Map
-            ? Map<String, dynamic>.from(payload['user'] as Map)
+        : (payload.containsKey('user')
+            ? (payload['user'] is Map
+                ? Map<String, dynamic>.from(payload['user'] as Map)
+                : null)
             : Map<String, dynamic>.from(payload));
 
     if (rawUser == null) return null;

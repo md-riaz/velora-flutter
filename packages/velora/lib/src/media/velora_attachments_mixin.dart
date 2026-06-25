@@ -36,6 +36,7 @@ import 'velora_upload_adapter.dart';
 /// ```
 mixin VeloraAttachmentsMixin {
   final attachments = <VeloraAttachment>[].obs;
+  final _uploadsInFlight = <String>{};
 
   /// Override in your controller to swap in the real upload adapter.
   VeloraUploadAdapter get uploadAdapter => const VeloraMockUploadAdapter();
@@ -76,8 +77,10 @@ mixin VeloraAttachmentsMixin {
   /// Transitions through [AttachmentStatus.uploading] → [AttachmentStatus.done]
   /// (or [AttachmentStatus.error] on failure).  Safe to call concurrently.
   Future<void> uploadAttachment(String id) async {
-    var idx = attachments.indexWhere((a) => a.id == id);
+    final idx = attachments.indexWhere((a) => a.id == id);
     if (idx < 0) return;
+    if (attachments[idx].status != AttachmentStatus.pending) return;
+    if (!_uploadsInFlight.add(id)) return;
 
     attachments[idx] = attachments[idx].copyWith(
       status: AttachmentStatus.uploading,
@@ -110,6 +113,8 @@ mixin VeloraAttachmentsMixin {
           errorMessage: e.toString(),
         );
       }
+    } finally {
+      _uploadsInFlight.remove(id);
     }
   }
 
@@ -125,12 +130,25 @@ mixin VeloraAttachmentsMixin {
     }
   }
 
-  /// Upload all [AttachmentStatus.pending] attachments concurrently.
+  /// Upload all [AttachmentStatus.pending] attachments sequentially.
+  ///
+  /// Throws [StateError] if any attachment ends in [AttachmentStatus.error] so
+  /// callers cannot silently submit with missing files.
   Future<void> uploadAll() async {
-    final pending = attachments
+    for (final a in attachments
         .where((a) => a.status == AttachmentStatus.pending)
+        .toList()) {
+      await uploadAttachment(a.id);
+    }
+    final failed = attachments
+        .where((a) => a.status == AttachmentStatus.error)
         .toList();
-    await Future.wait(pending.map((a) => uploadAttachment(a.id)));
+    if (failed.isNotEmpty) {
+      throw StateError(
+        '${failed.length} attachment(s) failed to upload. '
+        'Remove or retry them before submitting.',
+      );
+    }
   }
 
   bool get hasAttachments => attachments.isNotEmpty;

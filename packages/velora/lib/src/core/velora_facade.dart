@@ -117,6 +117,11 @@ class Velora {
     Get.put<VeloraNotify>(notify, permanent: true);
     Get.put<NotificationService>(notify, permanent: true);
     auth.attachNotifications(notify);
+    if (auth.check &&
+        config.notifications.enabled &&
+        config.notifications.requestPermissionAfterLogin) {
+      await notify.initForUser();
+    }
 
     Get.put<PermissionService>(
       PermissionService(

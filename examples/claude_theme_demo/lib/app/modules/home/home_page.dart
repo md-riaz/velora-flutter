@@ -7,6 +7,8 @@ import '../../routes/app_routes.dart';
 import 'conversation_model.dart';
 import 'home_controller.dart';
 
+const _kDividerIndent = 72.0;
+
 class HomePage extends GetView<HomeController> {
   const HomePage({super.key});
 
@@ -138,7 +140,8 @@ class HomePage extends GetView<HomeController> {
             return SliverList.builder(
               itemCount: items.length,
               itemBuilder: (context, index) {
-                if (index >= items.length - 3) {
+                if (controller.searchQuery.value.isEmpty &&
+                    index >= items.length - 3) {
                   controller.loadMore();
                 }
                 final tile = _ConversationTile(
@@ -150,7 +153,7 @@ class HomePage extends GetView<HomeController> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     tile,
-                    Divider(height: 1, indent: 72, color: scheme.outlineVariant),
+                    Divider(height: 1, indent: _kDividerIndent, color: scheme.outlineVariant),
                   ],
                 );
               },

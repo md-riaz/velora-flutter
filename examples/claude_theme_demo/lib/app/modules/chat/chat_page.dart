@@ -566,14 +566,26 @@ class _InputBar extends StatelessWidget {
                 color: isTyping ? scheme.surfaceContainerHighest : ClaudeColors.primary,
                 shape: BoxShape.circle,
               ),
-              child: IconButton(
-                icon: Icon(
-                  isTyping ? Icons.stop_rounded : Icons.arrow_upward_rounded,
-                  color: Colors.white,
-                  size: 20,
-                ),
-                onPressed: isTyping ? null : controller.sendMessage,
-              ),
+              child: isTyping
+                  ? const Padding(
+                      padding: EdgeInsets.all(10),
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      ),
+                    )
+                  : IconButton(
+                      icon: const Icon(
+                        Icons.arrow_upward_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                      onPressed: controller.sendMessage,
+                    ),
             );
           }),
         ],

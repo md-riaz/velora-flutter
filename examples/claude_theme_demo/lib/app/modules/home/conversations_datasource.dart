@@ -19,7 +19,7 @@ class MockConversationsDataSource implements ConversationsDataSource {
     final raw = await VeloraMockApi.paginated(
       _store.map((c) => c.toJson()).toList(),
       page: page,
-      perPage: 15,
+      perPage: 5,
       total: _store.length,
     );
     return PaginatedData.fromJson(

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../media/velora_attachment.dart';
 import '_file_image_stub.dart' if (dart.library.io) '_file_image_io.dart';
 
+const _kChipWidth = 112.0;
+
 /// A thumbnail-style chip for a single [VeloraAttachment].
 ///
 /// Shows an image preview or a file-type icon, the filename, file size,
@@ -28,7 +30,7 @@ class VeloraAttachmentChip extends StatelessWidget {
     final isError = attachment.status == AttachmentStatus.error;
 
     return Container(
-      width: 112,
+      width: _kChipWidth,
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
@@ -163,7 +165,7 @@ class _Thumbnail extends StatelessWidget {
     if (attachment.isImage && attachment.remoteUrl != null) {
       return Image.network(
         attachment.remoteUrl!,
-        width: 112,
+        width: _kChipWidth,
         height: 72,
         fit: BoxFit.cover,
         errorBuilder: (_, __, ___) =>
@@ -193,7 +195,7 @@ class _FilePlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 112,
+      width: _kChipWidth,
       height: 72,
       child: Center(
         child: Icon(icon, size: 30, color: scheme.onSurfaceVariant),

@@ -12,8 +12,6 @@ class ChatController extends VeloraController with VeloraAttachmentsMixin {
   final isTyping = false.obs;
   final inputController = TextEditingController();
   final scrollController = ScrollController();
-  bool _isDisposed = false;
-
   late final ConversationModel conversation;
 
   ChatController({MessagesDataSource? dataSource})
@@ -22,13 +20,17 @@ class ChatController extends VeloraController with VeloraAttachmentsMixin {
   @override
   void onInit() {
     super.onInit();
-    conversation = Get.arguments as ConversationModel;
+    final args = Get.arguments;
+    if (args is! ConversationModel) {
+      Get.back<void>();
+      return;
+    }
+    conversation = args;
     _loadMessages();
   }
 
   @override
   void onClose() {
-    _isDisposed = true;
     inputController.dispose();
     scrollController.dispose();
     super.onClose();
@@ -45,29 +47,32 @@ class ChatController extends VeloraController with VeloraAttachmentsMixin {
   Future<void> sendMessage() async {
     if (isTyping.value) return;
     final text = inputController.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty && !hasAttachments) return;
 
-    inputController.clear();
     clearError();
     isTyping.value = true;
+    ChatMessage? optimistic;
 
     try {
       // Upload any staged attachments before sending
       if (hasAttachments) await uploadAll();
       final urls = uploadedUrls;
 
-      messages.add(ChatMessage(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+      optimistic = ChatMessage(
+        id: UniqueKey().toString(),
         content: text,
         role: MessageRole.user,
         createdAt: DateTime.now(),
-      ));
+      );
+      messages.add(optimistic);
       _scrollToBottom();
 
       final reply = await _dataSource.sendMessage(conversation.id, text, attachmentUrls: urls);
       messages.add(reply);
+      inputController.clear();
       attachments.clear();
     } catch (e) {
+      if (optimistic != null) messages.remove(optimistic);
       error.value = e.toString();
     } finally {
       isTyping.value = false;
@@ -77,7 +82,7 @@ class ChatController extends VeloraController with VeloraAttachmentsMixin {
 
   void _scrollToBottom() {
     Future<void>.delayed(const Duration(milliseconds: 80), () {
-      if (!_isDisposed && scrollController.hasClients) {
+      if (!isClosed && scrollController.hasClients) {
         scrollController.animateTo(
           scrollController.position.maxScrollExtent,
           duration: const Duration(milliseconds: 300),
