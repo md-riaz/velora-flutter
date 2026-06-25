@@ -26,7 +26,6 @@ class AccountPage extends GetView<AccountController> {
           // Profile card
           // ----------------------------------------------------------------
           _ProfileCard(
-            controller: controller,
             scheme: scheme,
             textTheme: textTheme,
           ),
@@ -69,12 +68,10 @@ class AccountPage extends GetView<AccountController> {
 // ---------------------------------------------------------------------------
 
 class _ProfileCard extends StatelessWidget {
-  final AccountController controller;
   final ColorScheme scheme;
   final TextTheme textTheme;
 
   const _ProfileCard({
-    required this.controller,
     required this.scheme,
     required this.textTheme,
   });
@@ -195,62 +192,64 @@ class _SessionSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isAuth = controller.isAuthenticated;
-    final stateLabel = isAuth ? 'Authenticated' : 'Guest (demo mode)';
-    final stateColor = isAuth ? Colors.green : scheme.onSurfaceVariant;
+    return Obx(() {
+      final isAuth = controller.isAuthenticated;
+      final stateLabel = isAuth ? 'Authenticated' : 'Guest (demo mode)';
+      final stateColor = isAuth ? Colors.green : scheme.onSurfaceVariant;
 
-    return Column(
-      children: [
-        ListTile(
-          title: Text('Auth state', style: textTheme.bodyMedium),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: stateColor,
-                  shape: BoxShape.circle,
+      return Column(
+        children: [
+          ListTile(
+            title: Text('Auth state', style: textTheme.bodyMedium),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: stateColor,
+                    shape: BoxShape.circle,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                stateLabel,
-                style: textTheme.bodySmall?.copyWith(color: stateColor),
-              ),
-            ],
+                const SizedBox(width: 6),
+                Text(
+                  stateLabel,
+                  style: textTheme.bodySmall?.copyWith(color: stateColor),
+                ),
+              ],
+            ),
           ),
-        ),
-        ListTile(
-          title: Text('User object', style: textTheme.bodyMedium),
-          trailing: Text(
-            controller.currentUser != null ? 'VeloraUser' : 'null',
-            style: textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+          ListTile(
+            title: Text('User object', style: textTheme.bodyMedium),
+            trailing: Text(
+              controller.currentUser != null ? 'VeloraUser' : 'null',
+              style: textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+            ),
           ),
-        ),
-        if (!isAuth)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: scheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: scheme.outlineVariant),
-              ),
-              child: Text(
-                'No active session — profile data above is mock. '
-                'Call Velora.login() to authenticate and populate Velora.auth.user.',
-                style: textTheme.bodySmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
+          if (!isAuth)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: scheme.outlineVariant),
+                ),
+                child: Text(
+                  'No active session — profile data above is mock. '
+                  'Call Velora.login() to authenticate and populate Velora.auth.user.',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ),
             ),
-          ),
-      ],
-    );
+        ],
+      );
+    });
   }
 }
 

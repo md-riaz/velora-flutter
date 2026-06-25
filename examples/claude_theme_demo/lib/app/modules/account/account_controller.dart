@@ -12,7 +12,7 @@ import 'package:velora/velora.dart';
 ///   3. Call [Velora.logout] to clear the session.
 ///   4. Guard routes with [Velora.authOnly] middleware.
 class AccountController extends VeloraController {
-  bool get isAuthenticated => Velora.auth.check;
+  bool get isAuthenticated => Velora.auth.isAuthenticated.value;
 
   VeloraUser? get currentUser => Velora.auth.user;
 

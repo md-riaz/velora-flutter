@@ -695,7 +695,10 @@ class _InputBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    // Use paddingOf (safe-area inset) not viewInsetsOf (keyboard height).
+    // Scaffold's resizeToAvoidBottomInset already shrinks the view for the
+    // keyboard, so adding viewInsets here would double-count it.
+    final bottom = MediaQuery.paddingOf(context).bottom;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
