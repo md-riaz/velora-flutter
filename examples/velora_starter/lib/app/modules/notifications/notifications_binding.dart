@@ -44,10 +44,10 @@ class NotificationsBinding extends Bindings {
     Get.put<NotificationService>(notify, permanent: true);
   }
 
-  List<AppNotification> _mockNotifications() {
+  List<VeloraNotification> _mockNotifications() {
     final now = DateTime.now();
 
-    return [
+    return <VeloraNotification>[
       AppNotification(
         id: 'starter-welcome',
         type: 'in_app',

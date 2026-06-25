@@ -6,19 +6,16 @@ import 'velora_attachment.dart';
 
 /// The result returned by [VeloraUploadAdapter.upload].
 ///
-/// Carries the display URL plus any server-assigned identifiers your backend
-/// returns. The full raw response is in [meta] for backends that return extra
-/// fields (e.g. image dimensions, conversions, CDN keys).
+/// Carries the display URL plus the server-assigned identifiers your backend
+/// returns — numeric [mediaId] and [mediaUuid] from Laravel Media Library,
+/// or just [url] for S3 / flat-file endpoints.
+///
+/// All fields from the raw server response are available in [meta] for
+/// backends that return extra data (e.g. conversions, responsive images).
 class VeloraUploadResult {
   final String url;
-
-  /// Server-assigned numeric or string ID, if returned by the backend.
   final String? mediaId;
-
-  /// Server-assigned UUID, if returned by the backend.
   final String? mediaUuid;
-
-  /// Full raw response body — access any extra fields your backend returns.
   final Map<String, dynamic> meta;
 
   const VeloraUploadResult({
@@ -45,11 +42,11 @@ abstract class VeloraUploadAdapter {
 /// Returns a mock URL plus a fake [VeloraUploadResult.mediaId] so you can
 /// exercise the full pick → upload → submit flow without a real backend.
 ///
-/// Replace with [MultipartUploadAdapter] (or your own adapter) before production:
+/// Replace with [LaravelMediaAdapter] (or your own adapter) before production:
 /// ```dart
 /// class MyController extends VeloraController with VeloraAttachmentsMixin {
 ///   @override
-///   VeloraUploadAdapter get uploadAdapter => MultipartUploadAdapter();
+///   VeloraUploadAdapter get uploadAdapter => LaravelMediaAdapter();
 /// }
 /// ```
 class VeloraMockUploadAdapter implements VeloraUploadAdapter {
@@ -79,31 +76,33 @@ class VeloraMockUploadAdapter implements VeloraUploadAdapter {
   static String _fakeId() => (++_counter).toString();
 }
 
-/// General-purpose multipart file upload adapter.
+/// Ready-to-use adapter for [Spatie Laravel Media Library](https://spatie.be/docs/laravel-medialibrary).
 ///
-/// Uploads via `multipart/form-data POST` and maps the server's JSON response
-/// into [VeloraUploadResult]. Works with any backend that accepts a file upload
-/// and returns a URL in the response body.
+/// Uploads via multipart `POST` and maps the standard Laravel Media Library
+/// JSON response — `id`, `uuid`, `original_url` — into [VeloraUploadResult].
 ///
-/// The adapter checks `original_url`, `url`, and `path` (in that order) for
-/// the file URL — cover the most common response shapes out of the box.
-/// The full response is also available in [VeloraUploadResult.meta].
+/// The full response body is preserved in [VeloraUploadResult.meta] for
+/// accessing custom properties, conversions, or responsive images.
 ///
-/// ## Wiring it up
+/// ## Setup
 ///
+/// 1. Register a route in `routes/api.php` (or reuse the default media endpoint):
+/// ```php
+/// Route::post('/media', [MediaController::class, 'store'])->middleware('auth:sanctum');
+/// ```
+///
+/// 2. Wire the adapter in your controller:
 /// ```dart
 /// class PostController extends VeloraController with VeloraAttachmentsMixin {
 ///   @override
-///   VeloraUploadAdapter get uploadAdapter => MultipartUploadAdapter(
-///     endpoint: '/api/uploads',
-///     urlKey: 'file_url',   // override if your backend uses a different key
-///   );
+///   VeloraUploadAdapter get uploadAdapter => LaravelMediaAdapter();
 ///
 ///   Future<void> submit() async {
 ///     await uploadAll();
+///     // Associate with the model on the server using the server-assigned IDs:
 ///     await Velora.api.post('/posts', data: {
 ///       'title': title.value,
-///       'attachment_ids': mediaIds,
+///       'media_ids': mediaIds,   // e.g. ['42', '43']
 ///     });
 ///     attachments.clear();
 ///   }
@@ -112,23 +111,18 @@ class VeloraMockUploadAdapter implements VeloraUploadAdapter {
 ///
 /// ## Custom Dio instance
 ///
-/// By default the adapter uses `Velora.api.dio` (already authenticated via the
-/// Bearer token interceptor). Pass your own [Dio] only if you need a separate
-/// HTTP client:
+/// By default the adapter uses `Velora.api.dio` (already authenticated via
+/// the Bearer token interceptor set up in [VeloraApiService]).  Pass your
+/// own [Dio] only if you need a separate HTTP client:
 /// ```dart
-/// MultipartUploadAdapter(dio: myCustomDio, endpoint: '/v2/files')
+/// LaravelMediaAdapter(dio: myCustomDio, endpoint: '/api/v2/media')
 /// ```
-class MultipartUploadAdapter implements VeloraUploadAdapter {
+class LaravelMediaAdapter implements VeloraUploadAdapter {
   final String endpoint;
-
-  /// JSON keys to check for the uploaded file URL, tried in order.
-  final List<String> urlKeys;
-
   final Dio? _customDio;
 
-  MultipartUploadAdapter({
+  LaravelMediaAdapter({
     this.endpoint = '/api/media',
-    this.urlKeys = const ['original_url', 'url', 'path'],
     Dio? dio,
   }) : _customDio = dio;
 
@@ -156,11 +150,11 @@ class MultipartUploadAdapter implements VeloraUploadAdapter {
       },
     );
     final body = response.data ?? <String, dynamic>{};
-    final url = _firstNonEmpty(body, urlKeys);
+    final url = _firstNonEmpty(body, const ['original_url', 'url', 'path']);
     if (url.isEmpty) {
       throw Exception(
-        'MultipartUploadAdapter: upload response contained no usable URL. '
-        'Checked keys: $urlKeys. Response: $body',
+        'LaravelMediaAdapter: upload response contained no usable URL. '
+        'Expected one of: original_url, url, path. Response: $body',
       );
     }
     return VeloraUploadResult(
@@ -179,6 +173,3 @@ class MultipartUploadAdapter implements VeloraUploadAdapter {
     return '';
   }
 }
-
-/// Backwards-compatible alias for [MultipartUploadAdapter].
-typedef LaravelMediaAdapter = MultipartUploadAdapter;

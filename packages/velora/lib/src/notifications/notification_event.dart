@@ -10,7 +10,7 @@ enum NotificationEventType {
 
 class NotificationEvent {
   final NotificationEventType type;
-  final AppNotification? notification;
+  final VeloraNotification? notification;
   final PushMessage? message;
   final Map<String, dynamic> data;
 

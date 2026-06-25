@@ -1,3 +1,5 @@
+import 'notification_payload.dart';
+
 enum PushProvider { none, fcm }
 
 class VeloraNotificationConfig {
@@ -12,6 +14,18 @@ class VeloraNotificationConfig {
   final String markAsReadEndpoint;
   final String markAllAsReadEndpoint;
 
+  /// Converts a raw JSON map into your [VeloraNotification] model.
+  ///
+  /// If omitted, [AppNotification.fromJson] is used. Override when you have
+  /// custom notification fields or a non-standard API shape:
+  ///
+  /// ```dart
+  /// VeloraNotificationConfig(
+  ///   notificationParser: MyNotification.fromJson,
+  /// )
+  /// ```
+  final VeloraNotification Function(Map<String, dynamic>)? notificationParser;
+
   const VeloraNotificationConfig({
     this.enabled = true,
     this.provider = PushProvider.fcm,
@@ -23,5 +37,6 @@ class VeloraNotificationConfig {
     this.notificationsEndpoint = '/notifications',
     this.markAsReadEndpoint = '/notifications/{id}/read',
     this.markAllAsReadEndpoint = '/notifications/read-all',
+    this.notificationParser,
   });
 }

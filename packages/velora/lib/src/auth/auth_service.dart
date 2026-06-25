@@ -35,15 +35,10 @@ class AuthService extends GetxService {
   final RxBool isAuthenticated = false.obs;
 
   VeloraUser? get user => currentUser.value;
-
-  /// Returns the current user cast to [T].
-  ///
-  /// Use this when you own your user model:
-  /// ```dart
-  /// final user = Velora.auth.userAs<AppUser>();
-  /// ```
-  T? userAs<T extends VeloraUser>() => currentUser.value as T?;
-
+  T? userAs<T extends VeloraUser>() {
+    final u = currentUser.value;
+    return u is T ? u : null;
+  }
   bool get check => state.value == SessionState.authenticated;
   bool get isLoggingOut => state.value == SessionState.loggingOut;
 
@@ -59,9 +54,14 @@ class AuthService extends GetxService {
     final token = await storage.getToken();
     final json = storage.getJson(_userKey);
     if (token != null && token.isNotEmpty && json != null) {
-      final parse = config.userParser ?? AuthUser.fromJson;
-      currentUser.value = parse(json);
-      state.value = SessionState.authenticated;
+      try {
+        final parse = config.userParser ?? AuthUser.fromJson;
+        currentUser.value = parse(json);
+        state.value = SessionState.authenticated;
+      } catch (_) {
+        await _clearLocalSession();
+        state.value = SessionState.guest;
+      }
     } else {
       state.value = SessionState.guest;
     }
@@ -78,18 +78,23 @@ class AuthService extends GetxService {
         userScoped: false,
       );
       final payload = response.data ?? const <String, dynamic>{};
-      final token = config.tokenExtractor != null
-          ? config.tokenExtractor!(payload)
-          : payload['token']?.toString() ??
-              payload['access_token']?.toString();
-      final rawUser = config.userExtractor != null
-          ? config.userExtractor!(payload)
+
+      final tokenExtractor = config.tokenExtractor;
+      final token = tokenExtractor != null
+          ? tokenExtractor(payload)
+          : payload['token']?.toString() ?? payload['access_token']?.toString();
+
+      final userExtractor = config.userExtractor;
+      final rawUser = userExtractor != null
+          ? userExtractor(payload)
           : (payload['user'] is Map
               ? Map<String, dynamic>.from(payload['user'] as Map)
-              : null);
+              : Map<String, dynamic>.from(payload));
+
       if (token == null || token.isEmpty || rawUser == null) {
-        throw StateError('Login response must include a token and user data.');
+        throw StateError('Login response must include token and user.');
       }
+
       final parse = config.userParser ?? AuthUser.fromJson;
       final user = parse(rawUser);
       await storage.setToken(token);
@@ -159,13 +164,20 @@ class AuthService extends GetxService {
     );
     final payload = response.data;
     if (payload == null) return null;
-    final rawUser = config.meUserExtractor != null
-        ? config.meUserExtractor!(payload)
-        : (payload['user'] is Map
-            ? Map<String, dynamic>.from(payload['user'] as Map)
-            : payload);
+
+    final meUserExtractor = config.meUserExtractor;
+    final rawUser = meUserExtractor != null
+        ? meUserExtractor(payload)
+        : (payload.containsKey('user')
+            ? (payload['user'] is Map
+                ? Map<String, dynamic>.from(payload['user'] as Map)
+                : null)
+            : Map<String, dynamic>.from(payload));
+
+    if (rawUser == null) return null;
+
     final parse = config.userParser ?? AuthUser.fromJson;
-    final user = parse(Map<String, dynamic>.from(rawUser as Map));
+    final user = parse(rawUser);
     currentUser.value = user;
     state.value = SessionState.authenticated;
     await storage.setJson(_userKey, user.toJson());

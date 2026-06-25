@@ -164,6 +164,16 @@ class VeloraAuthConfig {
   /// ```
   final bool Function(VeloraUser user, String permission)? permissionResolver;
 
+  /// Key used to store the auth token in secure storage / shared prefs.
+  ///
+  /// Override when multiple Velora-based apps share the same device and you
+  /// need to avoid token key collisions:
+  ///
+  /// ```dart
+  /// VeloraAuthConfig(tokenStorageKey: 'com.myapp.auth.token')
+  /// ```
+  final String tokenStorageKey;
+
   const VeloraAuthConfig({
     this.loginEndpoint = '/auth/login',
     this.logoutEndpoint = '/auth/logout',
@@ -174,5 +184,6 @@ class VeloraAuthConfig {
     this.meUserExtractor,
     this.userParser,
     this.permissionResolver,
+    this.tokenStorageKey = 'velora.auth.token',
   });
 }

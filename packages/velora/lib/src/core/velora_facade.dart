@@ -7,6 +7,7 @@ import '../config/velora_config.dart';
 import '../features/feature_service.dart';
 import '../http/velora_api_interceptor.dart';
 import '../http/velora_api_service.dart';
+import '../media/velora_media_service.dart';
 import '../notifications/adapters/local_notification_adapter.dart';
 import '../notifications/adapters/noop_push_adapter.dart';
 import '../notifications/adapters/push_adapter.dart';
@@ -22,7 +23,6 @@ import '../theme/theme_service.dart';
 import '../ui/velora_dialog.dart';
 import '../ui/velora_loader.dart';
 import '../ui/velora_toast.dart';
-import '../media/velora_media_service.dart';
 import '../validation/velora_validator.dart';
 import 'velora_lifecycle.dart';
 
@@ -87,8 +87,9 @@ class Velora {
     /// HTTP interceptors applied (in order) after the built-in auth injector.
     List<VeloraApiInterceptor> interceptors = const [],
 
-    /// Custom push adapter. Defaults to [NoopPushAdapter].
-    /// Pass a [FcmPushAdapter] (wired with firebase_messaging) for real push.
+    /// Custom push adapter. Pass an [FcmPushAdapter] (with your Firebase
+    /// closures) or any other [PushAdapter] implementation. Defaults to
+    /// [NoopPushAdapter] when omitted.
     PushAdapter? pushAdapter,
   }) async {
     Velora.config = config;
@@ -96,7 +97,9 @@ class Velora {
     // Also register VeloraConfig in GetX so guards can find it.
     Get.put<VeloraConfig>(config, permanent: true);
 
-    final storage = await VeloraStorageService().init();
+    final storage = await VeloraStorageService(
+      tokenKey: config.auth.tokenStorageKey,
+    ).init();
     Get.put<VeloraStorageService>(storage, permanent: true);
 
     final api = VeloraApiService(
@@ -130,14 +133,21 @@ class Velora {
     final notificationRepository = NotificationRepositoryImpl(notificationRemote);
     Get.put<NotificationRepository>(notificationRepository, permanent: true);
 
+    final resolvedPushAdapter = pushAdapter ?? NoopPushAdapter();
+
     final notify = VeloraNotify(
       repository: notificationRepository,
-      pushAdapter: pushAdapter ?? NoopPushAdapter(),
+      pushAdapter: resolvedPushAdapter,
       localAdapter: InMemoryLocalNotificationAdapter(),
     );
     Get.put<VeloraNotify>(notify, permanent: true);
     Get.put<NotificationService>(notify, permanent: true);
     auth.attachNotifications(notify);
+    if (auth.check &&
+        config.notifications.enabled &&
+        config.notifications.requestPermissionAfterLogin) {
+      await notify.initForUser();
+    }
 
     Get.put<PermissionService>(
       PermissionService(

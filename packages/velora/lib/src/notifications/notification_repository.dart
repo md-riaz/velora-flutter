@@ -2,7 +2,7 @@ import 'notification_payload.dart';
 import 'notification_remote_datasource.dart';
 
 abstract class NotificationRepository {
-  Future<List<AppNotification>> index();
+  Future<List<VeloraNotification>> index();
 
   Future<void> markAsRead(String id);
 
@@ -23,7 +23,7 @@ class NotificationRepositoryImpl implements NotificationRepository {
   NotificationRepositoryImpl(this.remote);
 
   @override
-  Future<List<AppNotification>> index() => remote.index();
+  Future<List<VeloraNotification>> index() => remote.index();
 
   @override
   Future<void> markAsRead(String id) => remote.markAsRead(id);
@@ -51,18 +51,18 @@ class NotificationRepositoryImpl implements NotificationRepository {
 }
 
 class InMemoryNotificationRepository implements NotificationRepository {
-  final List<AppNotification> items;
+  final List<VeloraNotification> items;
   final List<Map<String, String>> registeredTokens = <Map<String, String>>[];
   final List<String> unregisteredTokens = <String>[];
 
-  InMemoryNotificationRepository([List<AppNotification>? initialItems])
-    : items = List<AppNotification>.from(
-        initialItems ?? const <AppNotification>[],
+  InMemoryNotificationRepository([List<VeloraNotification>? initialItems])
+    : items = List<VeloraNotification>.from(
+        initialItems ?? const <VeloraNotification>[],
       );
 
   @override
-  Future<List<AppNotification>> index() async =>
-      List<AppNotification>.from(items);
+  Future<List<VeloraNotification>> index() async =>
+      List<VeloraNotification>.from(items);
 
   @override
   Future<void> markAsRead(String id) async {

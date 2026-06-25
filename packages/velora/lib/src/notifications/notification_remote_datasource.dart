@@ -8,12 +8,12 @@ class NotificationRemoteDataSource {
 
   NotificationRemoteDataSource({required this.api, required this.config});
 
-  Future<List<AppNotification>> index() async {
-    final response = await api.get<List<AppNotification>>(
+  Future<List<VeloraNotification>> index() async {
+    final response = await api.get<List<VeloraNotification>>(
       config.notificationsEndpoint,
       parser: _parseNotifications,
     );
-    return response.data ?? const <AppNotification>[];
+    return response.data ?? const <VeloraNotification>[];
   }
 
   Future<void> markAsRead(String id) async {
@@ -42,7 +42,7 @@ class NotificationRemoteDataSource {
     );
   }
 
-  List<AppNotification> _parseNotifications(Object? value) {
+  List<VeloraNotification> _parseNotifications(Object? value) {
     final items = switch (value) {
       List() => value,
       {'data': final List data} => data,
@@ -50,11 +50,10 @@ class NotificationRemoteDataSource {
       _ => const <Object?>[],
     };
 
+    final parse = config.notificationParser ?? AppNotification.fromJson;
     return items
         .whereType<Map>()
-        .map(
-          (item) => AppNotification.fromJson(Map<String, dynamic>.from(item)),
-        )
+        .map((item) => parse(Map<String, dynamic>.from(item)))
         .toList(growable: false);
   }
 

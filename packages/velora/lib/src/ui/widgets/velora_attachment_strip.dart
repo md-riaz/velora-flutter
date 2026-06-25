@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../media/velora_attachment.dart';
 import 'velora_attachment_chip.dart';
 
+const _kStripHeight = 136.0;
+
 /// Horizontally scrollable strip of [VeloraAttachmentChip]s.
 ///
 /// Place above the input bar in chat or form screens.  Wire callbacks to
@@ -42,7 +44,7 @@ class VeloraAttachmentStrip extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return Container(
-      height: 136,
+      height: _kStripHeight,
       decoration: BoxDecoration(
         color: scheme.surface,
         border: Border(
@@ -53,7 +55,7 @@ class VeloraAttachmentStrip extends StatelessWidget {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: attachments.length + (onPickTap != null ? 1 : 0),
-        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           if (index == attachments.length) {
             return _AddMoreButton(onTap: onPickTap!, scheme: scheme);

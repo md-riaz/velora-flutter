@@ -1,59 +1,45 @@
-/// The only contract Velora requires from any user model.
+/// Interface for authenticated user models.
 ///
-/// Implement this in your own class — Velora never forces a fixed shape on
-/// your domain. Keep every field your app needs; the framework only reads
-/// [roles], [permissions], and [features] for access-control decisions.
+/// Implement this (or use the built-in [AuthUser]) to bring your own user model
+/// with custom fields, ID types, and parsing logic.
 ///
 /// ```dart
 /// class AppUser implements VeloraUser {
-///   final String id;       // UUID? int? String — your choice
-///   final String username;
-///   final String? phone;
-///   final String? email;
-///   final String avatarUrl;
-///
+///   final String uuid;          // UUID instead of int
+///   final String name;
+///   final String? phone;        // phone/OTP auth — no email
 ///   @override final List<String> roles;
 ///   @override final List<String> permissions;
 ///   @override final List<String> features;
 ///
-///   static AppUser fromJson(Map<String, dynamic> json) => AppUser(...);
+///   static AppUser fromJson(Map<String, dynamic> json) => AppUser(
+///     uuid: json['uuid']?.toString() ?? '',
+///     name: json['name']?.toString() ?? '',
+///     phone: json['phone']?.toString(),
+///     roles: _list(json['roles']),
+///     permissions: _list(json['permissions']),
+///     features: _list(json['features']),
+///   );
 ///
-///   @override
-///   Map<String, dynamic> toJson() => {...};
+///   @override Map<String, dynamic> toJson() => {'uuid': uuid, ...};
 /// }
-/// ```
-///
-/// Register the parser at boot so Velora knows how to restore the session:
-/// ```dart
-/// VeloraAuthConfig(userParser: AppUser.fromJson)
-/// ```
-///
-/// Access the typed user anywhere:
-/// ```dart
-/// final user = Velora.auth.userAs<AppUser>();
 /// ```
 abstract class VeloraUser {
   List<String> get roles;
   List<String> get permissions;
   List<String> get features;
-
-  /// Called by Velora to persist the session across restarts.
-  /// Return a Map that [VeloraAuthConfig.userParser] can reconstruct.
   Map<String, dynamic> toJson();
 }
 
-/// Built-in user model — a ready-to-use [VeloraUser] implementation for apps
-/// that don't need custom fields beyond id, name, email, roles, permissions,
-/// and features.
+/// Built-in user model — use as-is when your backend matches the default shape.
 ///
-/// For anything beyond these fields, implement [VeloraUser] directly in your
-/// own class and register it via [VeloraAuthConfig.userParser].
+/// Override with your own class implementing [VeloraUser] when you need custom
+/// fields, a different ID type, or non-standard JSON keys.
 class AuthUser implements VeloraUser {
   final int id;
   final String name;
 
-  /// Null when the backend does not use email-based auth (phone / OTP /
-  /// username-only flows). Always check for null before displaying or submitting.
+  /// Nullable — backends using phone/OTP/username auth may not send an email.
   final String? email;
 
   @override

@@ -29,10 +29,9 @@ class HomeController extends VeloraPaginatedController<ConversationModel> {
   void search(String query) => searchQuery.value = query;
 
   Future<void> startNewChat() async {
-    await run(() async {
-      final conv = await _dataSource.create('New conversation');
-      items.insert(0, conv);
-      Velora.nav.to(AppRoutes.chat, arguments: conv);
-    });
+    final conv = await run(() => _dataSource.create('New conversation'));
+    if (conv == null) return;
+    await Velora.nav.to(AppRoutes.chat, arguments: conv);
+    await reload();
   }
 }

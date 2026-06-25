@@ -10,7 +10,7 @@ Widget buildFileImagePreview(VeloraAttachment a, ColorScheme scheme) =>
       width: 112,
       height: 72,
       fit: BoxFit.cover,
-      errorBuilder: (_, _, _) => SizedBox(
+      errorBuilder: (_, __, ___) => SizedBox(
         width: 112,
         height: 72,
         child: Center(

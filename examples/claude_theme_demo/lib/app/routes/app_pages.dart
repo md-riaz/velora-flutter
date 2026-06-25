@@ -1,4 +1,4 @@
-import 'package:velora/velora.dart';
+import 'package:get/get.dart';
 
 import '../modules/chat/chat_controller.dart';
 import '../modules/chat/chat_page.dart';
@@ -12,14 +12,11 @@ class AppPages {
       name: AppRoutes.home,
       page: () => const HomePage(),
       binding: BindingsBuilder(() => Get.lazyPut(() => HomeController())),
-      // In a real app, guard protected routes like so:
-      //   middlewares: Velora.authOnly,
     ),
     GetPage(
       name: AppRoutes.chat,
       page: () => const ChatPage(),
       binding: BindingsBuilder(() => Get.lazyPut(() => ChatController())),
-      // middlewares: Velora.authOnly,
     ),
   ];
 }

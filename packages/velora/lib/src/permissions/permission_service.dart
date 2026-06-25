@@ -15,7 +15,7 @@ class PermissionService extends GetxService {
   /// Returns true if the current user may perform [permission].
   ///
   /// Uses [VeloraAuthConfig.permissionResolver] when configured; otherwise
-  /// checks whether [permission] appears in [AuthUser.permissions].
+  /// checks whether [permission] appears in [VeloraUser.permissions].
   bool can(String permission) {
     final user = auth.user;
     if (user == null) return false;

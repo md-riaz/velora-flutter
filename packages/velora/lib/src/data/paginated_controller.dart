@@ -29,6 +29,98 @@ import '../validation/velora_controller.dart';
 ///   },
 /// ))
 /// ```
+/// Result type for cursor/keyset-based pagination.
+///
+/// [C] is the cursor type — typically [String] (opaque token) or [int] (ID).
+///
+/// ```dart
+/// CursorPage<UserModel, String>(
+///   data: users,
+///   nextCursor: response.meta['next_cursor'],
+/// )
+/// ```
+class CursorPage<T, C> {
+  final List<T> data;
+
+  /// Cursor for the next page. `null` when there are no more pages.
+  final C? nextCursor;
+
+  const CursorPage({required this.data, this.nextCursor});
+
+  bool get hasMore => nextCursor != null;
+}
+
+/// Base controller for screens backed by a cursor/keyset-paginated data source.
+///
+/// Subclasses implement [fetchNextPage] with the cursor from the previous
+/// response (null on the first call).  The controller handles accumulation,
+/// load-more, and pull-to-refresh.
+///
+/// ```dart
+/// class ActivityController extends VeloraCursorController<ActivityModel, String> {
+///   @override
+///   Future<CursorPage<ActivityModel, String>> fetchNextPage(String? cursor) =>
+///       _service.getActivity(cursor: cursor);
+/// }
+///
+/// // In the view:
+/// Obx(() => ListView.builder(
+///   itemCount: controller.items.length + (controller.hasMore ? 1 : 0),
+///   itemBuilder: (ctx, i) {
+///     if (i == controller.items.length) {
+///       controller.loadMore();
+///       return const CircularProgressIndicator.adaptive();
+///     }
+///     return ActivityTile(activity: controller.items[i]);
+///   },
+/// ))
+/// ```
+abstract class VeloraCursorController<T, C> extends VeloraController {
+  final items = <T>[].obs;
+  final isRefreshing = false.obs;
+  C? _nextCursor;
+  bool _hasMore = true;
+
+  bool get hasMore => _hasMore;
+
+  /// Fetch the next page.  [cursor] is null on the first call and non-null
+  /// on subsequent calls.  Implement in your subclass.
+  Future<CursorPage<T, C>> fetchNextPage(C? cursor);
+
+  @override
+  void onInit() {
+    super.onInit();
+    reload();
+  }
+
+  /// Clears and reloads from the beginning.  Safe to call on pull-to-refresh.
+  Future<void> reload() async {
+    if (isRefreshing.value || loading.value) return;
+    isRefreshing.value = true;
+    _nextCursor = null;
+    _hasMore = true;
+    items.clear();
+    clearError();
+    await _loadPage();
+    isRefreshing.value = false;
+  }
+
+  Future<void> loadMore() async {
+    if (loading.value || !_hasMore) return;
+    await _loadPage();
+  }
+
+  Future<void> _loadPage() async {
+    final cursor = _nextCursor;
+    await run(() async {
+      final result = await fetchNextPage(cursor);
+      items.addAll(result.data);
+      _nextCursor = result.nextCursor;
+      _hasMore = result.hasMore;
+    });
+  }
+}
+
 abstract class VeloraPaginatedController<T> extends VeloraController {
   final items = <T>[].obs;
   final isRefreshing = false.obs;

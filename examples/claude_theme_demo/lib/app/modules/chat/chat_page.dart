@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'package:get/get.dart';
 import 'package:velora/velora.dart';
 
 import '../../../resources/theme/claude_colors.dart';
@@ -381,7 +381,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
           const SizedBox(width: 10),
           AnimatedBuilder(
             animation: _anim,
-            builder: (_, _) => Row(
+            builder: (_, __) => Row(
               children: List.generate(3, (i) {
                 final delay = i * 0.3;
                 final t = ((_anim.value - delay) % 1.0).clamp(0.0, 1.0);
@@ -566,14 +566,26 @@ class _InputBar extends StatelessWidget {
                 color: isTyping ? scheme.surfaceContainerHighest : ClaudeColors.primary,
                 shape: BoxShape.circle,
               ),
-              child: IconButton(
-                icon: Icon(
-                  isTyping ? Icons.stop_rounded : Icons.arrow_upward_rounded,
-                  color: Colors.white,
-                  size: 20,
-                ),
-                onPressed: isTyping ? null : controller.sendMessage,
-              ),
+              child: isTyping
+                  ? const Padding(
+                      padding: EdgeInsets.all(10),
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      ),
+                    )
+                  : IconButton(
+                      icon: const Icon(
+                        Icons.arrow_upward_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                      onPressed: controller.sendMessage,
+                    ),
             );
           }),
         ],

@@ -29,6 +29,7 @@ class VeloraLoadingButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return FilledButton(
       style: style,
       onPressed: loading ? null : onPressed,
@@ -36,10 +37,13 @@ class VeloraLoadingButton extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         child: loading
             ? loadingChild ??
-                const SizedBox(
+                SizedBox(
                   width: 18,
                   height: 18,
-                  child: CircularProgressIndicator.adaptive(strokeWidth: 2.5),
+                  child: CircularProgressIndicator.adaptive(
+                    strokeWidth: 2.5,
+                    valueColor: AlwaysStoppedAnimation<Color>(scheme.onPrimary),
+                  ),
                 )
             : child,
       ),

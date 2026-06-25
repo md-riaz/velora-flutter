@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:velora/velora.dart';
 
 class NotificationTile extends StatelessWidget {
-  final AppNotification notification;
+  final VeloraNotification notification;
   final VoidCallback? onTap;
   final VoidCallback? onMarkRead;
 
@@ -16,6 +16,12 @@ class NotificationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final unread = notification.isUnread;
+    // createdAt is not part of VeloraNotification — access it only when the
+    // concrete type is AppNotification (the default, no custom parser set).
+    final createdAt =
+        notification is AppNotification
+            ? (notification as AppNotification).createdAt
+            : null;
 
     return Card(
       child: ListTile(
@@ -36,8 +42,10 @@ class NotificationTile extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 4),
-            Text(_relativeTime(notification.createdAt)),
+            if (createdAt != null) ...[
+              const SizedBox(height: 4),
+              Text(_relativeTime(createdAt)),
+            ],
           ],
         ),
         trailing: unread

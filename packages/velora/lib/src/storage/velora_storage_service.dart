@@ -5,12 +5,16 @@ import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class VeloraStorageService extends GetxService {
-  static const _tokenKey = 'velora.auth.token';
+  static const _defaultTokenKey = 'velora.auth.token';
+  final String _tokenKey;
   late final SharedPreferences _prefs;
   final FlutterSecureStorage _secureStorage;
 
-  VeloraStorageService({FlutterSecureStorage? secureStorage})
-    : _secureStorage = secureStorage ?? const FlutterSecureStorage();
+  VeloraStorageService({
+    FlutterSecureStorage? secureStorage,
+    String tokenKey = 'velora.auth.token',
+  })  : _secureStorage = secureStorage ?? const FlutterSecureStorage(),
+        _tokenKey = tokenKey;
 
   Future<VeloraStorageService> init() async {
     _prefs = await SharedPreferences.getInstance();
@@ -65,8 +69,18 @@ class VeloraStorageService extends GetxService {
 
   Future<String?> getToken() async {
     try {
-      return await _secureStorage.read(key: _tokenKey) ??
+      var token = await _secureStorage.read(key: _tokenKey) ??
           _prefs.getString(_tokenKey);
+      if (token != null) return token;
+      // Migrate legacy default key when a custom key is in use.
+      if (_tokenKey == _defaultTokenKey) return null;
+      token = await _secureStorage.read(key: _defaultTokenKey) ??
+          _prefs.getString(_defaultTokenKey);
+      if (token == null) return null;
+      await setToken(token);
+      await _secureStorage.delete(key: _defaultTokenKey);
+      await _prefs.remove(_defaultTokenKey);
+      return token;
     } catch (_) {
       return _prefs.getString(_tokenKey);
     }
@@ -75,9 +89,15 @@ class VeloraStorageService extends GetxService {
   Future<void> clearToken() async {
     try {
       await _secureStorage.delete(key: _tokenKey);
+      if (_tokenKey != _defaultTokenKey) {
+        await _secureStorage.delete(key: _defaultTokenKey);
+      }
     } catch (_) {
       // Shared preferences fallback below still clears token.
     }
     await _prefs.remove(_tokenKey);
+    if (_tokenKey != _defaultTokenKey) {
+      await _prefs.remove(_defaultTokenKey);
+    }
   }
 }
