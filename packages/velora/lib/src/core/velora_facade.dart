@@ -4,17 +4,18 @@ import '../auth/auth_service.dart';
 import '../auth/logout_coordinator.dart';
 import '../config/velora_config.dart';
 import '../features/feature_service.dart';
+import '../http/velora_api_interceptor.dart';
 import '../http/velora_api_service.dart';
-import '../notifications/adapters/fcm_push_adapter.dart';
 import '../notifications/adapters/local_notification_adapter.dart';
 import '../notifications/adapters/noop_push_adapter.dart';
-import '../notifications/notification_config.dart';
+import '../notifications/adapters/push_adapter.dart';
 import '../notifications/notification_remote_datasource.dart';
 import '../notifications/notification_repository.dart';
 import '../notifications/notification_service.dart';
 import '../notifications/velora_notify.dart';
 import '../permissions/permission_service.dart';
 import '../routing/velora_nav.dart';
+import '../routing/velora_route_guard.dart';
 import '../storage/velora_storage_service.dart';
 import '../theme/theme_service.dart';
 import '../ui/velora_dialog.dart';
@@ -45,12 +46,50 @@ class Velora {
 
   static Future<void> logout() => auth.logout();
 
-  static Future<void> boot({required VeloraConfig config}) async {
+  // ---------------------------------------------------------------------------
+  // Route guard shorthands — use directly in GetPage.middlewares:
+  //
+  //   GetPage(name: '/home',  page: () => HomePage(),  middlewares: Velora.authOnly)
+  //   GetPage(name: '/login', page: () => LoginPage(), middlewares: Velora.guestOnly)
+  // ---------------------------------------------------------------------------
+
+  /// Requires the user to be authenticated; redirects to login otherwise.
+  static List<GetMiddleware> get authOnly =>
+      [VeloraMiddleware(guards: const [VeloraAuthGuard()])];
+
+  /// Requires the user to be a guest; redirects to [authenticatedRoute] otherwise.
+  static List<GetMiddleware> guestOnly({String authenticatedRoute = '/'}) =>
+      [VeloraMiddleware(guards: [VeloraGuestGuard(authenticatedRoute: authenticatedRoute)])];
+
+  /// Wrap arbitrary guards into a middleware list.
+  static List<GetMiddleware> guard(List<VeloraRouteGuard> guards) =>
+      [VeloraMiddleware(guards: guards)];
+
+  // ---------------------------------------------------------------------------
+
+  static Future<void> boot({
+    required VeloraConfig config,
+
+    /// HTTP interceptors applied (in order) after the built-in auth injector.
+    List<VeloraApiInterceptor> interceptors = const [],
+
+    /// Custom push adapter. Defaults to [NoopPushAdapter].
+    /// Pass a [FcmPushAdapter] (wired with firebase_messaging) for real push.
+    PushAdapter? pushAdapter,
+  }) async {
     Velora.config = config;
+
+    // Also register VeloraConfig in GetX so guards can find it.
+    Get.put<VeloraConfig>(config, permanent: true);
+
     final storage = await VeloraStorageService().init();
     Get.put<VeloraStorageService>(storage, permanent: true);
 
-    final api = VeloraApiService(config: config, storage: storage);
+    final api = VeloraApiService(
+      config: config,
+      storage: storage,
+      interceptors: interceptors,
+    );
     Get.put<VeloraApiService>(api, permanent: true);
 
     final lifecycle = VeloraLifecycleRegistry();
@@ -67,22 +106,19 @@ class Velora {
     ).init();
     Get.put<AuthService>(auth, permanent: true);
     auth.attachLogoutCoordinator(logoutCoordinator);
+
     final notificationRemote = NotificationRemoteDataSource(
       api: api,
       config: config.notifications,
     );
     Get.put<NotificationRemoteDataSource>(notificationRemote, permanent: true);
 
-    final notificationRepository = NotificationRepositoryImpl(
-      notificationRemote,
-    );
+    final notificationRepository = NotificationRepositoryImpl(notificationRemote);
     Get.put<NotificationRepository>(notificationRepository, permanent: true);
 
     final notify = VeloraNotify(
       repository: notificationRepository,
-      pushAdapter: config.notifications.provider == PushProvider.fcm
-          ? FcmPushAdapter()
-          : NoopPushAdapter(),
+      pushAdapter: pushAdapter ?? NoopPushAdapter(),
       localAdapter: InMemoryLocalNotificationAdapter(),
     );
     Get.put<VeloraNotify>(notify, permanent: true);

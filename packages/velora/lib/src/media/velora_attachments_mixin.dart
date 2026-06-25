@@ -40,8 +40,6 @@ mixin VeloraAttachmentsMixin {
   /// Override in your controller to swap in the real upload adapter.
   VeloraUploadAdapter get uploadAdapter => const VeloraMockUploadAdapter();
 
-  VeloraMediaService get _media => Get.find<VeloraMediaService>();
-
   /// Opens the source picker bottom sheet and adds the selected files.
   ///
   /// If [config.uploadImmediately] is true, picked files are uploaded right

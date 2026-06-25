@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies (velora)
+        working-directory: packages/velora
+        run: flutter pub get
+
+      - name: Analyze velora package
+        working-directory: packages/velora
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run velora tests
+        working-directory: packages/velora
+        run: |
+          if [ -d "test" ] && find test -name '*_test.dart' -print -quit | grep -q .; then
+            flutter test --coverage
+          else
+            echo "No test files found — skipping"
+          fi
+
+      - name: Install dependencies (claude_theme_demo)
+        working-directory: examples/claude_theme_demo
+        run: flutter pub get
+
+      - name: Analyze claude_theme_demo
+        working-directory: examples/claude_theme_demo
+        run: flutter analyze --no-fatal-infos
+
+      - name: Install dependencies (velora_starter)
+        working-directory: examples/velora_starter
+        run: flutter pub get
+
+      - name: Analyze velora_starter
+        working-directory: examples/velora_starter
+        run: flutter analyze --no-fatal-infos

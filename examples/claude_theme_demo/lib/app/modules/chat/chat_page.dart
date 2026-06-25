@@ -381,7 +381,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
           const SizedBox(width: 10),
           AnimatedBuilder(
             animation: _anim,
-            builder: (_, __) => Row(
+            builder: (_, _) => Row(
               children: List.generate(3, (i) {
                 final delay = i * 0.3;
                 final t = ((_anim.value - delay) % 1.0).clamp(0.0, 1.0);

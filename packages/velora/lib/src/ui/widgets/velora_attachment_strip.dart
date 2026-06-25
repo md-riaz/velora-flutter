@@ -53,7 +53,7 @@ class VeloraAttachmentStrip extends StatelessWidget {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: attachments.length + (onPickTap != null ? 1 : 0),
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           if (index == attachments.length) {
             return _AddMoreButton(onTap: onPickTap!, scheme: scheme);

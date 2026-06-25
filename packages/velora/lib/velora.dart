@@ -1,3 +1,5 @@
+export 'package:get/get.dart';
+
 export 'src/auth/auth_service.dart';
 export 'src/auth/auth_user.dart';
 export 'src/auth/logout_coordinator.dart';
@@ -10,6 +12,7 @@ export 'src/data/paginated_controller.dart';
 export 'src/data/repository.dart';
 export 'src/features/feature_service.dart';
 export 'src/http/api_exception.dart';
+export 'src/http/velora_api_interceptor.dart';
 export 'src/media/velora_attachment.dart';
 export 'src/media/velora_attachments_mixin.dart';
 export 'src/media/velora_media_service.dart';
@@ -32,6 +35,7 @@ export 'src/permissions/permission_service.dart';
 export 'src/permissions/permission_widgets.dart';
 export 'src/responsive/responsive.dart';
 export 'src/routing/velora_nav.dart';
+export 'src/routing/velora_route_guard.dart';
 export 'src/storage/velora_storage_service.dart';
 export 'src/support/paginated_data.dart';
 export 'src/theme/theme_service.dart';
