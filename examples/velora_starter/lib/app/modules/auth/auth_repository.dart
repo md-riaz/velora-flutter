@@ -3,10 +3,9 @@ import 'package:velora/velora.dart';
 import 'auth_remote_data_source.dart';
 
 abstract class StarterAuthRepository {
-  Future<ApiResponse<Map<String, dynamic>>> login({
-    required String email,
-    required String password,
-  });
+  Future<ApiResponse<Map<String, dynamic>>> login(
+    Map<String, dynamic> credentials,
+  );
 
   Future<ApiResponse<Map<String, dynamic>>> me(String token);
 
@@ -19,11 +18,10 @@ class StarterAuthRepositoryImpl implements StarterAuthRepository {
   const StarterAuthRepositoryImpl(this.remote);
 
   @override
-  Future<ApiResponse<Map<String, dynamic>>> login({
-    required String email,
-    required String password,
-  }) {
-    return remote.login(email: email, password: password);
+  Future<ApiResponse<Map<String, dynamic>>> login(
+    Map<String, dynamic> credentials,
+  ) {
+    return remote.login(credentials);
   }
 
   @override

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+
 import 'package:velora/velora.dart';
 
 import '../../notifications_routes.dart';

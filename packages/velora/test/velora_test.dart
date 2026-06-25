@@ -5,7 +5,6 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:get/get.dart' hide Response;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:velora/velora.dart';
 

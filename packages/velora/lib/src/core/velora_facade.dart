@@ -5,6 +5,7 @@ import '../auth/auth_user.dart';
 import '../auth/logout_coordinator.dart';
 import '../config/velora_config.dart';
 import '../features/feature_service.dart';
+import '../http/velora_api_interceptor.dart';
 import '../http/velora_api_service.dart';
 import '../media/velora_media_service.dart';
 import '../notifications/adapters/fcm_push_adapter.dart';
@@ -18,6 +19,7 @@ import '../notifications/notification_service.dart';
 import '../notifications/velora_notify.dart';
 import '../permissions/permission_service.dart';
 import '../routing/velora_nav.dart';
+import '../routing/velora_route_guard.dart';
 import '../storage/velora_storage_service.dart';
 import '../theme/theme_service.dart';
 import '../ui/velora_dialog.dart';
@@ -60,8 +62,32 @@ class Velora {
 
   static Future<void> logout() => auth.logout();
 
+  // ---------------------------------------------------------------------------
+  // Route guard shorthands — use directly in GetPage.middlewares:
+  //
+  //   GetPage(name: '/home',  page: () => HomePage(),  middlewares: Velora.authOnly)
+  //   GetPage(name: '/login', page: () => LoginPage(), middlewares: Velora.guestOnly)
+  // ---------------------------------------------------------------------------
+
+  /// Requires the user to be authenticated; redirects to login otherwise.
+  static List<GetMiddleware> get authOnly =>
+      [VeloraMiddleware(guards: const [VeloraAuthGuard()])];
+
+  /// Requires the user to be a guest; redirects to [authenticatedRoute] otherwise.
+  static List<GetMiddleware> guestOnly({String authenticatedRoute = '/'}) =>
+      [VeloraMiddleware(guards: [VeloraGuestGuard(authenticatedRoute: authenticatedRoute)])];
+
+  /// Wrap arbitrary guards into a middleware list.
+  static List<GetMiddleware> guard(List<VeloraRouteGuard> guards) =>
+      [VeloraMiddleware(guards: guards)];
+
+  // ---------------------------------------------------------------------------
+
   static Future<void> boot({
     required VeloraConfig config,
+
+    /// HTTP interceptors applied (in order) after the built-in auth injector.
+    List<VeloraApiInterceptor> interceptors = const [],
 
     /// Custom push adapter. Defaults to [FcmPushAdapter] when provider is FCM,
     /// [NoopPushAdapter] otherwise.
@@ -69,7 +95,7 @@ class Velora {
   }) async {
     Velora.config = config;
 
-    // Also register VeloraConfig in GetX so any service can look it up.
+    // Also register VeloraConfig in GetX so guards can find it.
     Get.put<VeloraConfig>(config, permanent: true);
 
     final storage = await VeloraStorageService(
@@ -77,7 +103,11 @@ class Velora {
     ).init();
     Get.put<VeloraStorageService>(storage, permanent: true);
 
-    final api = VeloraApiService(config: config, storage: storage);
+    final api = VeloraApiService(
+      config: config,
+      storage: storage,
+      interceptors: interceptors,
+    );
     Get.put<VeloraApiService>(api, permanent: true);
 
     final lifecycle = VeloraLifecycleRegistry();

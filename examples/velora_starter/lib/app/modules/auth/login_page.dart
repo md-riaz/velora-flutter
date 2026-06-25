@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+
 import 'package:velora/velora.dart';
 
 import '../../routes/app_routes.dart';
@@ -26,10 +26,10 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _demoLogin() async {
     setState(() => loading = true);
-    final response = await Get.find<StarterAuthService>().login(
-      email: email.text,
-      password: password.text,
-    );
+    final response = await Get.find<StarterAuthService>().login({
+      'email': email.text,
+      'password': password.text,
+    });
     if (!mounted) return;
     setState(() => loading = false);
 
