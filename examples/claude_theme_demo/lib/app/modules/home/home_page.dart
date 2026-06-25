@@ -155,10 +155,13 @@ class HomePage extends GetView<HomeController> {
                     index >= items.length - 3) {
                   controller.loadMore();
                 }
+                final conv = items[index];
                 final tile = _ConversationTile(
-                  conversation: items[index],
-                  onTap: () =>
-                      Velora.nav.to(AppRoutes.chat, arguments: items[index]),
+                  conversation: conv,
+                  onTap: () async {
+                    await Velora.nav.to(AppRoutes.chat, arguments: conv);
+                    controller.reload();
+                  },
                 );
                 if (index == items.length - 1) return tile;
                 return Column(
@@ -263,9 +266,10 @@ class _AppDrawer extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: textTheme.bodyMedium,
                     ),
-                    onTap: () {
+                    onTap: () async {
                       Navigator.pop(context);
-                      Velora.nav.to(AppRoutes.chat, arguments: conv);
+                      await Velora.nav.to(AppRoutes.chat, arguments: conv);
+                      controller.reload();
                     },
                     dense: true,
                     contentPadding:

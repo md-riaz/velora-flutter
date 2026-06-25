@@ -129,11 +129,9 @@ class ChatController extends VeloraController with VeloraAttachmentsMixin {
   // ---------------------------------------------------------------------------
 
   Future<void> renameConversation() async {
-    final dialogController = TextEditingController(text: conversation.value.title);
     final newTitle = await Get.dialog<String>(
-      _RenameDialog(controller: dialogController),
+      _RenameDialog(initialTitle: conversation.value.title),
     );
-    dialogController.dispose();
     if (newTitle == null || newTitle.trim().isEmpty) return;
     final trimmed = newTitle.trim();
     await run(() async {
@@ -198,16 +196,35 @@ class ChatController extends VeloraController with VeloraAttachmentsMixin {
 // Rename dialog
 // ---------------------------------------------------------------------------
 
-class _RenameDialog extends StatelessWidget {
-  final TextEditingController controller;
-  const _RenameDialog({required this.controller});
+class _RenameDialog extends StatefulWidget {
+  final String initialTitle;
+  const _RenameDialog({required this.initialTitle});
+
+  @override
+  State<_RenameDialog> createState() => _RenameDialogState();
+}
+
+class _RenameDialogState extends State<_RenameDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialTitle);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Rename conversation'),
       content: TextField(
-        controller: controller,
+        controller: _controller,
         autofocus: true,
         decoration: const InputDecoration(hintText: 'Conversation title'),
         onSubmitted: (v) => Get.back(result: v),
@@ -218,7 +235,7 @@ class _RenameDialog extends StatelessWidget {
           child: const Text('Cancel'),
         ),
         FilledButton(
-          onPressed: () => Get.back(result: controller.text),
+          onPressed: () => Get.back(result: _controller.text),
           child: const Text('Rename'),
         ),
       ],

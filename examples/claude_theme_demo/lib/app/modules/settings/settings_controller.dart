@@ -8,16 +8,10 @@ const _kFeatureArtifacts = 'chat.artifacts';
 
 /// Demonstrates [ThemeService] and [FeatureService] patterns.
 ///
-/// On [onInit] the demo features are registered with [FeatureService] so the
-/// settings page can toggle them with [FeatureService.enable] /
-/// [FeatureService.disable].
+/// Demo features are registered once at app startup (see [main]) so they
+/// persist across [SettingsController] lifecycles.  The controller toggles
+/// them with [FeatureService.enable] / [FeatureService.disable].
 class SettingsController extends VeloraController {
-  @override
-  void onInit() {
-    super.onInit();
-    _registerDemoFeatures();
-  }
-
   // ---------------------------------------------------------------------------
   // Theme
   // ---------------------------------------------------------------------------
@@ -46,12 +40,6 @@ class SettingsController extends VeloraController {
       Velora.feature.disable(featureId);
     } else {
       Velora.feature.enable(featureId);
-    }
-  }
-
-  void _registerDemoFeatures() {
-    for (final f in demoFeatures) {
-      Velora.feature.register(VeloraFeature(id: f.id, name: f.label));
     }
   }
 }
