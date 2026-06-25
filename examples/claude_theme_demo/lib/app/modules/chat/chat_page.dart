@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:velora/velora.dart';
 
 import '../../../resources/theme/claude_colors.dart';
@@ -57,16 +56,33 @@ class ChatPage extends GetView<ChatController> {
               if (msgs.isEmpty) {
                 return _WelcomePrompts(tokens: tokens);
               }
+
+              // Total item count: optional load-earlier header + messages + optional typing indicator
+              final hasEarlier = controller.hasEarlier.value;
+              final isTyping = controller.isTyping.value;
+              final headerCount = hasEarlier ? 1 : 0;
+              final typingCount = isTyping ? 1 : 0;
+              final totalItems = headerCount + msgs.length + typingCount;
+
               return ListView.builder(
                 controller: controller.scrollController,
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                itemCount: msgs.length + (controller.isTyping.value ? 1 : 0),
+                itemCount: totalItems,
                 itemBuilder: (context, index) {
-                  if (index == msgs.length) {
+                  // Load-earlier header
+                  if (hasEarlier && index == 0) {
+                    return _LoadEarlierButton(controller: controller);
+                  }
+
+                  final msgIndex = index - headerCount;
+
+                  // Typing indicator at the end
+                  if (msgIndex == msgs.length) {
                     return _TypingIndicator(tokens: tokens);
                   }
+
                   return _MessageBubble(
-                    message: msgs[index],
+                    message: msgs[msgIndex],
                     tokens: tokens,
                   );
                 },
@@ -83,6 +99,54 @@ class ChatPage extends GetView<ChatController> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Load-earlier header
+// ---------------------------------------------------------------------------
+
+class _LoadEarlierButton extends StatelessWidget {
+  final ChatController controller;
+  const _LoadEarlierButton({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Obx(() {
+          if (controller.loadingEarlier.value) {
+            return const Padding(
+              padding: EdgeInsets.all(12),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+              ),
+            );
+          }
+          return TextButton.icon(
+            onPressed: controller.loadEarlier,
+            icon: Icon(Icons.keyboard_arrow_up, size: 18, color: scheme.onSurfaceVariant),
+            label: Text(
+              'Load earlier messages',
+              style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13),
+            ),
+            style: TextButton.styleFrom(
+              backgroundColor: scheme.surfaceContainerHighest,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// App bar
+// ---------------------------------------------------------------------------
+
 class _ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
   final ColorScheme scheme;
   const _ChatAppBar({required this.scheme});
@@ -93,45 +157,158 @@ class _ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final controller = Get.find<ChatController>();
+
     return AppBar(
       leading: IconButton(
         icon: const Icon(Icons.arrow_back_ios_new, size: 20),
         onPressed: () => Velora.nav.back(),
       ),
-      title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            Get.find<ChatController>().conversation.title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-            decoration: BoxDecoration(
-              color: ClaudeColors.primary.withAlpha(26),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Text(
-              'claude-opus-4',
-              style: textTheme.labelSmall?.copyWith(
-                color: ClaudeColors.primary,
-                fontWeight: FontWeight.w600,
+      title: Obx(() => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                controller.conversation.value.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
               ),
-            ),
-          ),
-        ],
-      ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                decoration: BoxDecoration(
+                  color: ClaudeColors.primary.withAlpha(26),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  'claude-opus-4',
+                  style: textTheme.labelSmall?.copyWith(
+                    color: ClaudeColors.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          )),
       actions: [
         IconButton(
           icon: const Icon(Icons.more_horiz),
-          onPressed: () {},
+          onPressed: () => _showMoreMenu(context, controller),
         ),
       ],
     );
   }
+
+  void _showMoreMenu(BuildContext context, ChatController controller) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => SafeArea(
+        child: Obx(() {
+          final isStarred = controller.conversation.value.isStarred;
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 8),
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: scheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Text(
+                  controller.conversation.value.title,
+                  style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const Divider(height: 1),
+              _MenuAction(
+                icon: Icons.drive_file_rename_outline,
+                label: 'Rename',
+                onTap: () {
+                  Navigator.pop(context);
+                  controller.renameConversation();
+                },
+              ),
+              _MenuAction(
+                icon: isStarred ? Icons.star : Icons.star_border,
+                label: isStarred ? 'Remove star' : 'Star conversation',
+                onTap: () {
+                  Navigator.pop(context);
+                  controller.toggleStar();
+                },
+              ),
+              _MenuAction(
+                icon: Icons.delete_sweep_outlined,
+                label: 'Clear history',
+                onTap: () {
+                  Navigator.pop(context);
+                  controller.clearHistory();
+                },
+              ),
+              _MenuAction(
+                icon: Icons.delete_outline,
+                label: 'Delete conversation',
+                color: scheme.error,
+                onTap: () {
+                  Navigator.pop(context);
+                  controller.deleteConversation();
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          );
+        }),
+      ),
+    );
+  }
 }
+
+class _MenuAction extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final Color? color;
+
+  const _MenuAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final effectiveColor = color ?? scheme.onSurface;
+
+    return ListTile(
+      leading: Icon(icon, size: 22, color: effectiveColor),
+      title: Text(
+        label,
+        style: TextStyle(color: effectiveColor, fontSize: 15),
+      ),
+      onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+      dense: true,
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Message bubbles
+// ---------------------------------------------------------------------------
 
 class _MessageBubble extends StatelessWidget {
   final ChatMessage message;
@@ -198,7 +375,6 @@ class _AssistantMessage extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Claude avatar
           Container(
             width: 28,
             height: 28,
@@ -234,8 +410,10 @@ class _AssistantMessage extends StatelessWidget {
   }
 }
 
-/// Renders message content, detecting fenced code blocks (```...```) and
-/// wrapping them in a styled code block container.
+// ---------------------------------------------------------------------------
+// Rich message content (text + fenced code blocks)
+// ---------------------------------------------------------------------------
+
 class _RichMessageContent extends StatelessWidget {
   final String content;
   final TextTheme textTheme;
@@ -326,6 +504,10 @@ class _CodeBlock extends StatelessWidget {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Typing indicator
+// ---------------------------------------------------------------------------
+
 class _TypingIndicator extends StatefulWidget {
   final ClaudeTokens tokens;
   const _TypingIndicator({required this.tokens});
@@ -381,7 +563,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
           const SizedBox(width: 10),
           AnimatedBuilder(
             animation: _anim,
-            builder: (_, __) => Row(
+            builder: (_, child) => Row(
               children: List.generate(3, (i) {
                 final delay = i * 0.3;
                 final t = ((_anim.value - delay) % 1.0).clamp(0.0, 1.0);
@@ -404,7 +586,10 @@ class _TypingIndicatorState extends State<_TypingIndicator>
   }
 }
 
-/// Shown when a conversation is empty — surfaces suggested prompt chips.
+// ---------------------------------------------------------------------------
+// Welcome prompts (empty state)
+// ---------------------------------------------------------------------------
+
 class _WelcomePrompts extends StatelessWidget {
   final ClaudeTokens tokens;
   const _WelcomePrompts({required this.tokens});
@@ -478,7 +663,12 @@ class _WelcomePrompts extends StatelessWidget {
                       children: [
                         Icon(p.$2, size: 16, color: ClaudeColors.primary),
                         const SizedBox(width: 6),
-                        Text(p.$1, style: textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500)),
+                        Text(
+                          p.$1,
+                          style: textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -491,6 +681,10 @@ class _WelcomePrompts extends StatelessWidget {
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Input bar
+// ---------------------------------------------------------------------------
 
 class _InputBar extends StatelessWidget {
   final ChatController controller;
@@ -506,7 +700,6 @@ class _InputBar extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Attachment strip — hides itself when empty
         Obx(() => VeloraAttachmentStrip(
               attachments: controller.attachments,
               onPickTap: () => controller.showAttachmentPicker(),
@@ -514,82 +707,90 @@ class _InputBar extends StatelessWidget {
               onRetry: controller.retryAttachment,
             )),
         Container(
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        border: Border(top: BorderSide(color: scheme.outlineVariant, width: 0.5)),
-      ),
-      padding: EdgeInsets.fromLTRB(12, 10, 12, 10 + bottom),
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: tokens.inputBackground,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Row(
-                children: [
-                  const SizedBox(width: 4),
-                  IconButton(
-                    icon: Icon(Icons.add_circle_outline, color: scheme.onSurfaceVariant),
-                    iconSize: 22,
-                    onPressed: () => controller.showAttachmentPicker(),
-                  ),
-                  Expanded(
-                    child: TextField(
-                      controller: controller.inputController,
-                      maxLines: 5,
-                      minLines: 1,
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => controller.sendMessage(),
-                      style: Theme.of(context).textTheme.bodyMedium,
-                      decoration: const InputDecoration(
-                        hintText: 'Message Claude…',
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(vertical: 10),
-                        filled: false,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+          decoration: BoxDecoration(
+            color: scheme.surface,
+            border: Border(
+              top: BorderSide(color: scheme.outlineVariant, width: 0.5),
             ),
           ),
-          const SizedBox(width: 8),
-          Obx(() {
-            final isTyping = controller.isTyping.value;
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              decoration: BoxDecoration(
-                color: isTyping ? scheme.surfaceContainerHighest : ClaudeColors.primary,
-                shape: BoxShape.circle,
-              ),
-              child: isTyping
-                  ? const Padding(
-                      padding: EdgeInsets.all(10),
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
+          padding: EdgeInsets.fromLTRB(12, 10, 12, 10 + bottom),
+          child: Row(
+            children: [
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: tokens.inputBackground,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 4),
+                      IconButton(
+                        icon: Icon(
+                          Icons.add_circle_outline,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                        iconSize: 22,
+                        onPressed: () => controller.showAttachmentPicker(),
+                      ),
+                      Expanded(
+                        child: TextField(
+                          controller: controller.inputController,
+                          maxLines: 5,
+                          minLines: 1,
+                          textInputAction: TextInputAction.send,
+                          onSubmitted: (_) => controller.sendMessage(),
+                          style: Theme.of(context).textTheme.bodyMedium,
+                          decoration: const InputDecoration(
+                            hintText: 'Message Claude…',
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            contentPadding:
+                                EdgeInsets.symmetric(vertical: 10),
+                            filled: false,
+                          ),
                         ),
                       ),
-                    )
-                  : IconButton(
-                      icon: const Icon(
-                        Icons.arrow_upward_rounded,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                      onPressed: controller.sendMessage,
-                    ),
-            );
-          }),
-        ],
-      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Obx(() {
+                final isTyping = controller.isTyping.value;
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  decoration: BoxDecoration(
+                    color: isTyping
+                        ? scheme.surfaceContainerHighest
+                        : ClaudeColors.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  child: isTyping
+                      ? const Padding(
+                          padding: EdgeInsets.all(10),
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          ),
+                        )
+                      : IconButton(
+                          icon: const Icon(
+                            Icons.arrow_upward_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                          onPressed: controller.sendMessage,
+                        ),
+                );
+              }),
+            ],
+          ),
         ),
       ],
     );

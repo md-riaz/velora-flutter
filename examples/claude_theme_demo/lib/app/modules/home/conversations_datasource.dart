@@ -6,13 +6,19 @@ abstract class ConversationsDataSource {
   Future<PaginatedData<ConversationModel>> getPage(int page);
   Future<ConversationModel> create(String title);
   Future<void> delete(String id);
+  Future<void> rename(String id, String title);
+  Future<void> toggleStar(String id);
+  Future<void> clearHistory(String id);
 }
 
 /// In-memory mock that simulates the real `/api/conversations` REST endpoints
 /// via [VeloraMockApi].  Swap this with a [RemoteConversationsDataSource] that
 /// calls [Velora.api] to go live without changing anything upstream.
+///
+/// The store is static so [HomeController] and [ChatController] share state
+/// within a session without a real backend.
 class MockConversationsDataSource implements ConversationsDataSource {
-  final List<ConversationModel> _store = _seed();
+  static final List<ConversationModel> _store = _seed();
 
   @override
   Future<PaginatedData<ConversationModel>> getPage(int page) async {
@@ -47,6 +53,31 @@ class MockConversationsDataSource implements ConversationsDataSource {
   Future<void> delete(String id) async {
     await VeloraMockApi.ok<void>(null, delayMs: 200);
     _store.removeWhere((c) => c.id == id);
+  }
+
+  @override
+  Future<void> rename(String id, String title) async {
+    await VeloraMockApi.ok<void>(null, delayMs: 150);
+    final idx = _store.indexWhere((c) => c.id == id);
+    if (idx != -1) _store[idx] = _store[idx].copyWith(title: title);
+  }
+
+  @override
+  Future<void> toggleStar(String id) async {
+    await VeloraMockApi.ok<void>(null, delayMs: 100);
+    final idx = _store.indexWhere((c) => c.id == id);
+    if (idx != -1) {
+      _store[idx] = _store[idx].copyWith(isStarred: !_store[idx].isStarred);
+    }
+  }
+
+  @override
+  Future<void> clearHistory(String id) async {
+    await VeloraMockApi.ok<void>(null, delayMs: 100);
+    final idx = _store.indexWhere((c) => c.id == id);
+    if (idx != -1) {
+      _store[idx] = _store[idx].copyWith(lastMessage: '', updatedAt: DateTime.now());
+    }
   }
 
   static List<ConversationModel> _seed() {

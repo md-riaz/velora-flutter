@@ -1,21 +1,33 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:velora/velora.dart';
 
 import '../home/conversation_model.dart';
+import '../home/conversations_datasource.dart';
 import 'chat_message.dart';
 import 'messages_datasource.dart';
 
 class ChatController extends VeloraController with VeloraAttachmentsMixin {
-  final MessagesDataSource _dataSource;
+  final MessagesDataSource _messagesDs;
+  final ConversationsDataSource _conversationsDs;
 
   final messages = <ChatMessage>[].obs;
   final isTyping = false.obs;
+  final hasEarlier = false.obs;
+  final loadingEarlier = false.obs;
   final inputController = TextEditingController();
   final scrollController = ScrollController();
-  late final ConversationModel conversation;
 
-  ChatController({MessagesDataSource? dataSource})
-      : _dataSource = dataSource ?? MockMessagesDataSource();
+  late final Rx<ConversationModel> conversation;
+
+  /// ID of the oldest loaded message — used as cursor for the next
+  /// "load earlier" request.
+  String? _earlierCursor;
+
+  ChatController({
+    MessagesDataSource? messagesDs,
+    ConversationsDataSource? conversationsDs,
+  })  : _messagesDs = messagesDs ?? MockMessagesDataSource(),
+        _conversationsDs = conversationsDs ?? MockConversationsDataSource();
 
   @override
   void onInit() {
@@ -25,7 +37,7 @@ class ChatController extends VeloraController with VeloraAttachmentsMixin {
       Get.back<void>();
       return;
     }
-    conversation = args;
+    conversation = args.obs;
     _loadMessages();
   }
 
@@ -36,13 +48,53 @@ class ChatController extends VeloraController with VeloraAttachmentsMixin {
     super.onClose();
   }
 
+  // ---------------------------------------------------------------------------
+  // Message loading
+  // ---------------------------------------------------------------------------
+
   Future<void> _loadMessages() async {
     await run(() async {
-      final loaded = await _dataSource.getMessages(conversation.id);
-      messages.assignAll(loaded);
+      final page = await _messagesDs.getPage(conversation.value.id);
+      messages.assignAll(page.data);
+      _earlierCursor = page.nextCursor;
+      hasEarlier.value = page.hasMore;
       _scrollToBottom();
     });
   }
+
+  /// Loads the next earlier page and prepends it to [messages].
+  Future<void> loadEarlier() async {
+    if (loadingEarlier.value || !hasEarlier.value) return;
+    loadingEarlier.value = true;
+    try {
+      final page = await _messagesDs.getPage(
+        conversation.value.id,
+        beforeId: _earlierCursor,
+      );
+      // Capture the current max extent before prepending so we can restore
+      // the reading position — without this the viewport snaps upward.
+      final prevMax = scrollController.hasClients
+          ? scrollController.position.maxScrollExtent
+          : 0.0;
+      messages.insertAll(0, page.data);
+      _earlierCursor = page.nextCursor;
+      hasEarlier.value = page.hasMore;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!isClosed && scrollController.hasClients) {
+          final delta = scrollController.position.maxScrollExtent - prevMax;
+          scrollController.jumpTo(scrollController.offset + delta);
+        }
+      });
+    } catch (e) {
+      error.value = e.toString();
+    } finally {
+      loadingEarlier.value = false;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Sending
+  // ---------------------------------------------------------------------------
 
   Future<void> sendMessage() async {
     if (isTyping.value) return;
@@ -54,7 +106,6 @@ class ChatController extends VeloraController with VeloraAttachmentsMixin {
     ChatMessage? optimistic;
 
     try {
-      // Upload any staged attachments before sending
       if (hasAttachments) await uploadAll();
       final urls = uploadedUrls;
 
@@ -67,7 +118,11 @@ class ChatController extends VeloraController with VeloraAttachmentsMixin {
       messages.add(optimistic);
       _scrollToBottom();
 
-      final reply = await _dataSource.sendMessage(conversation.id, text, attachmentUrls: urls);
+      final reply = await _messagesDs.sendMessage(
+        conversation.value.id,
+        text,
+        attachmentUrls: urls,
+      );
       messages.add(reply);
       inputController.clear();
       attachments.clear();
@@ -80,6 +135,76 @@ class ChatController extends VeloraController with VeloraAttachmentsMixin {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Conversation mutations
+  // ---------------------------------------------------------------------------
+
+  Future<void> renameConversation() async {
+    final newTitle = await Get.dialog<String>(
+      _RenameDialog(initialTitle: conversation.value.title),
+    );
+    if (newTitle == null || newTitle.trim().isEmpty) return;
+    final trimmed = newTitle.trim();
+    await run(() async {
+      await _messagesDs.rename(conversation.value.id, trimmed);
+      await _conversationsDs.rename(conversation.value.id, trimmed);
+    });
+    if (error.value.isNotEmpty) return;
+    conversation.value = conversation.value.copyWith(title: trimmed);
+    Velora.toast.success('Renamed');
+  }
+
+  Future<void> toggleStar() async {
+    final newStarred = !conversation.value.isStarred;
+    conversation.value = conversation.value.copyWith(isStarred: newStarred);
+    await run(() async {
+      await _messagesDs.toggleStar(conversation.value.id);
+      await _conversationsDs.toggleStar(conversation.value.id);
+    });
+    if (error.value.isNotEmpty) {
+      conversation.value = conversation.value.copyWith(isStarred: !newStarred);
+      return;
+    }
+    Velora.toast.success(newStarred ? 'Added to starred' : 'Removed from starred');
+  }
+
+  Future<void> clearHistory() async {
+    final confirmed = await Velora.dialog.confirm(
+      title: 'Clear history',
+      message: 'This will remove all messages from this conversation.',
+    );
+    if (!confirmed) return;
+    await run(() async {
+      await _messagesDs.clearMessages(conversation.value.id);
+      await _conversationsDs.clearHistory(conversation.value.id);
+    });
+    if (error.value.isNotEmpty) return;
+    messages.clear();
+    hasEarlier.value = false;
+    _earlierCursor = null;
+    conversation.value = conversation.value.copyWith(lastMessage: '');
+    Velora.toast.success('Chat history cleared');
+  }
+
+  Future<void> deleteConversation() async {
+    final confirmed = await Velora.dialog.confirm(
+      title: 'Delete conversation',
+      message: 'This will permanently delete this conversation and all its messages.',
+    );
+    if (!confirmed) return;
+    await run(() async {
+      await _messagesDs.delete(conversation.value.id);
+      await _conversationsDs.delete(conversation.value.id);
+    });
+    if (error.value.isNotEmpty) return;
+    Velora.nav.back();
+    Velora.toast.success('Conversation deleted');
+  }
+
+  // ---------------------------------------------------------------------------
+  // Helpers
+  // ---------------------------------------------------------------------------
+
   void _scrollToBottom() {
     Future<void>.delayed(const Duration(milliseconds: 80), () {
       if (!isClosed && scrollController.hasClients) {
@@ -90,5 +215,56 @@ class ChatController extends VeloraController with VeloraAttachmentsMixin {
         );
       }
     });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Rename dialog
+// ---------------------------------------------------------------------------
+
+class _RenameDialog extends StatefulWidget {
+  final String initialTitle;
+  const _RenameDialog({required this.initialTitle});
+
+  @override
+  State<_RenameDialog> createState() => _RenameDialogState();
+}
+
+class _RenameDialogState extends State<_RenameDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialTitle);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Rename conversation'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        decoration: const InputDecoration(hintText: 'Conversation title'),
+        onSubmitted: (v) => Get.back(result: v),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Get.back<String>(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Get.back(result: _controller.text),
+          child: const Text('Rename'),
+        ),
+      ],
+    );
   }
 }
