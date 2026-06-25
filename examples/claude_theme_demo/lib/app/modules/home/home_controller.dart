@@ -40,6 +40,7 @@ class HomeController extends VeloraPaginatedController<ConversationModel> {
 
   Future<void> toggleStar(String id) async {
     await run(() => _dataSource.toggleStar(id));
+    if (error.value.isNotEmpty) return;
     final idx = items.indexWhere((c) => c.id == id);
     if (idx != -1) {
       items[idx] = items[idx].copyWith(isStarred: !items[idx].isStarred);
@@ -48,6 +49,7 @@ class HomeController extends VeloraPaginatedController<ConversationModel> {
 
   Future<void> renameConversation(String id, String title) async {
     await run(() => _dataSource.rename(id, title));
+    if (error.value.isNotEmpty) return;
     final idx = items.indexWhere((c) => c.id == id);
     if (idx != -1) {
       items[idx] = items[idx].copyWith(title: title);
@@ -61,6 +63,7 @@ class HomeController extends VeloraPaginatedController<ConversationModel> {
     );
     if (!confirmed) return;
     await run(() => _dataSource.delete(id));
+    if (error.value.isNotEmpty) return;
     items.removeWhere((c) => c.id == id);
     Velora.toast.success('Conversation deleted');
   }

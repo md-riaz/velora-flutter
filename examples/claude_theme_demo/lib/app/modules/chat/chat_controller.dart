@@ -71,9 +71,20 @@ class ChatController extends VeloraController with VeloraAttachmentsMixin {
         conversation.value.id,
         beforeId: _earlierCursor,
       );
+      // Capture the current max extent before prepending so we can restore
+      // the reading position — without this the viewport snaps upward.
+      final prevMax = scrollController.hasClients
+          ? scrollController.position.maxScrollExtent
+          : 0.0;
       messages.insertAll(0, page.data);
       _earlierCursor = page.nextCursor;
       hasEarlier.value = page.hasMore;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!isClosed && scrollController.hasClients) {
+          final delta = scrollController.position.maxScrollExtent - prevMax;
+          scrollController.jumpTo(scrollController.offset + delta);
+        }
+      });
     } catch (e) {
       error.value = e.toString();
     } finally {
@@ -146,8 +157,14 @@ class ChatController extends VeloraController with VeloraAttachmentsMixin {
   Future<void> toggleStar() async {
     final newStarred = !conversation.value.isStarred;
     conversation.value = conversation.value.copyWith(isStarred: newStarred);
-    await _messagesDs.toggleStar(conversation.value.id);
-    await _conversationsDs.toggleStar(conversation.value.id);
+    await run(() async {
+      await _messagesDs.toggleStar(conversation.value.id);
+      await _conversationsDs.toggleStar(conversation.value.id);
+    });
+    if (error.value.isNotEmpty) {
+      conversation.value = conversation.value.copyWith(isStarred: !newStarred);
+      return;
+    }
     Velora.toast.success(newStarred ? 'Added to starred' : 'Removed from starred');
   }
 
@@ -175,8 +192,11 @@ class ChatController extends VeloraController with VeloraAttachmentsMixin {
       message: 'This will permanently delete this conversation and all its messages.',
     );
     if (!confirmed) return;
-    await _messagesDs.delete(conversation.value.id);
-    await _conversationsDs.delete(conversation.value.id);
+    await run(() async {
+      await _messagesDs.delete(conversation.value.id);
+      await _conversationsDs.delete(conversation.value.id);
+    });
+    if (error.value.isNotEmpty) return;
     Velora.nav.back();
     Velora.toast.success('Conversation deleted');
   }
