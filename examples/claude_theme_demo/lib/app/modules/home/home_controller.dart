@@ -26,6 +26,12 @@ class HomeController extends VeloraPaginatedController<ConversationModel> {
     return items.where((c) => c.title.toLowerCase().contains(q)).toList();
   }
 
+  // NOTE: filters only the in-memory page cache, not all conversations.
+  // A conversation starred on a page that hasn't been loaded yet won't
+  // appear here until that page is fetched. A production implementation
+  // should either load all starred conversations via a dedicated endpoint
+  // (e.g. GET /conversations?starred=true) or maintain a separate starred
+  // index alongside the paginated list.
   List<ConversationModel> get starred =>
       items.where((c) => c.isStarred).toList();
 

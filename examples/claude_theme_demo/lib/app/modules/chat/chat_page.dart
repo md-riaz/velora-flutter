@@ -695,7 +695,12 @@ class _InputBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    // Use paddingOf (safe-area inset) not viewInsetsOf (keyboard height).
+    // Scaffold's resizeToAvoidBottomInset already shrinks the view for the
+    // keyboard, so adding viewInsets here would double-count it and push
+    // the bar too high. paddingOf gives the iOS home-indicator gap when the
+    // keyboard is closed and collapses to zero when it's open.
+    final bottom = MediaQuery.paddingOf(context).bottom;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
