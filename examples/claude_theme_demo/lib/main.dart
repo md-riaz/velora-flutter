@@ -41,7 +41,7 @@ class ClaudeApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return VeloraApp(
       title: 'Claude',
-      initialRoute: AppRoutes.home,
+      initialRoute: Velora.auth.check ? AppRoutes.home : AppRoutes.login,
       routes: AppPages.routes,
       theme: ClaudeTheme.light(),
       darkTheme: ClaudeTheme.dark(),

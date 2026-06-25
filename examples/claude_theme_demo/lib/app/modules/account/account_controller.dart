@@ -1,10 +1,8 @@
 import 'package:velora/velora.dart';
 
+import '../../routes/app_routes.dart';
+
 /// Demonstrates [AuthService] patterns in Velora.
-///
-/// In this demo app the user is not authenticated, so [Velora.auth.check]
-/// is false.  The controller shows mock profile data alongside explanations
-/// of the auth API for developers studying the demo.
 ///
 /// In a real app:
 ///   1. Call [Velora.login] with credentials — it stores the token and user.
@@ -16,7 +14,7 @@ class AccountController extends VeloraController {
 
   VeloraUser? get currentUser => Velora.auth.user;
 
-  /// Demo user displayed when no real session is active.
+  /// Fallback user shown when no real session is active.
   static const mockUser = _MockUser(
     name: 'Alex Chen',
     email: 'alex@example.com',
@@ -31,10 +29,9 @@ class AccountController extends VeloraController {
     );
     if (!confirmed) return;
     if (isAuthenticated) {
-      await Velora.logout();
-    } else {
-      Velora.toast.info('Sign out called — no real session in demo');
+      await run(() => Velora.logout());
     }
+    Velora.nav.offAll(AppRoutes.login);
   }
 }
 

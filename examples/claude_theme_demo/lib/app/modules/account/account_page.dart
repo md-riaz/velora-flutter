@@ -26,6 +26,7 @@ class AccountPage extends GetView<AccountController> {
           // Profile card
           // ----------------------------------------------------------------
           _ProfileCard(
+            controller: controller,
             scheme: scheme,
             textTheme: textTheme,
           ),
@@ -68,18 +69,52 @@ class AccountPage extends GetView<AccountController> {
 // ---------------------------------------------------------------------------
 
 class _ProfileCard extends StatelessWidget {
+  final AccountController controller;
   final ColorScheme scheme;
   final TextTheme textTheme;
 
   const _ProfileCard({
+    required this.controller,
     required this.scheme,
     required this.textTheme,
   });
 
   @override
   Widget build(BuildContext context) {
-    final user = AccountController.mockUser;
+    return Obx(() {
+      final authUser = controller.currentUser;
+      final typedUser = authUser is AuthUser ? authUser : null;
+      final name = typedUser?.name ?? AccountController.mockUser.name;
+      final email = typedUser?.email ?? AccountController.mockUser.email;
+      final plan = controller.isAuthenticated ? 'Pro' : AccountController.mockUser.plan;
+      return _ProfileCardContent(
+        name: name,
+        email: email,
+        plan: plan,
+        scheme: scheme,
+        textTheme: textTheme,
+      );
+    });
+  }
+}
 
+class _ProfileCardContent extends StatelessWidget {
+  final String name;
+  final String email;
+  final String plan;
+  final ColorScheme scheme;
+  final TextTheme textTheme;
+
+  const _ProfileCardContent({
+    required this.name,
+    required this.email,
+    required this.plan,
+    required this.scheme,
+    required this.textTheme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(20),
@@ -100,7 +135,7 @@ class _ProfileCard extends StatelessWidget {
             ),
             child: Center(
               child: Text(
-                user.name.substring(0, 1),
+                name.substring(0, 1).toUpperCase(),
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 26,
@@ -117,20 +152,20 @@ class _ProfileCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  user.name,
+                  name,
                   style: textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  user.email,
+                  email,
                   style: textTheme.bodySmall?.copyWith(
                     color: scheme.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 6),
-                _PlanBadge(plan: user.plan),
+                _PlanBadge(plan: plan),
               ],
             ),
           ),
