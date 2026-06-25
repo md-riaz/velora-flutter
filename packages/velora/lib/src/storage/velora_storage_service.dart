@@ -5,12 +5,15 @@ import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class VeloraStorageService extends GetxService {
-  static const _tokenKey = 'velora.auth.token';
+  final String _tokenKey;
   late final SharedPreferences _prefs;
   final FlutterSecureStorage _secureStorage;
 
-  VeloraStorageService({FlutterSecureStorage? secureStorage})
-    : _secureStorage = secureStorage ?? const FlutterSecureStorage();
+  VeloraStorageService({
+    FlutterSecureStorage? secureStorage,
+    String tokenKey = 'velora.auth.token',
+  })  : _secureStorage = secureStorage ?? const FlutterSecureStorage(),
+        _tokenKey = tokenKey;
 
   Future<VeloraStorageService> init() async {
     _prefs = await SharedPreferences.getInstance();

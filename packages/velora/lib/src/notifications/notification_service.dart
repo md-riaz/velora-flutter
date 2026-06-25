@@ -21,7 +21,7 @@ class NotificationService {
     required this.localAdapter,
   });
 
-  final RxList<AppNotification> notifications = <AppNotification>[].obs;
+  final RxList<VeloraNotification> notifications = <VeloraNotification>[].obs;
   final RxInt unreadCount = 0.obs;
   final RxBool permissionGranted = false.obs;
   final RxBool initialized = false.obs;
@@ -153,7 +153,7 @@ class NotificationService {
     return localAdapter.cancelAll();
   }
 
-  bool canHandleNotification(AppNotification notification) {
+  bool canHandleNotification(VeloraNotification notification) {
     if (!Velora.auth.check) return false;
 
     final feature = notification.feature;
@@ -173,7 +173,7 @@ class NotificationService {
     return true;
   }
 
-  Future<void> handleTap(AppNotification notification) async {
+  Future<void> handleTap(VeloraNotification notification) async {
     lastEvent.value = NotificationEvent(
       type: NotificationEventType.tapped,
       notification: notification,

@@ -5,7 +5,7 @@ class NotificationsController extends VeloraController {
     await run(() => Velora.notify.fetch());
   }
 
-  Future<void> markAsRead(AppNotification notification) async {
+  Future<void> markAsRead(VeloraNotification notification) async {
     if (notification.isRead) return;
     await run(() => Velora.notify.markAsRead(notification.id));
   }
@@ -18,7 +18,7 @@ class NotificationsController extends VeloraController {
     );
   }
 
-  Future<void> open(AppNotification notification) async {
+  Future<void> open(VeloraNotification notification) async {
     await Velora.notify.handleTap(notification);
   }
 }

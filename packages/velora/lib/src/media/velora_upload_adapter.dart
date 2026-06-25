@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:get/get.dart' hide MultipartFile;
+import 'package:get/get.dart' hide MultipartFile, FormData;
 
 import '../http/velora_api_service.dart';
 import 'velora_attachment.dart';

@@ -1,13 +1,16 @@
 import 'package:get/get.dart';
 
 import '../auth/auth_service.dart';
+import '../auth/auth_user.dart';
 import '../auth/logout_coordinator.dart';
 import '../config/velora_config.dart';
 import '../features/feature_service.dart';
 import '../http/velora_api_service.dart';
+import '../media/velora_media_service.dart';
 import '../notifications/adapters/fcm_push_adapter.dart';
 import '../notifications/adapters/local_notification_adapter.dart';
 import '../notifications/adapters/noop_push_adapter.dart';
+import '../notifications/adapters/push_adapter.dart';
 import '../notifications/notification_config.dart';
 import '../notifications/notification_remote_datasource.dart';
 import '../notifications/notification_repository.dart';
@@ -20,7 +23,6 @@ import '../theme/theme_service.dart';
 import '../ui/velora_dialog.dart';
 import '../ui/velora_loader.dart';
 import '../ui/velora_toast.dart';
-import '../media/velora_media_service.dart';
 import '../validation/velora_validator.dart';
 import 'velora_lifecycle.dart';
 
@@ -43,11 +45,36 @@ class Velora {
   static VeloraMediaService get media => Get.find<VeloraMediaService>();
   static const VeloraValidator validator = VeloraValidator();
 
+  /// The currently authenticated user, or null when no session is active.
+  static VeloraUser? get user => auth.user;
+
+  /// Returns the current user cast to your own model type.
+  ///
+  /// ```dart
+  /// final user = Velora.userAs<AppUser>();
+  /// ```
+  static T? userAs<T extends VeloraUser>() => auth.userAs<T>();
+
+  static Future<VeloraUser> login(Map<String, dynamic> credentials) =>
+      auth.login(credentials);
+
   static Future<void> logout() => auth.logout();
 
-  static Future<void> boot({required VeloraConfig config}) async {
+  static Future<void> boot({
+    required VeloraConfig config,
+
+    /// Custom push adapter. Defaults to [FcmPushAdapter] when provider is FCM,
+    /// [NoopPushAdapter] otherwise.
+    PushAdapter? pushAdapter,
+  }) async {
     Velora.config = config;
-    final storage = await VeloraStorageService().init();
+
+    // Also register VeloraConfig in GetX so any service can look it up.
+    Get.put<VeloraConfig>(config, permanent: true);
+
+    final storage = await VeloraStorageService(
+      tokenKey: config.auth.tokenStorageKey,
+    ).init();
     Get.put<VeloraStorageService>(storage, permanent: true);
 
     final api = VeloraApiService(config: config, storage: storage);
@@ -67,29 +94,37 @@ class Velora {
     ).init();
     Get.put<AuthService>(auth, permanent: true);
     auth.attachLogoutCoordinator(logoutCoordinator);
+
     final notificationRemote = NotificationRemoteDataSource(
       api: api,
       config: config.notifications,
     );
     Get.put<NotificationRemoteDataSource>(notificationRemote, permanent: true);
 
-    final notificationRepository = NotificationRepositoryImpl(
-      notificationRemote,
-    );
+    final notificationRepository = NotificationRepositoryImpl(notificationRemote);
     Get.put<NotificationRepository>(notificationRepository, permanent: true);
+
+    final resolvedPushAdapter = pushAdapter ??
+        (config.notifications.provider == PushProvider.fcm
+            ? FcmPushAdapter()
+            : NoopPushAdapter());
 
     final notify = VeloraNotify(
       repository: notificationRepository,
-      pushAdapter: config.notifications.provider == PushProvider.fcm
-          ? FcmPushAdapter()
-          : NoopPushAdapter(),
+      pushAdapter: resolvedPushAdapter,
       localAdapter: InMemoryLocalNotificationAdapter(),
     );
     Get.put<VeloraNotify>(notify, permanent: true);
     Get.put<NotificationService>(notify, permanent: true);
     auth.attachNotifications(notify);
 
-    Get.put<PermissionService>(PermissionService(auth: auth), permanent: true);
+    Get.put<PermissionService>(
+      PermissionService(
+        auth: auth,
+        permissionResolver: config.auth.permissionResolver,
+      ),
+      permanent: true,
+    );
     final feature = FeatureService();
     Get.put<FeatureService>(feature, permanent: true);
     lifecycle.register(feature);

@@ -10,7 +10,7 @@ class NotificationDetailsPage extends GetView<NotificationsController> {
   @override
   Widget build(BuildContext context) {
     final argument = Get.arguments;
-    final notification = argument is AppNotification ? argument : null;
+    final notification = argument is VeloraNotification ? argument : null;
 
     if (notification == null) {
       return const Scaffold(
@@ -28,7 +28,8 @@ class NotificationDetailsPage extends GetView<NotificationsController> {
             style: Theme.of(context).textTheme.headlineSmall,
           ),
           const SizedBox(height: 8),
-          Text(_createdAt(notification.createdAt)),
+          if (notification is AppNotification)
+            Text(_createdAt(notification.createdAt)),
           const SizedBox(height: 24),
           Text(notification.body, style: Theme.of(context).textTheme.bodyLarge),
           const SizedBox(height: 24),

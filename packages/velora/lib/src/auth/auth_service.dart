@@ -30,11 +30,12 @@ class AuthService extends GetxService {
     });
   }
 
-  final Rxn<AuthUser> currentUser = Rxn<AuthUser>();
+  final Rxn<VeloraUser> currentUser = Rxn<VeloraUser>();
   final Rx<SessionState> state = SessionState.guest.obs;
   final RxBool isAuthenticated = false.obs;
 
-  AuthUser? get user => currentUser.value;
+  VeloraUser? get user => currentUser.value;
+  T? userAs<T extends VeloraUser>() => currentUser.value as T?;
   bool get check => state.value == SessionState.authenticated;
   bool get isLoggingOut => state.value == SessionState.loggingOut;
 
@@ -50,7 +51,8 @@ class AuthService extends GetxService {
     final token = await storage.getToken();
     final json = storage.getJson(_userKey);
     if (token != null && token.isNotEmpty && json != null) {
-      currentUser.value = AuthUser.fromJson(json);
+      final parse = config.userParser ?? AuthUser.fromJson;
+      currentUser.value = parse(json);
       state.value = SessionState.authenticated;
     } else {
       state.value = SessionState.guest;
@@ -58,26 +60,35 @@ class AuthService extends GetxService {
     return this;
   }
 
-  Future<AuthUser> login({
-    required String email,
-    required String password,
-  }) async {
+  Future<VeloraUser> login(Map<String, dynamic> credentials) async {
     state.value = SessionState.authenticating;
     try {
       final response = await api.post<Map<String, dynamic>>(
         config.loginEndpoint,
-        data: {'email': email, 'password': password},
+        data: credentials,
         parser: (value) => Map<String, dynamic>.from(value as Map),
         userScoped: false,
       );
       final payload = response.data ?? const <String, dynamic>{};
-      final token =
-          payload['token']?.toString() ?? payload['access_token']?.toString();
-      final rawUser = payload['user'];
-      if (token == null || token.isEmpty || rawUser is! Map) {
+
+      final tokenExtractor = config.tokenExtractor;
+      final token = tokenExtractor != null
+          ? tokenExtractor(payload)
+          : payload['token']?.toString() ?? payload['access_token']?.toString();
+
+      final userExtractor = config.userExtractor;
+      final rawUser = userExtractor != null
+          ? userExtractor(payload)
+          : (payload['user'] is Map
+              ? Map<String, dynamic>.from(payload['user'] as Map)
+              : null);
+
+      if (token == null || token.isEmpty || rawUser == null) {
         throw StateError('Login response must include token and user.');
       }
-      final user = AuthUser.fromJson(Map<String, dynamic>.from(rawUser));
+
+      final parse = config.userParser ?? AuthUser.fromJson;
+      final user = parse(rawUser);
       await storage.setToken(token);
       await storage.setJson(_userKey, user.toJson());
       currentUser.value = user;
@@ -138,15 +149,25 @@ class AuthService extends GetxService {
     currentUser.value = null;
   }
 
-  Future<AuthUser?> me() async {
+  Future<VeloraUser?> me() async {
     final response = await api.get<Map<String, dynamic>>(
       config.meEndpoint,
       parser: (value) => Map<String, dynamic>.from(value as Map),
     );
     final payload = response.data;
     if (payload == null) return null;
-    final rawUser = payload['user'] is Map ? payload['user'] : payload;
-    final user = AuthUser.fromJson(Map<String, dynamic>.from(rawUser as Map));
+
+    final meUserExtractor = config.meUserExtractor;
+    final rawUser = meUserExtractor != null
+        ? meUserExtractor(payload)
+        : (payload['user'] is Map
+            ? Map<String, dynamic>.from(payload['user'] as Map)
+            : Map<String, dynamic>.from(payload));
+
+    if (rawUser == null) return null;
+
+    final parse = config.userParser ?? AuthUser.fromJson;
+    final user = parse(rawUser);
     currentUser.value = user;
     state.value = SessionState.authenticated;
     await storage.setJson(_userKey, user.toJson());

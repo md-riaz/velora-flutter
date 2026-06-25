@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../theme/theme_service.dart';
+
 class VeloraApp extends StatelessWidget {
   final String title;
   final String initialRoute;

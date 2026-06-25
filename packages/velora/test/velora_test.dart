@@ -110,7 +110,7 @@ void main() {
     final fallback = AuthUser.fromJson({'roles': 'admin'});
     expect(fallback.id, 0);
     expect(fallback.name, isEmpty);
-    expect(fallback.email, isEmpty);
+    expect(fallback.email, isNull);
     expect(fallback.roles, isEmpty);
   });
 
@@ -392,7 +392,7 @@ void main() {
         notifications: VeloraNotificationConfig(provider: PushProvider.none),
       );
 
-      await auth.login(email: 'admin@example.test', password: 'secret');
+      await auth.login({'email': 'admin@example.test', 'password': 'secret'});
 
       expect(auth.check, isTrue);
       expect(notify.initialized.value, isTrue);

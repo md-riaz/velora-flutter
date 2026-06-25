@@ -1,13 +1,47 @@
-class AppNotification {
-  final String id;
+/// Interface for in-app notification models.
+///
+/// Implement this (or use the built-in [AppNotification]) to bring your own
+/// notification model with custom fields, IDs, and parsing logic.
+///
+/// ```dart
+/// class MyNotification implements VeloraNotification {
+///   @override final String id;
+///   @override final String title;
+///   @override final String body;
+///   // ... your own fields ...
+///
+///   @override
+///   MyNotification copyWith({DateTime? readAt}) => MyNotification(
+///     id: id, title: title, body: body,
+///     readAt: readAt ?? this.readAt,
+///   );
+/// }
+/// ```
+abstract class VeloraNotification {
+  String get id;
+  String get title;
+  String get body;
+  Map<String, dynamic> get data;
+  DateTime? get readAt;
+  bool get isRead;
+  bool get isUnread;
+  String? get feature;
+  String? get permission;
+  String? get route;
+  VeloraNotification copyWith({DateTime? readAt});
+  Map<String, dynamic> toJson();
+}
+
+class AppNotification implements VeloraNotification {
+  @override final String id;
   final String type;
-  final String title;
-  final String body;
-  final String? feature;
-  final String? permission;
-  final String? route;
-  final Map<String, dynamic> data;
-  final DateTime? readAt;
+  @override final String title;
+  @override final String body;
+  @override final String? feature;
+  @override final String? permission;
+  @override final String? route;
+  @override final Map<String, dynamic> data;
+  @override final DateTime? readAt;
   final DateTime createdAt;
 
   const AppNotification({
@@ -23,9 +57,12 @@ class AppNotification {
     required this.createdAt,
   });
 
+  @override
   bool get isRead => readAt != null;
+  @override
   bool get isUnread => readAt == null;
 
+  @override
   AppNotification copyWith({
     String? id,
     String? type,
@@ -52,6 +89,7 @@ class AppNotification {
     );
   }
 
+  @override
   Map<String, dynamic> toJson() {
     return {
       'id': id,
