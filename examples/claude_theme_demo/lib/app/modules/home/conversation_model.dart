@@ -17,12 +17,13 @@ class ConversationModel {
     String? title,
     String? lastMessage,
     bool? isStarred,
+    DateTime? updatedAt,
   }) {
     return ConversationModel(
       id: id,
       title: title ?? this.title,
       lastMessage: lastMessage ?? this.lastMessage,
-      updatedAt: updatedAt,
+      updatedAt: updatedAt ?? this.updatedAt,
       isStarred: isStarred ?? this.isStarred,
     );
   }

@@ -8,6 +8,7 @@ abstract class ConversationsDataSource {
   Future<void> delete(String id);
   Future<void> rename(String id, String title);
   Future<void> toggleStar(String id);
+  Future<void> clearHistory(String id);
 }
 
 /// In-memory mock that simulates the real `/api/conversations` REST endpoints
@@ -67,6 +68,15 @@ class MockConversationsDataSource implements ConversationsDataSource {
     final idx = _store.indexWhere((c) => c.id == id);
     if (idx != -1) {
       _store[idx] = _store[idx].copyWith(isStarred: !_store[idx].isStarred);
+    }
+  }
+
+  @override
+  Future<void> clearHistory(String id) async {
+    await VeloraMockApi.ok<void>(null, delayMs: 100);
+    final idx = _store.indexWhere((c) => c.id == id);
+    if (idx != -1) {
+      _store[idx] = _store[idx].copyWith(lastMessage: '', updatedAt: DateTime.now());
     }
   }
 

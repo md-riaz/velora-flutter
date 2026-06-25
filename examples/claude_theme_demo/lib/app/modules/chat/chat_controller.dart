@@ -138,6 +138,7 @@ class ChatController extends VeloraController with VeloraAttachmentsMixin {
       await _messagesDs.rename(conversation.value.id, trimmed);
       await _conversationsDs.rename(conversation.value.id, trimmed);
     });
+    if (error.value.isNotEmpty) return;
     conversation.value = conversation.value.copyWith(title: trimmed);
     Velora.toast.success('Renamed');
   }
@@ -156,10 +157,15 @@ class ChatController extends VeloraController with VeloraAttachmentsMixin {
       message: 'This will remove all messages from this conversation.',
     );
     if (!confirmed) return;
-    await _messagesDs.clearMessages(conversation.value.id);
+    await run(() async {
+      await _messagesDs.clearMessages(conversation.value.id);
+      await _conversationsDs.clearHistory(conversation.value.id);
+    });
+    if (error.value.isNotEmpty) return;
     messages.clear();
     hasEarlier.value = false;
     _earlierCursor = null;
+    conversation.value = conversation.value.copyWith(lastMessage: '');
     Velora.toast.success('Chat history cleared');
   }
 
