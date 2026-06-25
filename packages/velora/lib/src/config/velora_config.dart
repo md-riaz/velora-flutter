@@ -124,11 +124,23 @@ class VeloraAuthConfig {
   final Map<String, dynamic>? Function(Map<String, dynamic> payload)?
       meUserExtractor;
 
+  /// Converts the extracted user map into your [VeloraUser] model.
+  ///
+  /// Required when you own your own user class. If omitted, [AuthUser.fromJson]
+  /// is used — sufficient for apps that don't need custom fields.
+  ///
+  /// ```dart
+  /// VeloraAuthConfig(userParser: AppUser.fromJson)
+  /// ```
+  ///
+  /// The parser is also called when restoring a persisted session, so it must
+  /// be able to round-trip whatever [VeloraUser.toJson] returns.
+  final VeloraUser Function(Map<String, dynamic>)? userParser;
+
   /// Controls how [PermissionService.can] resolves a permission string.
   ///
   /// By default, `can(p)` returns true when `p` appears in
-  /// [AuthUser.permissions]. Override this to support other access-control
-  /// models without changing any call sites:
+  /// [VeloraUser.permissions]. Override to support other access-control models:
   ///
   /// **Roles only** — admin can do everything, editor has limited access:
   /// ```dart
@@ -141,17 +153,16 @@ class VeloraAuthConfig {
   /// },
   /// ```
   ///
-  /// **Resource permissions only** — no override needed; [AuthUser.permissions]
-  /// can hold any strings your backend returns (`'posts:read'`, `'users:write'`,
-  /// etc.) and the default resolver handles them transparently.
+  /// **Resource permissions only** — no override needed; [VeloraUser.permissions]
+  /// can hold any strings your backend returns (`'posts:read'`, `'users:write'`).
   ///
-  /// **Hybrid** — check permissions first, fall back to role wildcard:
+  /// **Hybrid** — permissions first, role wildcard as fallback:
   /// ```dart
   /// permissionResolver: (user, permission) =>
   ///     user.permissions.contains(permission) ||
   ///     user.roles.contains('superadmin'),
   /// ```
-  final bool Function(AuthUser user, String permission)? permissionResolver;
+  final bool Function(VeloraUser user, String permission)? permissionResolver;
 
   const VeloraAuthConfig({
     this.loginEndpoint = '/auth/login',
@@ -161,6 +172,7 @@ class VeloraAuthConfig {
     this.tokenExtractor,
     this.userExtractor,
     this.meUserExtractor,
+    this.userParser,
     this.permissionResolver,
   });
 }

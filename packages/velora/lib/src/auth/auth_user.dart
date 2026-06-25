@@ -1,25 +1,68 @@
-class AuthUser {
+/// The only contract Velora requires from any user model.
+///
+/// Implement this in your own class — Velora never forces a fixed shape on
+/// your domain. Keep every field your app needs; the framework only reads
+/// [roles], [permissions], and [features] for access-control decisions.
+///
+/// ```dart
+/// class AppUser implements VeloraUser {
+///   final String id;       // UUID? int? String — your choice
+///   final String username;
+///   final String? phone;
+///   final String? email;
+///   final String avatarUrl;
+///
+///   @override final List<String> roles;
+///   @override final List<String> permissions;
+///   @override final List<String> features;
+///
+///   static AppUser fromJson(Map<String, dynamic> json) => AppUser(...);
+///
+///   @override
+///   Map<String, dynamic> toJson() => {...};
+/// }
+/// ```
+///
+/// Register the parser at boot so Velora knows how to restore the session:
+/// ```dart
+/// VeloraAuthConfig(userParser: AppUser.fromJson)
+/// ```
+///
+/// Access the typed user anywhere:
+/// ```dart
+/// final user = Velora.auth.userAs<AppUser>();
+/// ```
+abstract class VeloraUser {
+  List<String> get roles;
+  List<String> get permissions;
+  List<String> get features;
+
+  /// Called by Velora to persist the session across restarts.
+  /// Return a Map that [VeloraAuthConfig.userParser] can reconstruct.
+  Map<String, dynamic> toJson();
+}
+
+/// Built-in user model — a ready-to-use [VeloraUser] implementation for apps
+/// that don't need custom fields beyond id, name, email, roles, permissions,
+/// and features.
+///
+/// For anything beyond these fields, implement [VeloraUser] directly in your
+/// own class and register it via [VeloraAuthConfig.userParser].
+class AuthUser implements VeloraUser {
   final int id;
   final String name;
 
-  /// Null when the backend does not use email-based auth (e.g. phone / OTP /
+  /// Null when the backend does not use email-based auth (phone / OTP /
   /// username-only flows). Always check for null before displaying or submitting.
   final String? email;
 
-  /// Role labels assigned to this user (e.g. `['admin', 'editor']`).
-  ///
-  /// Populated from the `roles` key by default; override via
-  /// [VeloraAuthConfig.userExtractor] for different field names.
-  /// Empty list if the backend does not use role-based access control.
+  @override
   final List<String> roles;
 
-  /// Flat permission strings (e.g. `['users.view', 'posts:write']`).
-  ///
-  /// Populated from the `permissions` key by default. Empty list if the
-  /// backend uses roles only — in that case configure
-  /// [VeloraAuthConfig.permissionResolver] to derive access from roles.
+  @override
   final List<String> permissions;
 
+  @override
   final List<String> features;
 
   const AuthUser({
@@ -42,6 +85,7 @@ class AuthUser {
     );
   }
 
+  @override
   Map<String, dynamic> toJson() {
     return {
       'id': id,

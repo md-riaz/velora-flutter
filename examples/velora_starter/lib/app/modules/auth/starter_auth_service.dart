@@ -1,10 +1,10 @@
-
 import 'package:velora/velora.dart';
 
 import '../notifications/notifications_feature.dart';
 import '../users/users_feature.dart';
 import 'auth_repository.dart';
 import 'logout_state.dart';
+import 'starter_user.dart';
 
 class StarterAuthService extends GetxService {
   static const _userKey = 'velora.auth.user';
@@ -13,7 +13,7 @@ class StarterAuthService extends GetxService {
 
   StarterAuthService(this.repository);
 
-  Future<ApiResponse<AuthUser>> login(Map<String, dynamic> credentials) async {
+  Future<ApiResponse<StarterUser>> login(Map<String, dynamic> credentials) async {
     final response = await repository.login(credentials);
     if (!response.success || response.data == null) {
       return ApiResponse(
@@ -35,7 +35,7 @@ class StarterAuthService extends GetxService {
       );
     }
 
-    final user = AuthUser.fromJson(Map<String, dynamic>.from(rawUser));
+    final user = StarterUser.fromJson(Map<String, dynamic>.from(rawUser));
     await Velora.storage.setToken(token);
     await Velora.storage.setJson(_userKey, user.toJson());
     Velora.auth.currentUser.value = user;
@@ -46,7 +46,7 @@ class StarterAuthService extends GetxService {
     return ApiResponse(success: true, data: user, message: response.message);
   }
 
-  Future<ApiResponse<AuthUser?>> me() async {
+  Future<ApiResponse<StarterUser?>> me() async {
     final token = await Velora.storage.getToken();
     if (token == null || token.isEmpty) {
       return const ApiResponse(
@@ -69,7 +69,7 @@ class StarterAuthService extends GetxService {
     final rawUser = response.data!['user'] is Map
         ? response.data!['user']
         : response.data;
-    final user = AuthUser.fromJson(Map<String, dynamic>.from(rawUser as Map));
+    final user = StarterUser.fromJson(Map<String, dynamic>.from(rawUser as Map));
     await Velora.storage.setJson(_userKey, user.toJson());
     Velora.auth.currentUser.value = user;
     Velora.auth.state.value = SessionState.authenticated;
@@ -96,7 +96,7 @@ class StarterAuthService extends GetxService {
     );
   }
 
-  void _syncFeatureAccess(AuthUser user) {
+  void _syncFeatureAccess(StarterUser user) {
     Velora.feature.registerAll([
       UsersFeature.feature,
       NotificationsFeature.feature,

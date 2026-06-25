@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:velora/velora.dart';
 
 import 'app/modules/auth/auth_binding.dart';
+import 'app/modules/auth/starter_user.dart';
 import 'app/modules/notifications/notifications_binding.dart';
 import 'app/routes/app_pages.dart';
 import 'app/routes/app_routes.dart';
@@ -10,10 +11,14 @@ import 'resources/theme/app_theme.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Velora.boot(
-    config: const VeloraConfig(
+    config: VeloraConfig(
       appName: 'Velora Starter',
       apiBaseUrl: 'https://api.example.com/api',
-      notifications: VeloraNotificationConfig(provider: PushProvider.none),
+      notifications: const VeloraNotificationConfig(provider: PushProvider.none),
+      auth: VeloraAuthConfig(
+        // Tell Velora how to restore a persisted StarterUser session.
+        userParser: StarterUser.fromJson,
+      ),
     ),
   );
   AuthBinding().dependencies();

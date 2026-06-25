@@ -45,7 +45,17 @@ class Velora {
   static VeloraMediaService get media => Get.find<VeloraMediaService>();
   static const VeloraValidator validator = VeloraValidator();
 
-  static Future<AuthUser> login(Map<String, dynamic> credentials) =>
+  /// The currently authenticated user, or null when no session is active.
+  static VeloraUser? get user => auth.user;
+
+  /// Returns the current user cast to your own model type.
+  ///
+  /// ```dart
+  /// final user = Velora.userAs<AppUser>();
+  /// ```
+  static T? userAs<T extends VeloraUser>() => auth.userAs<T>();
+
+  static Future<VeloraUser> login(Map<String, dynamic> credentials) =>
       auth.login(credentials);
 
   static Future<void> logout() => auth.logout();

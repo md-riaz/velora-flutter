@@ -5,11 +5,11 @@ import '../auth/auth_user.dart';
 
 class PermissionService extends GetxService {
   final AuthService auth;
-  final bool Function(AuthUser user, String permission)? _resolver;
+  final bool Function(VeloraUser user, String permission)? _resolver;
 
   PermissionService({
     required this.auth,
-    bool Function(AuthUser user, String permission)? permissionResolver,
+    bool Function(VeloraUser user, String permission)? permissionResolver,
   }) : _resolver = permissionResolver;
 
   /// Returns true if the current user may perform [permission].
