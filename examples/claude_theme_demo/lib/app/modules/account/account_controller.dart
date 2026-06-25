@@ -12,7 +12,7 @@ import 'package:velora/velora.dart';
 ///   3. Call [Velora.logout] to clear the session.
 ///   4. Guard routes with [Velora.authOnly] middleware.
 class AccountController extends VeloraController {
-  bool get isAuthenticated => Velora.auth.check;
+  bool get isAuthenticated => Velora.auth.isAuthenticated.value;
 
   VeloraUser? get currentUser => Velora.auth.user;
 
@@ -30,8 +30,11 @@ class AccountController extends VeloraController {
       message: 'Are you sure you want to sign out?',
     );
     if (!confirmed) return;
-    // In a real app: await Velora.logout();
-    Velora.toast.info('Sign out called — no real session in demo');
+    if (isAuthenticated) {
+      await Velora.logout();
+    } else {
+      Velora.toast.info('Sign out called — no real session in demo');
+    }
   }
 }
 

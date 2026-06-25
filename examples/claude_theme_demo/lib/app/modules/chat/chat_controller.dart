@@ -169,6 +169,10 @@ class ChatController extends VeloraController with VeloraAttachmentsMixin {
   }
 
   Future<void> clearHistory() async {
+    if (isTyping.value) {
+      Velora.toast.info('Wait for the current reply to finish');
+      return;
+    }
     final confirmed = await Velora.dialog.confirm(
       title: 'Clear history',
       message: 'This will remove all messages from this conversation.',
