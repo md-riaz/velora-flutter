@@ -109,7 +109,7 @@ void main() {
     final fallback = AuthUser.fromJson({'roles': 'admin'});
     expect(fallback.id, 0);
     expect(fallback.name, isEmpty);
-    expect(fallback.email, isEmpty);
+    expect(fallback.email, isNull);
     expect(fallback.roles, isEmpty);
   });
 

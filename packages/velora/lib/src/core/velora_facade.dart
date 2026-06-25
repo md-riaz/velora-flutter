@@ -129,7 +129,13 @@ class Velora {
     Get.put<NotificationService>(notify, permanent: true);
     auth.attachNotifications(notify);
 
-    Get.put<PermissionService>(PermissionService(auth: auth), permanent: true);
+    Get.put<PermissionService>(
+      PermissionService(
+        auth: auth,
+        permissionResolver: config.auth.permissionResolver,
+      ),
+      permanent: true,
+    );
     final feature = FeatureService();
     Get.put<FeatureService>(feature, permanent: true);
     lifecycle.register(feature);

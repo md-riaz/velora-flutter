@@ -1,3 +1,4 @@
+import '../auth/auth_user.dart';
 import '../notifications/notification_config.dart';
 
 /// Configures how [ApiResponse.fromJson] unwraps your API's JSON envelope.
@@ -123,6 +124,35 @@ class VeloraAuthConfig {
   final Map<String, dynamic>? Function(Map<String, dynamic> payload)?
       meUserExtractor;
 
+  /// Controls how [PermissionService.can] resolves a permission string.
+  ///
+  /// By default, `can(p)` returns true when `p` appears in
+  /// [AuthUser.permissions]. Override this to support other access-control
+  /// models without changing any call sites:
+  ///
+  /// **Roles only** — admin can do everything, editor has limited access:
+  /// ```dart
+  /// permissionResolver: (user, permission) {
+  ///   if (user.roles.contains('admin')) return true;
+  ///   if (user.roles.contains('editor')) {
+  ///     return const ['posts.view', 'posts.create'].contains(permission);
+  ///   }
+  ///   return false;
+  /// },
+  /// ```
+  ///
+  /// **Resource permissions only** — no override needed; [AuthUser.permissions]
+  /// can hold any strings your backend returns (`'posts:read'`, `'users:write'`,
+  /// etc.) and the default resolver handles them transparently.
+  ///
+  /// **Hybrid** — check permissions first, fall back to role wildcard:
+  /// ```dart
+  /// permissionResolver: (user, permission) =>
+  ///     user.permissions.contains(permission) ||
+  ///     user.roles.contains('superadmin'),
+  /// ```
+  final bool Function(AuthUser user, String permission)? permissionResolver;
+
   const VeloraAuthConfig({
     this.loginEndpoint = '/auth/login',
     this.logoutEndpoint = '/auth/logout',
@@ -131,5 +161,6 @@ class VeloraAuthConfig {
     this.tokenExtractor,
     this.userExtractor,
     this.meUserExtractor,
+    this.permissionResolver,
   });
 }
