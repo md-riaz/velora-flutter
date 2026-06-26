@@ -150,8 +150,10 @@ class _ReactiveReadDetector extends RecursiveAstVisitor<void> {
   static bool _isGetxRxType(DartType type) {
     if (type is! InterfaceType) return false;
     for (final t in [type, ...type.allSupertypes]) {
-      final name = t.element.name;
-      final uri = t.element.library.source.uri.toString();
+      final element = t.element;
+      final name = element.name;
+      if (name == null) continue;
+      final uri = element.library?.source?.uri.toString() ?? '';
       if (uri.contains('package:get/') &&
           (name.startsWith('Rx') || name == 'GetListenable')) {
         return true;
@@ -169,8 +171,10 @@ class _ReactiveReadDetector extends RecursiveAstVisitor<void> {
   static bool _isGetxController(DartType type) {
     if (type is! InterfaceType) return false;
     for (final t in [type, ...type.allSupertypes]) {
-      final name = t.element.name;
-      final uri = t.element.library.source.uri.toString();
+      final element = t.element;
+      final name = element.name;
+      if (name == null) continue;
+      final uri = element.library?.source?.uri.toString() ?? '';
       if (uri.contains('package:get/') &&
           (name == 'GetxController' ||
               name == 'GetxService' ||
