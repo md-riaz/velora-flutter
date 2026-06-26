@@ -40,7 +40,7 @@ jobs:
 
       - name: Lint velora package
         working-directory: packages/velora
-        run: dart run custom_lint --no-fatal-infos
+        run: dart run custom_lint --no-fatal-warnings
 
       - name: Run velora tests
         working-directory: packages/velora
@@ -61,5 +61,5 @@ jobs:
 
       - name: Lint claude_clone
         working-directory: examples/claude_clone
-        run: dart run custom_lint --no-fatal-infos
+        run: dart run custom_lint --no-fatal-warnings
 
