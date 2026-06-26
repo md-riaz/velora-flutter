@@ -201,7 +201,7 @@ class HomePage extends GetView<HomeController> {
                 final conv = items[index];
                 final tile = _ConversationTile(
                   conversation: conv,
-                  onTap: () => Velora.nav.to(AppRoutes.chat, arguments: conv),
+                  onTap: () => Velora.nav.to('/chat/${conv.id}', arguments: conv),
                 );
                 if (index == items.length - 1) return tile;
                 return Column(
@@ -308,7 +308,7 @@ class _AppDrawer extends StatelessWidget {
                     ),
                     onTap: () {
                       Navigator.pop(context);
-                      Velora.nav.to(AppRoutes.chat, arguments: conv);
+                      Velora.nav.to('/chat/${conv.id}', arguments: conv);
                     },
                     dense: true,
                     contentPadding:

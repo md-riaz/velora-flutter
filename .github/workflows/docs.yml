@@ -7,6 +7,7 @@ on:
       - 'packages/velora/lib/**'
       - 'packages/velora/pubspec.yaml'
       - 'examples/*/lib/**'
+      - 'docs/**'
       - '.github/workflows/docs.yml'
   workflow_dispatch:
 
@@ -57,64 +58,8 @@ jobs:
         if: steps.demo-check.outcome == 'success'
         run: sed -i 's|<base href="/claude_theme_demo/">|<base href="/velora-flutter/demo/">|' _site/demo/index.html
 
-      - name: Create landing page
-        run: |
-          cat > _site/index.html << 'LANDING'
-          <!DOCTYPE html>
-          <html lang="en">
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1">
-            <title>Velora — Laravel-like DX for Flutter</title>
-            <style>
-              :root { --bg: #FAFAF8; --fg: #1A1613; --muted: #6B6560; --accent: #D97757; --card: #fff; --border: #E8E4DF; }
-              @media (prefers-color-scheme: dark) {
-                :root { --bg: #1A1613; --fg: #F5F1EE; --muted: #A39E99; --accent: #E8916D; --card: #2A2520; --border: #3D3833; }
-              }
-              * { margin: 0; padding: 0; box-sizing: border-box; }
-              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--fg); line-height: 1.6; }
-              .container { max-width: 720px; margin: 0 auto; padding: 64px 24px; }
-              h1 { font-size: 2.5rem; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 8px; }
-              h1 span { color: var(--accent); }
-              .subtitle { color: var(--muted); font-size: 1.15rem; margin-bottom: 48px; }
-              .links { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 48px; }
-              .links a { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 500; font-size: 0.95rem; transition: opacity .15s; }
-              .links a:hover { opacity: .85; }
-              .primary { background: var(--accent); color: #fff; }
-              .secondary { background: var(--card); color: var(--fg); border: 1px solid var(--border); }
-              .cards { display: grid; gap: 16px; }
-              .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; }
-              .card h3 { font-size: 1.05rem; margin-bottom: 4px; }
-              .card p { color: var(--muted); font-size: 0.9rem; }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <h1>Velora<span>.</span></h1>
-              <p class="subtitle">Laravel-like productivity for Flutter apps.</p>
-              <div class="links">
-                <a class="primary" href="api/">API Reference</a>
-                <a class="secondary" href="https://github.com/md-riaz/velora-flutter">GitHub</a>
-                <a class="secondary" href="demo/">Live Demo</a>
-              </div>
-              <div class="cards">
-                <div class="card">
-                  <h3>Themed from day one</h3>
-                  <p>Brand-precise color schemes, light/dark persistence, and ThemeExtension tokens out of the box.</p>
-                </div>
-                <div class="card">
-                  <h3>Batteries included</h3>
-                  <p>Paginated lists, mock API layer, form validation, media attachments, and file uploads — all built in.</p>
-                </div>
-                <div class="card">
-                  <h3>Swap mock → production</h3>
-                  <p>Data sources use the repository pattern. Replace MockDataSource with RemoteDataSource — zero controller changes.</p>
-                </div>
-              </div>
-            </div>
-          </body>
-          </html>
-          LANDING
+      - name: Copy landing page
+        run: cp docs/index.html _site/index.html
 
       - name: Upload pages artifact
         uses: actions/upload-pages-artifact@v3

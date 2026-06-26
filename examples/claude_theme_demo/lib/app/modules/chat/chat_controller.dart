@@ -32,12 +32,30 @@ class ChatController extends VeloraController with VeloraAttachmentsMixin {
   @override
   void onInit() {
     super.onInit();
-    final args = Get.arguments;
-    if (args is! ConversationModel) {
+    final id = Get.parameters['id'];
+    if (id == null || id.isEmpty) {
       Get.back<void>();
       return;
     }
-    conversation = args.obs;
+    final args = Get.arguments;
+    if (args is ConversationModel && args.id == id) {
+      conversation = args.obs;
+      _loadMessages();
+    } else {
+      _bootstrapFromId(id);
+    }
+  }
+
+  Future<void> _bootstrapFromId(String id) async {
+    ConversationModel? conv;
+    await run(() async {
+      conv = await _conversationsDs.getById(id);
+    });
+    if (conv == null || error.value.isNotEmpty) {
+      Get.back<void>();
+      return;
+    }
+    conversation = conv!.obs;
     _loadMessages();
   }
 
