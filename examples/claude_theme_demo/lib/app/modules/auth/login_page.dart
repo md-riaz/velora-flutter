@@ -224,6 +224,18 @@ class _FeatureToggles extends StatelessWidget {
               ),
             ),
           ),
+          // Admin role toggle — first item, always visible
+          _FeatureRow(
+            label: 'Admin role',
+            description: 'Grants admin role + permissions (enables RoleOnly demo)',
+            scheme: scheme,
+            textTheme: textTheme,
+            valueBuilder: () => controller.loginAsAdmin.value,
+            onToggle: () =>
+                controller.loginAsAdmin.value = !controller.loginAsAdmin.value,
+          ),
+          Divider(height: 1, indent: 16, color: scheme.outlineVariant),
+
           ...SettingsController.demoFeatures.asMap().entries.map((entry) {
             final i = entry.key;
             final f = entry.value;
@@ -231,50 +243,15 @@ class _FeatureToggles extends StatelessWidget {
             return Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Obx(() {
-                  final enabled = controller.featureEnabled(f.id);
-                  return InkWell(
-                    onTap: () => controller.toggleFeature(f.id),
-                    borderRadius: isLast
-                        ? const BorderRadius.vertical(bottom: Radius.circular(14))
-                        : null,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  f.label,
-                                  style: textTheme.bodyMedium?.copyWith(
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  f.description,
-                                  style: textTheme.bodySmall?.copyWith(
-                                    color: scheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Switch(
-                            value: enabled,
-                            onChanged: (_) => controller.toggleFeature(f.id),
-                            activeTrackColor: ClaudeColors.primary,
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
+                _FeatureRow(
+                  label: f.label,
+                  description: f.description,
+                  scheme: scheme,
+                  textTheme: textTheme,
+                  isLastInGroup: isLast,
+                  valueBuilder: () => controller.featureEnabled(f.id),
+                  onToggle: () => controller.toggleFeature(f.id),
+                ),
                 if (!isLast)
                   Divider(height: 1, indent: 16, color: scheme.outlineVariant),
               ],
@@ -289,6 +266,71 @@ class _FeatureToggles extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+class _FeatureRow extends StatelessWidget {
+  final String label;
+  final String description;
+  final ColorScheme scheme;
+  final TextTheme textTheme;
+  final bool isLastInGroup;
+  final bool Function() valueBuilder;
+  final VoidCallback onToggle;
+
+  const _FeatureRow({
+    required this.label,
+    required this.description,
+    required this.scheme,
+    required this.textTheme,
+    required this.valueBuilder,
+    required this.onToggle,
+    this.isLastInGroup = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final enabled = valueBuilder();
+      return InkWell(
+        onTap: onToggle,
+        borderRadius: isLastInGroup
+            ? const BorderRadius.vertical(bottom: Radius.circular(14))
+            : null,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      description,
+                      style: textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: enabled,
+                onChanged: (_) => onToggle(),
+                activeTrackColor: ClaudeColors.primary,
+              ),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+}
 
 class _FieldLabel extends StatelessWidget {
   final String label;

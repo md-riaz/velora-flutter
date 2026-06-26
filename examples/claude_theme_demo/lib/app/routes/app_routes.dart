@@ -4,4 +4,6 @@ abstract class AppRoutes {
   static const chat = '/chat';
   static const settings = '/settings';
   static const account = '/account';
+  static const notifications = '/notifications';
+  static const editProfile = '/account/edit';
 }

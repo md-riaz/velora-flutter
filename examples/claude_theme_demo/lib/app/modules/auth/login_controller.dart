@@ -13,6 +13,10 @@ class LoginController extends VeloraController {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
+  /// When true, the mock login grants the [admin] role and admin permissions.
+  /// This enables the [RoleOnly] and [Can] widgets on the Account page.
+  final loginAsAdmin = false.obs;
+
   @override
   void onClose() {
     emailController.dispose();
@@ -49,11 +53,15 @@ class LoginController extends VeloraController {
         .where((f) => Velora.feature.enabled(f.id))
         .map((f) => f.id)
         .toList();
+    final isAdmin = loginAsAdmin.value;
     Velora.auth.currentUser.value = AuthUser(
       id: 1,
       name: _capitalise(name),
       email: email,
-      roles: const ['user'],
+      roles: isAdmin ? const ['user', 'admin'] : const ['user'],
+      permissions: isAdmin
+          ? const ['admin.view', 'users.manage', 'notifications.view']
+          : const ['notifications.view'],
       features: enabledFeatures,
     );
     Velora.auth.state.value = SessionState.authenticated;

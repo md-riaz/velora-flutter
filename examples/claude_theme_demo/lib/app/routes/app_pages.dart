@@ -1,14 +1,17 @@
-import 'package:get/get.dart';
 import 'package:velora/velora.dart';
 
 import '../modules/account/account_controller.dart';
 import '../modules/account/account_page.dart';
+import '../modules/account/edit_profile_controller.dart';
+import '../modules/account/edit_profile_page.dart';
 import '../modules/auth/login_controller.dart';
 import '../modules/auth/login_page.dart';
 import '../modules/chat/chat_controller.dart';
 import '../modules/chat/chat_page.dart';
 import '../modules/home/home_controller.dart';
 import '../modules/home/home_page.dart';
+import '../modules/notifications/notifications_controller.dart';
+import '../modules/notifications/notifications_page.dart';
 import '../modules/settings/settings_controller.dart';
 import '../modules/settings/settings_page.dart';
 import 'app_routes.dart';
@@ -43,6 +46,22 @@ class AppPages {
       name: AppRoutes.account,
       page: () => const AccountPage(),
       binding: BindingsBuilder(() => Get.lazyPut(() => AccountController(), fenix: true)),
+      middlewares: Velora.authOnly,
+    ),
+    GetPage(
+      name: AppRoutes.notifications,
+      page: () => const NotificationsPage(),
+      binding: BindingsBuilder(
+        () => Get.lazyPut(() => NotificationsController(), fenix: true),
+      ),
+      middlewares: Velora.authOnly,
+    ),
+    GetPage(
+      name: AppRoutes.editProfile,
+      page: () => const EditProfilePage(),
+      binding: BindingsBuilder(
+        () => Get.lazyPut(() => EditProfileController(), fenix: true),
+      ),
       middlewares: Velora.authOnly,
     ),
   ];
