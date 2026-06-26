@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Velora — Laravel-like Flutter Framework</title>
+  <meta name="description" content="Routing, auth, API client, role-based permissions, and push notifications for Flutter — structured the way you already think after years of Laravel.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+  <style>
+    /* ── Tokens ─────────────────────────────────────────── */
+    :root {
+      --bg:        #F9F7F4;
+      --surface:   #FFFFFF;
+      --surface-2: #F0EDE8;
+      --border:    #DDD8D0;
+      --fg:        #161412;
+      --fg-2:      #4A4540;
+      --muted:     #7A746C;
+      --accent:    #D97757;
+      --accent-bg: #FBF0EA;
+      --code-bg:   #18160F;
+      --code-fg:   #E2DDD6;
+      --code-bdr:  rgba(255,255,255,0.07);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:        #111009;
+        --surface:   #1A1815;
+        --surface-2: #221F1A;
+        --border:    #2E2B24;
+        --fg:        #EDE8E1;
+        --fg-2:      #C4BDB4;
+        --muted:     #8C857D;
+        --accent:    #E8916D;
+        --accent-bg: #2A1E14;
+        --code-bg:   #0D0C09;
+        --code-fg:   #E2DDD6;
+        --code-bdr:  rgba(255,255,255,0.05);
+      }
+    }
+
+    /* ── Reset ──────────────────────────────────────────── */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      line-height: 1.6;
+      font-size: 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; }
+    a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
+    code, pre { font-family: 'IBM Plex Mono', 'Fira Code', 'Cascadia Code', monospace; }
+
+    /* ── Nav ────────────────────────────────────────────── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    .nav-inner {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 0 24px;
+      height: 54px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .nav-logo {
+      font-size: 1rem;
+      font-weight: 600;
+      text-decoration: none;
+      color: var(--fg);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .nav-logo-mark {
+      width: 26px;
+      height: 26px;
+      background: var(--accent);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #fff;
+      font-family: 'IBM Plex Mono', monospace;
+      letter-spacing: -0.02em;
+    }
+    .nav-divider {
+      width: 1px;
+      height: 20px;
+      background: var(--border);
+      margin: 0 12px;
+    }
+    .nav-version {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--muted);
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: auto;
+      list-style: none;
+    }
+    .nav-links a {
+      text-decoration: none;
+      font-size: 0.875rem;
+      color: var(--muted);
+      padding: 6px 12px;
+      border-radius: 6px;
+      transition: color 0.12s, background 0.12s;
+    }
+    .nav-links a:hover { color: var(--fg); background: var(--surface-2); }
+    .nav-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--fg) !important;
+      background: var(--surface) !important;
+      border: 1px solid var(--border);
+      padding: 6px 14px !important;
+      font-weight: 500;
+      transition: border-color 0.12s !important;
+    }
+    .nav-cta:hover { border-color: var(--muted) !important; }
+    .nav-cta svg { flex-shrink: 0; }
+
+    /* ── Hero ───────────────────────────────────────────── */
+    .hero {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 72px 24px 64px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 56px;
+      align-items: start;
+    }
+    .hero-eyebrow {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin-bottom: 20px;
+    }
+    .hero-title {
+      font-size: clamp(2rem, 3.5vw, 2.75rem);
+      font-weight: 600;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+      text-wrap: balance;
+      margin-bottom: 18px;
+    }
+    .hero-title em {
+      font-style: normal;
+      color: var(--muted);
+    }
+    .hero-desc {
+      font-size: 1.025rem;
+      color: var(--fg-2);
+      line-height: 1.75;
+      margin-bottom: 36px;
+      max-width: 42ch;
+    }
+    .hero-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 28px;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      padding: 9px 20px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 0.925rem;
+      transition: opacity 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-primary:hover { opacity: 0.85; }
+    .btn-outline {
+      background: transparent;
+      color: var(--fg);
+      border: 1px solid var(--border);
+      padding: 9px 20px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 0.925rem;
+      transition: border-color 0.12s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-outline:hover { border-color: var(--muted); }
+    .install-snippet {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.825rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 8px 14px;
+      border-radius: 7px;
+      color: var(--fg-2);
+    }
+    .install-snippet .prompt { color: var(--accent); user-select: none; }
+
+    /* ── Code pane ──────────────────────────────────────── */
+    .code-pane {
+      background: var(--code-bg);
+      border-radius: 12px;
+      border: 1px solid var(--code-bdr);
+      overflow: hidden;
+    }
+    .code-titlebar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 11px 14px;
+      border-bottom: 1px solid var(--code-bdr);
+    }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: #3A3730; }
+    .code-label {
+      margin-left: 8px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.72rem;
+      color: #5A5450;
+    }
+    .code-pane pre {
+      padding: 20px 22px;
+      font-size: 0.82rem;
+      line-height: 1.75;
+      color: var(--code-fg);
+      overflow-x: auto;
+      tab-size: 2;
+    }
+    /* Syntax colours — Material Palenight-ish */
+    .kw  { color: #C792EA; }   /* keyword */
+    .cls { color: #FFCB6B; }   /* class / type */
+    .fn  { color: #82AAFF; }   /* function / method */
+    .str { color: #C3E88D; }   /* string */
+    .cm  { color: #4A5568; }   /* comment */
+    .acc { color: #F78C6C; }   /* Velora accent */
+    .num { color: #F78C6C; }   /* number */
+
+    /* ── Divider ────────────────────────────────────────── */
+    .section-divider {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+    .section-divider hr { border: none; border-top: 1px solid var(--border); }
+
+    /* ── Features ───────────────────────────────────────── */
+    .features {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 64px 24px;
+    }
+    .section-eyebrow {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      margin-bottom: 36px;
+    }
+    .section-eyebrow span { color: var(--accent); }
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .feature-item {
+      padding: 28px 28px 28px 24px;
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      position: relative;
+    }
+    .feature-item:nth-child(3n) { border-right: none; }
+    .feature-item:nth-child(n+4) { border-bottom: none; }
+    .feature-accent {
+      width: 3px;
+      height: 20px;
+      background: var(--accent);
+      border-radius: 2px;
+      position: absolute;
+      left: 0;
+      top: 28px;
+      opacity: 0.6;
+    }
+    .feature-item h3 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--fg);
+    }
+    .feature-item p {
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+    .feature-item code {
+      font-size: 0.8rem;
+      background: var(--surface-2);
+      padding: 1px 5px;
+      border-radius: 3px;
+      color: var(--accent);
+    }
+
+    /* ── Guides ─────────────────────────────────────────── */
+    .guides {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 64px 24px;
+    }
+    .guides-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+    .guides-head h2 {
+      font-size: 1.35rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+    .guides-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 2px;
+      background: var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .guide-card {
+      background: var(--surface);
+      padding: 20px 24px;
+      text-decoration: none;
+      color: var(--fg);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      transition: background 0.1s;
+    }
+    .guide-card:hover { background: var(--surface-2); }
+    .guide-card:hover .guide-arrow { color: var(--fg); transform: translateX(2px); }
+    .guide-card-body { min-width: 0; }
+    .guide-card-body h4 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 3px;
+    }
+    .guide-card-body p {
+      font-size: 0.8rem;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .guide-arrow {
+      color: var(--muted);
+      font-size: 1rem;
+      flex-shrink: 0;
+      transition: color 0.1s, transform 0.1s;
+    }
+
+    /* ── Architecture callout ───────────────────────────── */
+    .callout {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 0 24px 64px;
+    }
+    .callout-inner {
+      background: var(--accent-bg);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 8px;
+      padding: 24px 28px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 24px;
+      align-items: center;
+    }
+    .callout-inner h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .callout-inner p {
+      font-size: 0.875rem;
+      color: var(--fg-2);
+      max-width: 60ch;
+    }
+
+    /* ── Footer ─────────────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border);
+    }
+    .footer-inner {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 28px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .footer-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .footer-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      color: var(--fg);
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    .footer-logo-mark {
+      width: 22px;
+      height: 22px;
+      background: var(--accent);
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: #fff;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+    .footer-copy {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .footer-links {
+      display: flex;
+      gap: 20px;
+      list-style: none;
+    }
+    .footer-links a {
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.12s;
+    }
+    .footer-links a:hover { color: var(--fg); }
+
+    /* ── Responsive ─────────────────────────────────────── */
+    @media (max-width: 800px) {
+      .hero {
+        grid-template-columns: 1fr;
+        gap: 40px;
+        padding-top: 48px;
+      }
+      .feature-grid {
+        grid-template-columns: 1fr;
+      }
+      .feature-item { border-right: none; }
+      .feature-item:last-child { border-bottom: none; }
+      .feature-item:nth-child(n+4) { border-bottom: 1px solid var(--border); }
+      .feature-item:last-child { border-bottom: none; }
+      .guides-grid { grid-template-columns: 1fr; }
+      .callout-inner { grid-template-columns: 1fr; }
+      .callout-inner .btn-outline { align-self: start; }
+    }
+    @media (max-width: 600px) {
+      .nav-links { display: none; }
+      .hero-title { font-size: 1.85rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      * { transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Navigation ──────────────────────────────────────── -->
+<nav aria-label="Site">
+  <div class="nav-inner">
+    <a class="nav-logo" href="#">
+      <span class="nav-logo-mark" aria-hidden="true">Vl</span>
+      Velora
+    </a>
+    <span class="nav-divider" aria-hidden="true"></span>
+    <span class="nav-version">v0.0.1</span>
+    <ul class="nav-links" role="list">
+      <li><a href="#guides">Guides</a></li>
+      <li><a href="api/" rel="noopener">API Reference</a></li>
+      <li><a href="demo/" rel="noopener">Demo</a></li>
+      <li>
+        <a class="nav-cta" href="https://github.com/md-riaz/velora-flutter" rel="noopener noreferrer" target="_blank">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38
+              0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13
+              -.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66
+              .07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15
+              -.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.68 7.68 0 012-.27c.68 0
+              1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82
+              1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01
+              1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+          </svg>
+          GitHub
+        </a>
+      </li>
+    </ul>
+  </div>
+</nav>
+
+<!-- ── Hero ────────────────────────────────────────────── -->
+<main>
+<section class="hero" aria-labelledby="hero-heading">
+  <div class="hero-text">
+    <p class="hero-eyebrow">Developer Preview</p>
+    <h1 class="hero-title" id="hero-heading">
+      The Laravel way<br>
+      <em>for Flutter.</em>
+    </h1>
+    <p class="hero-desc">
+      Auth, API client, permissions, notifications, and
+      scaffolded modules — wired together the way you already
+      think after years of Laravel.
+    </p>
+    <div class="hero-actions">
+      <a class="btn-primary" href="https://github.com/md-riaz/velora-flutter/blob/main/docs/getting-started.md" rel="noopener">
+        Get started
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+          <path d="M2.5 6h7M6 2.5L9.5 6 6 9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
+      <a class="btn-outline" href="api/">API Reference</a>
+      <a class="btn-outline" href="demo/">Live Demo</a>
+    </div>
+    <code class="install-snippet">
+      <span class="prompt">$</span>flutter pub add velora
+    </code>
+  </div>
+
+  <div class="hero-code" aria-label="Example controller code">
+    <div class="code-pane">
+      <div class="code-titlebar" aria-hidden="true">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="code-label">home_controller.dart</span>
+      </div>
+      <pre><code><span class="kw">class</span> <span class="cls">HomeController</span> <span class="kw">extends</span> <span class="cls">VeloraController</span> {
+  <span class="kw">final</span> posts = &lt;<span class="cls">Post</span>&gt;[].obs;
+
+  <span class="fn">@override</span>
+  <span class="kw">void</span> <span class="fn">onInit</span>() {
+    <span class="kw">super</span>.<span class="fn">onInit</span>();
+    <span class="fn">run</span>(() =&gt; _loadPosts());
+  }
+
+  <span class="cls">Future</span>&lt;<span class="kw">void</span>&gt; _loadPosts() <span class="kw">async</span> {
+    posts.value = <span class="kw">await</span>
+      <span class="acc">Velora</span>.api.<span class="fn">index</span>(<span class="cls">PostRemoteDataSource</span>());
+  }
+}
+
+<span class="cm">// Gate a button by server permission</span>
+<span class="cls">Can</span>(
+  permission: <span class="str">'posts.manage'</span>,
+  child: <span class="cls">FloatingActionButton</span>(
+    onPressed: controller.<span class="fn">create</span>,
+  ),
+)</code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ── Features ────────────────────────────────────────── -->
+<div class="section-divider"><hr></div>
+
+<section class="features" aria-labelledby="features-heading">
+  <p class="section-eyebrow"><span>—</span> What's included</p>
+  <div class="feature-grid" role="list">
+
+    <article class="feature-item" role="listitem">
+      <span class="feature-accent" aria-hidden="true"></span>
+      <h3>Auth &amp; Sessions</h3>
+      <p>Laravel Sanctum token flow with mock login for local development. No backend required to start building your UI.</p>
+    </article>
+
+    <article class="feature-item" role="listitem">
+      <span class="feature-accent" aria-hidden="true"></span>
+      <h3>Repository Pattern</h3>
+      <p>Data sources implement one interface. Replace <code>MockDataSource</code> with <code>RemoteDataSource</code> — controllers never change.</p>
+    </article>
+
+    <article class="feature-item" role="listitem">
+      <span class="feature-accent" aria-hidden="true"></span>
+      <h3>Permissions &amp; RBAC</h3>
+      <p><code>Can</code> and <code>RoleOnly</code> widgets gate UI by server-assigned permission or role. State mirrors the authenticated user.</p>
+    </article>
+
+    <article class="feature-item" role="listitem">
+      <span class="feature-accent" aria-hidden="true"></span>
+      <h3>Notification Infrastructure</h3>
+      <p>FCM/APNs wiring, in-app notification list, unread badge counts, and CLI commands for platform setup.</p>
+    </article>
+
+    <article class="feature-item" role="listitem">
+      <span class="feature-accent" aria-hidden="true"></span>
+      <h3>Form Validation</h3>
+      <p><code>VeloraFormController</code> accepts 422 responses from Laravel and binds field errors inline — no manual mapping.</p>
+    </article>
+
+    <article class="feature-item" role="listitem">
+      <span class="feature-accent" aria-hidden="true"></span>
+      <h3>CLI Scaffolding</h3>
+      <p>Generate modules, auth flows, and notification setup in one command. Consistent structure across every feature.</p>
+    </article>
+
+  </div>
+</section>
+
+<!-- ── Architecture callout ────────────────────────────── -->
+<section class="callout" aria-labelledby="arch-heading">
+  <div class="callout-inner">
+    <div>
+      <h3 id="arch-heading">GetxService owns shared state. Controllers own UI state.</h3>
+      <p>
+        The hard line between framework layer and app layer is intentional.
+        Services hold cross-screen business data; controllers hold what a single
+        screen needs. Read the architecture guide before building your first module.
+      </p>
+    </div>
+    <a class="btn-outline" href="https://github.com/md-riaz/velora-flutter/blob/main/docs/architecture.md" rel="noopener" style="white-space:nowrap">
+      Read the guide
+    </a>
+  </div>
+</section>
+
+<!-- ── Docs navigation ──────────────────────────────────── -->
+<div class="section-divider"><hr></div>
+
+<section class="guides" id="guides" aria-labelledby="guides-heading">
+  <div class="guides-head">
+    <h2 id="guides-heading">Documentation</h2>
+    <a class="btn-outline" style="font-size:0.85rem;padding:7px 14px;"
+       href="https://github.com/md-riaz/velora-flutter/tree/main/docs"
+       rel="noopener noreferrer" target="_blank">
+      View all on GitHub
+    </a>
+  </div>
+
+  <div class="guides-grid" role="list">
+
+    <a class="guide-card" role="listitem"
+       href="https://github.com/md-riaz/velora-flutter/blob/main/docs/getting-started.md"
+       rel="noopener noreferrer" target="_blank">
+      <div class="guide-card-body">
+        <h4>Getting Started</h4>
+        <p>Boot configuration, VeloraConfig, and mock mode setup</p>
+      </div>
+      <span class="guide-arrow" aria-hidden="true">→</span>
+    </a>
+
+    <a class="guide-card" role="listitem"
+       href="https://github.com/md-riaz/velora-flutter/blob/main/docs/architecture.md"
+       rel="noopener noreferrer" target="_blank">
+      <div class="guide-card-body">
+        <h4>Architecture</h4>
+        <p>GetX layering, service vs. controller, repository convention</p>
+      </div>
+      <span class="guide-arrow" aria-hidden="true">→</span>
+    </a>
+
+    <a class="guide-card" role="listitem"
+       href="https://github.com/md-riaz/velora-flutter/blob/main/docs/auth.md"
+       rel="noopener noreferrer" target="_blank">
+      <div class="guide-card-body">
+        <h4>Auth</h4>
+        <p>Sanctum token flow, mock login, Logout Safety Contract</p>
+      </div>
+      <span class="guide-arrow" aria-hidden="true">→</span>
+    </a>
+
+    <a class="guide-card" role="listitem"
+       href="https://github.com/md-riaz/velora-flutter/blob/main/docs/api-client.md"
+       rel="noopener noreferrer" target="_blank">
+      <div class="guide-card-body">
+        <h4>API Client</h4>
+        <p>Velora.api facade, response handling, mock data sources</p>
+      </div>
+      <span class="guide-arrow" aria-hidden="true">→</span>
+    </a>
+
+    <a class="guide-card" role="listitem"
+       href="https://github.com/md-riaz/velora-flutter/blob/main/docs/permissions.md"
+       rel="noopener noreferrer" target="_blank">
+      <div class="guide-card-body">
+        <h4>Permissions</h4>
+        <p>Frontend helpers, Can / RoleOnly widgets, backend enforcement</p>
+      </div>
+      <span class="guide-arrow" aria-hidden="true">→</span>
+    </a>
+
+    <a class="guide-card" role="listitem"
+       href="https://github.com/md-riaz/velora-flutter/blob/main/docs/notifications.md"
+       rel="noopener noreferrer" target="_blank">
+      <div class="guide-card-body">
+        <h4>Notifications</h4>
+        <p>FCM/APNs architecture, CLI setup, mock and noop modes</p>
+      </div>
+      <span class="guide-arrow" aria-hidden="true">→</span>
+    </a>
+
+    <a class="guide-card" role="listitem"
+       href="https://github.com/md-riaz/velora-flutter/blob/main/docs/scaffolding.md"
+       rel="noopener noreferrer" target="_blank">
+      <div class="guide-card-body">
+        <h4>Scaffolding</h4>
+        <p>CLI-generated modules, auth flows, and folder layout</p>
+      </div>
+      <span class="guide-arrow" aria-hidden="true">→</span>
+    </a>
+
+    <a class="guide-card" role="listitem"
+       href="https://github.com/md-riaz/velora-flutter/blob/main/docs/framework-app-boundary.md"
+       rel="noopener noreferrer" target="_blank">
+      <div class="guide-card-body">
+        <h4>Framework / App Boundary</h4>
+        <p>Where code lives, decision rules, and anti-patterns</p>
+      </div>
+      <span class="guide-arrow" aria-hidden="true">→</span>
+    </a>
+
+  </div>
+</section>
+</main>
+
+<!-- ── Footer ──────────────────────────────────────────── -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-left">
+      <a class="footer-logo" href="#">
+        <span class="footer-logo-mark" aria-hidden="true">Vl</span>
+        Velora
+      </a>
+      <span class="footer-copy">v0.0.1 · Developer Preview</span>
+    </div>
+    <ul class="footer-links" role="list">
+      <li><a href="https://github.com/md-riaz/velora-flutter" rel="noopener noreferrer" target="_blank">GitHub</a></li>
+      <li><a href="api/">API Reference</a></li>
+      <li><a href="https://github.com/md-riaz/velora-flutter/blob/main/docs/contributing.md" rel="noopener noreferrer" target="_blank">Contributing</a></li>
+      <li><a href="https://github.com/md-riaz/velora-flutter/blob/main/docs/roadmap.md" rel="noopener noreferrer" target="_blank">Roadmap</a></li>
+    </ul>
+  </div>
+</footer>
+
+</body>
+</html>
