@@ -56,16 +56,7 @@
 .md-header {
   box-shadow: none;
   border-bottom: 1px solid var(--md-default-fg-color--lightest);
-}
-
-[data-md-color-scheme="default"] .md-header {
-  background-color: color-mix(in srgb, #F9F7F4 85%, transparent);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
-[data-md-color-scheme="slate"] .md-header {
-  background-color: color-mix(in srgb, #111009 85%, transparent);
+  background-color: color-mix(in srgb, var(--md-default-bg-color) 85%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
@@ -221,14 +212,7 @@
 /* ── Footer ──────────────────────────────────────────────────────── */
 .md-footer {
   border-top: 1px solid var(--md-default-fg-color--lightest);
-}
-
-[data-md-color-scheme="default"] .md-footer {
-  background-color: #F9F7F4;
-}
-
-[data-md-color-scheme="slate"] .md-footer {
-  background-color: #111009;
+  background-color: var(--md-default-bg-color);
 }
 
 /* ── Search ──────────────────────────────────────────────────────── */
