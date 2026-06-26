@@ -48,6 +48,12 @@ class ChatController extends VeloraController with VeloraAttachmentsMixin {
       conversation.value = args;
       _loadMessages();
     } else {
+      conversation.value = ConversationModel(
+        id: id,
+        title: 'Loading...',
+        lastMessage: '',
+        updatedAt: DateTime.utc(2020),
+      );
       _bootstrapFromId(id);
     }
   }
