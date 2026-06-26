@@ -62,14 +62,15 @@ extra_css:
 
 nav:
   - Overview: index.md
-  - Guides:
-    - Getting Started: getting-started.md
-    - Architecture: architecture.md
-    - Auth: auth.md
-    - API Client: api-client.md
-    - Permissions: permissions.md
-    - Notifications: notifications.md
-    - Scaffolding: scaffolding.md
+  - Build Your First App:
+    - 1. Install & Boot: getting-started.md
+    - 2. Architecture: architecture.md
+    - 3. Auth: auth.md
+    - 4. API Client: api-client.md
+    - 5. Permissions: permissions.md
+    - 6. Notifications: notifications.md
+    - 7. Scaffold a Module: scaffolding.md
+  - Reference:
     - CLI Commands: commands.md
     - Framework / App Boundary: framework-app-boundary.md
   - Project:

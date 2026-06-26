@@ -5,7 +5,7 @@ hide:
 
 # Velora
 
-**The Laravel way for Flutter.** Auth, API client, role-based permissions, notifications, and scaffolded modules — wired together the way you already think after years of Laravel.
+**The Laravel way for Flutter.** Drop auth, API, permissions, notifications, and scaffolding into your Flutter app — structured the way you already think after years of Laravel.
 
 [Get Started](getting-started.md){ .md-button .md-button--primary }
 [API Reference](../api/){ .md-button }
@@ -13,81 +13,67 @@ hide:
 
 ---
 
-## Guides
+## Your Path to Production
+
+Follow these guides in order. Each one builds on the last — from zero to a fully wired Flutter + Laravel app.
 
 <div class="grid cards" markdown>
 
--   :material-rocket-launch:{ .lg } **Getting Started**
+-   :material-numeric-1-circle:{ .lg } **Install & Boot**
 
     ---
 
-    Boot config, `VeloraConfig`, and mock mode so you can build your UI without a backend.
+    Add Velora to your `pubspec.yaml`, call `Velora.boot()`, and enable mock mode so you can build without a running backend.
 
-    [→ Getting Started](getting-started.md)
+    [→ Get Started](getting-started.md)
 
--   :material-layers:{ .lg } **Architecture**
+-   :material-numeric-2-circle:{ .lg } **Architecture**
 
     ---
 
-    GetX layering, the service-vs-controller split, and the repository pattern that keeps data access swappable.
+    The six-layer GetX stack, why services own state instead of controllers, and how a feature flows from data source to UI.
 
     [→ Architecture](architecture.md)
 
--   :material-lock:{ .lg } **Auth**
+-   :material-numeric-3-circle:{ .lg } **Auth**
 
     ---
 
-    Laravel Sanctum token flow, mock login for local dev, logout safety contract.
+    Wire Laravel Sanctum login, read session state, and implement the safe logout contract so teardown never leaves a half-cleared session.
 
     [→ Auth](auth.md)
 
--   :material-web:{ .lg } **API Client**
+-   :material-numeric-4-circle:{ .lg } **API Client**
 
     ---
 
-    `Velora.api` facade, `ApiResponse<T>` unwrapping, mock data sources.
+    Call your Laravel endpoints via `Velora.api`, unwrap `ApiResponse<T>`, and swap in mock data sources without touching controllers.
 
     [→ API Client](api-client.md)
 
--   :material-shield-account:{ .lg } **Permissions & RBAC**
+-   :material-numeric-5-circle:{ .lg } **Permissions**
 
     ---
 
-    `Can` and `RoleOnly` widgets gate UI by server-assigned permission or role.
+    Gate widgets by server-assigned roles and permissions using `Can` and `RoleOnly` — reactive, no boilerplate.
 
     [→ Permissions](permissions.md)
 
--   :material-bell:{ .lg } **Notifications**
+-   :material-numeric-6-circle:{ .lg } **Notifications**
 
     ---
 
-    FCM/APNs wiring, in-app list, unread badge, CLI platform setup commands.
+    Scaffold FCM/APNs push, an in-app notification center, and unread badges with a single CLI command.
 
     [→ Notifications](notifications.md)
 
--   :material-code-braces:{ .lg } **Scaffolding**
+-   :material-numeric-7-circle:{ .lg } **Scaffold a Module**
 
     ---
 
-    Generate modules, auth flows, and notification setup in one command.
+    Generate a complete CRUD module — service, repository, data source, controller, pages — following all conventions automatically.
 
-    [→ Scaffolding](scaffolding.md)
-
--   :material-console:{ .lg } **CLI Commands**
-
-    ---
-
-    Full reference for all Velora CLI commands and their options.
-
-    [→ CLI Commands](commands.md)
-
--   :material-border-all:{ .lg } **Framework / App Boundary**
-
-    ---
-
-    Where code lives, decision rules, and the anti-patterns that blur the line.
-
-    [→ Framework / App Boundary](framework-app-boundary.md)
+    [→ Scaffold a Module](scaffolding.md)
 
 </div>
 
@@ -105,4 +91,4 @@ dependencies:
       path: packages/velora
 ```
 
-pub.dev publication coming soon.
+pub.dev publication coming soon. Continue to [Install & Boot →](getting-started.md) to finish setup.

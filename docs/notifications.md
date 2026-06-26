@@ -1,13 +1,32 @@
-# Notifications
+# 6 — Notifications
 
-Velora notifications use one service-owned flow for remote push, local notifications, and in-app notification center state.
+**What you'll do:** Scaffold a complete notification module with one command, wire FCM/APNs for remote push, and build an in-app notification center backed by your Laravel API.
+
+---
+
+## Scaffold the module
+
+Run this from your app root to generate the complete notifications module:
+
+```sh
+dart run velora_cli make:notifications
+```
+
+This writes `lib/app/modules/notifications/` with:
+
+- `NotificationService` — GetxService owning push token registration, unread count, and notification list
+- `NotificationRepository` and `NotificationRemoteDataSource` — API layer
+- `NotificationController`, pages, and widgets
+- Noop/mock adapters so everything compiles and runs without Firebase credentials
+
+## The notification stack
 
 ```text
 Notification UI
   ↓
 NotificationController
   ↓
-NotificationService / GetxService
+NotificationService (GetxService)
   ↓
 NotificationRepository
   ↓
@@ -18,32 +37,68 @@ Velora.api
 Laravel API
 ```
 
-Laravel is the notification source of truth. FCM is transport only for Android, iOS, and Web push. Local notifications handle foreground or app-triggered display. Generated code includes noop/mock adapters so UI and API contracts can be developed without Firebase credentials or device push setup.
+Laravel is the notification source of truth — FCM is transport only. The service owns `unreadCount`, the notification list, and push token registration. Never store any of these in a controller.
 
-## CLI
+## Add push support
 
 ```sh
-dart run velora_cli make:notifications
+# Firebase Cloud Messaging (Android, iOS, Web)
 dart run velora_cli install:push --fcm
+
+# Local notifications only (no Firebase required)
 dart run velora_cli install:push --local
 ```
 
-`make:notifications` writes `lib/app/modules/notifications` with service, repository, data source, adapters, entities, controller, pages, and widgets.
+`install:push --fcm` writes `web/firebase-messaging-sw.js` and `docs/reminders/` with platform-specific checklists for Android, iOS, Web, and Laravel.
 
-`install:push --fcm` writes `web/firebase-messaging-sw.js` with placeholder Firebase config plus reminder docs under `docs/reminders` for Android, iOS, Web, and Laravel.
+## Platform checklist
 
-`install:push --local` writes local notification adapter placeholders and reminder docs. It does not require Firebase files or server credentials.
+=== "Android"
+    - Add `android/app/google-services.json`
+    - Apply the Google Services Gradle plugin
+    - Request `POST_NOTIFICATIONS` permission on Android 13+
+    - Set a default notification channel
 
-## Platform setup reminders
+=== "iOS"
+    - Add `ios/Runner/GoogleService-Info.plist`
+    - Enable the Push Notifications capability
+    - Enable Background Modes → Remote notifications
+    - Upload your APNs key to Firebase Console
 
-Android needs `android/app/google-services.json`, Gradle Google Services setup, Android 13 `POST_NOTIFICATIONS`, and a default notification channel when real push/local display is enabled.
+=== "Web"
+    - Configure `web/firebase-messaging-sw.js` with your Firebase project config
+    - Add your VAPID key to Firebase Console
 
-iOS needs `ios/Runner/GoogleService-Info.plist`, Push Notifications capability, Background Modes -> Remote notifications, APNs key uploaded to Firebase Console, and a permission prompt.
+=== "Laravel"
+    Expose these endpoints:
 
-Web needs `web/firebase-messaging-sw.js`, Firebase config in web bootstrap as needed, and a VAPID key.
+    ```
+    GET    /notifications           paginated list
+    POST   /notifications/{id}/read
+    POST   /notifications/read-all
+    POST   /device-tokens           register FCM token
+    DELETE /device-tokens/{token}
+    ```
 
-Laravel needs endpoints for notifications, mark-as-read, mark-all-as-read, and device token register/unregister. Backend payloads should include `type`, `feature`, `permission`, `title`, `body`, `route`, `data`, `read_at`, and timestamps.
+    Payload fields: `type`, `title`, `body`, `route`, `data`, `read_at`, timestamps.
+
+## Using `Velora.notify`
+
+Once the generated service is bound, interact with it through the facade:
+
+```dart
+Velora.notify.unreadCount;           // Rx<int> — reactive badge count
+Velora.notify.notifications;         // RxList<NotificationItem>
+await Velora.notify.markRead(id);
+await Velora.notify.markAllRead();
+```
 
 ## Rules
 
-Do not store unread counts, lists, push tokens, permission state, or routing state in controllers. Do not call Firebase Messaging or local notification plugins from views/controllers. Use `Velora.notify` when bound, or inject the generated `NotificationService` from the notification binding.
+- Never call Firebase Messaging or local notification plugins from views or controllers.
+- Never store unread counts, notification lists, push tokens, or routing state in controllers.
+- Keep the generated noop/mock adapter bound until real platform push is configured.
+
+---
+
+**Next:** [7 — Scaffold a Module →](scaffolding.md)

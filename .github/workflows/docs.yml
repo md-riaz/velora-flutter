@@ -37,8 +37,8 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Install MkDocs Material
-        run: pip install mkdocs-material
+      - name: Install MkDocs toolchain
+        run: pip install "mkdocs==1.6.1" "mkdocs-material==9.5.49"
 
       - name: Build docs site
         run: mkdocs build

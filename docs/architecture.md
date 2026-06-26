@@ -1,65 +1,123 @@
-# Architecture
+# 2 — Architecture
 
-Velora is GetX-first. `velora.part2.md` is authoritative where it corrects the original blueprint: services own application/business state, repositories stay data-access focused.
+**What you'll learn:** The six-layer stack Velora enforces, why services own state instead of controllers, and how a feature flows end-to-end from data source to UI.
 
-## Layering
+---
+
+## The stack
+
+Every Velora feature follows the same vertical slice:
 
 ```text
 View
-  ↓
+  ↓  user events, navigation
 Controller
-  ↓
-Service / GetxService
-  ↓
-Repository Interface
-  ↓
-Repository Implementation
-  ↓
+  ↓  delegates business logic
+Service (GetxService)
+  ↓  owns shared/business state
+Repository interface
+  ↓  data-access contract
+Repository implementation
+  ↓  delegates to data sources
 RemoteDataSource / LocalDataSource
-  ↓
+  ↓  knows where data actually comes from
 Velora.api / Velora.storage
 ```
 
-## State ownership
+The rule: **each layer only talks to the layer directly below it.** A view never calls a repository. A controller never calls `Velora.api` directly.
 
-GetxService owns shared and business state:
+## Services own state, controllers own screens
 
-- Auth session state.
-- Current user state.
-- Permission and entitlement state.
-- Theme and settings state.
-- Long-lived feature state.
-- Business workflow logic.
+This is the most important distinction in Velora:
 
-Controllers own screen state and user actions. `GetxService` classes own shared state, feature workflows, and session/business logic. Repositories define data-access contracts; repository implementations delegate to remote/local data sources. Data sources are the only layer that should know whether data comes from `Velora.api`, local storage, or a mock.
+| `GetxService` | `GetxController` |
+|---|---|
+| Lives for the session lifecycle | Lives for the screen lifecycle |
+| Owns shared and business state | Owns screen/UI state |
+| Injected across many features | Bound to one screen |
+| Examples: auth session, unread count, feature flags | Examples: form state, loading spinner, pagination offset |
 
-## Repository/data-source convention
+If two screens need the same piece of state — the current user, a notification count, a flag — it belongs in a **service**, not a controller.
 
-Use one repository interface per feature and bind an implementation in the feature binding. Remote data sources call Laravel REST endpoints through `Velora.api`; local data sources use `Velora.storage`; mock data sources can be bound for starter/demo testing without changing controllers or services.
+## A concrete example
 
-## Notifications
+Here's how a "load users" feature flows through all six layers:
 
-NotificationService is the single source of truth for remote push, local notifications, and in-app notification center state.
+```dart
+// 1. View — triggers the action
+ElevatedButton(
+  onPressed: controller.loadUsers,
+  child: const Text('Load Users'),
+)
 
-```text
-Notification UI
-  ↓
-NotificationController
-  ↓
-NotificationService / GetxService
-  ↓
-NotificationRepository
-  ↓
-NotificationRemoteDataSource
-  ↓
-Velora.api
-  ↓
-Laravel API
+// 2. Controller — UI-focused, delegates to service
+class UsersController extends VeloraController {
+  final UsersService _service = Get.find();
+
+  Future<void> loadUsers() async {
+    await run(_service.fetchUsers);
+  }
+}
+
+// 3. Service — owns the users list, applies business logic
+class UsersService extends GetxService {
+  final UsersRepository _repo;
+  UsersService(this._repo);
+
+  final RxList<User> users = <User>[].obs;
+
+  Future<void> fetchUsers() async {
+    users.value = await _repo.list();
+  }
+}
+
+// 4. Repository interface — data-access contract
+abstract class UsersRepository {
+  Future<List<User>> list();
+}
+
+// 5. Remote data source — calls Velora.api
+class UsersRemoteDataSource implements UsersRepository {
+  @override
+  Future<List<User>> list() async {
+    final res = await Velora.api.get<List<User>>(
+      '/users',
+      parser: (json) => (json as List)
+          .map((e) => User.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+    return res.data ?? [];
+  }
+}
 ```
 
-Laravel remains source of truth for notification records. FCM is only transport for Android, iOS, and Web push. Local notifications handle foreground/local display. Generated adapters include mock/noop mode so apps can develop notification UI without Firebase credentials.
+`VeloraController.run()` manages `loading` and `error` automatically — you never set them manually.
 
-Do not store unread counts, notification lists, push tokens, permission state, or routing state in controllers. Use `Velora.notify` when runtime support is bound, or inject generated `NotificationService` in app modules.
-## MVP boundary
+## Swapping data sources
 
-MVP keeps runtime features in `packages/velora`, CLI scaffolding in `packages/velora_cli`, and starter usage in `examples/velora_starter`. Do not split extra packages until the core flow is stable.
+Because controllers and services depend only on the repository **interface**, you can bind `MockUsersDataSource` in development and swap to `UsersRemoteDataSource` in production — zero changes to services or controllers. This is the foundation of Velora's mock mode.
+
+Bind implementations in your feature's `Binding`:
+
+```dart
+class UsersBinding extends Bindings {
+  @override
+  void dependencies() {
+    // Swap MockUsersDataSource ↔ UsersRemoteDataSource here
+    Get.lazyPut<UsersRepository>(() => UsersRemoteDataSource());
+    Get.lazyPut(() => UsersService(Get.find()));
+    Get.lazyPut(() => UsersController());
+  }
+}
+```
+
+## Key rules
+
+- **Services** must not call `Get.back()`, push routes, or show dialogs — those are controller/navigation concerns.
+- **Controllers** must not call `Velora.api` directly — always go through a service and repository.
+- **Data sources** are the only layer that knows whether data comes from the network, local storage, or a mock.
+- **`VeloraController.run()`** is the standard wrapper for async work — use it everywhere loading/error state is needed.
+
+---
+
+**Next:** [3 — Auth →](auth.md)
