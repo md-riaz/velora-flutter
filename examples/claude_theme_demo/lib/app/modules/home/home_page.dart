@@ -45,6 +45,49 @@ class HomePage extends GetView<HomeController> {
               ],
             ),
             actions: [
+              // Notification bell with unread badge
+              Obx(() {
+                final count = Velora.notify.unreadCount.value;
+                return IconButton(
+                  tooltip: 'Notifications',
+                  onPressed: () => Velora.nav.to(AppRoutes.notifications),
+                  icon: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      const Icon(Icons.notifications_outlined),
+                      if (count > 0)
+                        Positioned(
+                          right: -2,
+                          top: -2,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 1,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.error,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            constraints:
+                                const BoxConstraints(minWidth: 16),
+                            child: Text(
+                              count > 99 ? '99+' : '$count',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onError,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                                height: 1.2,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              }),
               Obx(() {
                 final isDark = Velora.theme.current == ThemeMode.dark;
                 return IconButton(

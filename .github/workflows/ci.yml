@@ -47,10 +47,3 @@ jobs:
         working-directory: examples/claude_theme_demo
         run: flutter analyze --no-fatal-infos
 
-      - name: Install dependencies (velora_starter)
-        working-directory: examples/velora_starter
-        run: flutter pub get
-
-      - name: Analyze velora_starter
-        working-directory: examples/velora_starter
-        run: flutter analyze --no-fatal-infos

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:velora/velora.dart';
 
 import '../../../resources/theme/claude_colors.dart';
+import '../../routes/app_routes.dart';
 import 'account_controller.dart';
 
 class AccountPage extends GetView<AccountController> {
@@ -26,6 +27,7 @@ class AccountPage extends GetView<AccountController> {
           // Profile card
           // ----------------------------------------------------------------
           _ProfileCard(
+            controller: controller,
             scheme: scheme,
             textTheme: textTheme,
           ),
@@ -41,6 +43,14 @@ class AccountPage extends GetView<AccountController> {
           ),
 
           // ----------------------------------------------------------------
+          // Admin-only section (RoleOnly widget demo)
+          // ----------------------------------------------------------------
+          RoleOnly(
+            role: 'admin',
+            child: _AdminSection(scheme: scheme, textTheme: textTheme),
+          ),
+
+          // ----------------------------------------------------------------
           // Auth API patterns
           // ----------------------------------------------------------------
           _SectionHeader(label: 'SDK Patterns', textTheme: textTheme),
@@ -50,6 +60,12 @@ class AccountPage extends GetView<AccountController> {
           // Actions
           // ----------------------------------------------------------------
           _SectionHeader(label: 'Actions', textTheme: textTheme),
+          ListTile(
+            leading: const Icon(Icons.edit_outlined),
+            title: const Text('Edit profile'),
+            subtitle: const Text('Demonstrates VeloraFormController'),
+            onTap: () => Velora.nav.to(AppRoutes.editProfile),
+          ),
           ListTile(
             leading: const Icon(Icons.logout),
             title: const Text('Sign out'),
@@ -68,18 +84,52 @@ class AccountPage extends GetView<AccountController> {
 // ---------------------------------------------------------------------------
 
 class _ProfileCard extends StatelessWidget {
+  final AccountController controller;
   final ColorScheme scheme;
   final TextTheme textTheme;
 
   const _ProfileCard({
+    required this.controller,
     required this.scheme,
     required this.textTheme,
   });
 
   @override
   Widget build(BuildContext context) {
-    final user = AccountController.mockUser;
+    return Obx(() {
+      final authUser = controller.currentUser;
+      final typedUser = authUser is AuthUser ? authUser : null;
+      final name = typedUser?.name ?? AccountController.mockUser.name;
+      final email = typedUser?.email ?? AccountController.mockUser.email;
+      final plan = controller.isAuthenticated ? 'Pro' : AccountController.mockUser.plan;
+      return _ProfileCardContent(
+        name: name,
+        email: email,
+        plan: plan,
+        scheme: scheme,
+        textTheme: textTheme,
+      );
+    });
+  }
+}
 
+class _ProfileCardContent extends StatelessWidget {
+  final String name;
+  final String email;
+  final String plan;
+  final ColorScheme scheme;
+  final TextTheme textTheme;
+
+  const _ProfileCardContent({
+    required this.name,
+    required this.email,
+    required this.plan,
+    required this.scheme,
+    required this.textTheme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(20),
@@ -100,7 +150,7 @@ class _ProfileCard extends StatelessWidget {
             ),
             child: Center(
               child: Text(
-                user.name.substring(0, 1),
+                name.isNotEmpty ? name.substring(0, 1).toUpperCase() : '?',
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 26,
@@ -117,20 +167,20 @@ class _ProfileCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  user.name,
+                  name,
                   style: textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  user.email,
+                  email,
                   style: textTheme.bodySmall?.copyWith(
                     color: scheme.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 6),
-                _PlanBadge(plan: user.plan),
+                _PlanBadge(plan: plan),
               ],
             ),
           ),
@@ -299,7 +349,7 @@ class _SdkPatternsSection extends StatelessWidget {
           title: 'React to auth state',
           code: 'Obx(() {\n'
               '  if (!Velora.auth.isAuthenticated.value)\n'
-              "    return LoginPrompt();\n"
+              '    return LoginPrompt();\n'
               '  return ProfileBody();\n'
               '})',
           scheme: scheme,
@@ -315,6 +365,178 @@ class _SdkPatternsSection extends StatelessWidget {
               'VeloraAuthConfig(userParser: AppUser.fromJson)',
           scheme: scheme,
           textTheme: textTheme,
+        ),
+        _CodeCard(
+          title: 'Permission-gated UI (Can / RoleOnly)',
+          code: '// Hide a widget unless the user has a permission:\n'
+              'Can(\n'
+              "  permission: 'users.manage',\n"
+              '  child: DeleteButton(),\n'
+              ')\n\n'
+              '// Or restrict by role:\n'
+              "RoleOnly(role: 'admin', child: AdminPanel())",
+          scheme: scheme,
+          textTheme: textTheme,
+        ),
+        _CodeCard(
+          title: 'Form validation (VeloraFormController)',
+          code: 'class ProfileController extends VeloraFormController {\n'
+              '  Future<void> save() async {\n'
+              '    // Server returns field-level errors:\n'
+              "    setErrors({'email': ['Already taken']});\n"
+              "    final msg = firstError('email'); // 'Already taken'\n"
+              '  }\n'
+              '}',
+          scheme: scheme,
+          textTheme: textTheme,
+        ),
+        _CodeCard(
+          title: 'Repository pattern',
+          code: 'class UserRepository {\n'
+              '  final VeloraHttp http;\n'
+              '  UserRepository(this.http);\n\n'
+              '  Future<List<User>> index() =>\n'
+              "    http.get('/users').then((r) =>\n"
+              '      r.asList().map(User.fromJson).toList());\n'
+              '}',
+          scheme: scheme,
+          textTheme: textTheme,
+        ),
+        _CodeCard(
+          title: 'Logout coordinator',
+          code: 'await Velora.logoutCoordinator.run(\n'
+              '  remoteLogout: () => repository.logout(token),\n'
+              '  clearSession: () async {\n'
+              '    await Velora.storage.clearToken();\n'
+              '    Velora.auth.currentUser.value = null;\n'
+              '  },\n'
+              ');',
+          scheme: scheme,
+          textTheme: textTheme,
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Admin-only section (RoleOnly widget demo)
+// ---------------------------------------------------------------------------
+
+class _AdminSection extends StatelessWidget {
+  final ColorScheme scheme;
+  final TextTheme textTheme;
+
+  const _AdminSection({required this.scheme, required this.textTheme});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(label: 'Admin', textTheme: textTheme),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: scheme.errorContainer.withAlpha(60),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: scheme.error.withAlpha(60)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.admin_panel_settings_outlined,
+                      size: 18, color: scheme.error),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Admin panel',
+                    style: textTheme.titleSmall?.copyWith(
+                      color: scheme.error,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'This section is visible only to users with the admin role. '
+                'It is rendered via RoleOnly(role: \'admin\', …) — '
+                'non-admin users see nothing here. Log out and sign in '
+                'without the Admin role toggle to confirm.',
+                style: textTheme.bodySmall?.copyWith(
+                  color: scheme.onErrorContainer,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Can(
+                permission: 'users.manage',
+                child: _AdminAction(
+                  icon: Icons.people_outline,
+                  label: 'Manage users',
+                  description: 'Visible via Can(permission: \'users.manage\')',
+                  scheme: scheme,
+                  textTheme: textTheme,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AdminAction extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String description;
+  final ColorScheme scheme;
+  final TextTheme textTheme;
+
+  const _AdminAction({
+    required this.icon,
+    required this.label,
+    required this.description,
+    required this.scheme,
+    required this.textTheme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: scheme.surface,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: scheme.outlineVariant),
+          ),
+          child: Icon(icon, size: 16, color: scheme.onSurface),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                description,
+                style: textTheme.labelSmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                  fontFamily: 'monospace',
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );

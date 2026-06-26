@@ -233,7 +233,7 @@ class MockMessagesDataSource implements MessagesDataSource {
               'parametric down-conversion (SPDC)**: a laser photon passes through '
               'a nonlinear crystal and splits into two lower-energy photons with '
               'correlated polarisations.\n\n'
-              "Another route is **trapped ions**: two ions in an electromagnetic "
+              'Another route is **trapped ions**: two ions in an electromagnetic '
               'trap can be entangled via their shared phonon modes using laser '
               'pulses. IBM, Google, and IonQ all use variants of this for their '
               'quantum processors.'),
@@ -295,7 +295,7 @@ class MockMessagesDataSource implements MessagesDataSource {
               '- **Microsoft (2025)**: topological qubit prototype announced\n\n'
               'Consensus estimate for cryptographically relevant fault-tolerant '
               'quantum computers: **10–15 years** at current trajectory. '
-              "Quantum advantage for useful (not just benchmark) tasks is likely "
+              'Quantum advantage for useful (not just benchmark) tasks is likely '
               'within 5 years in specific domains like materials simulation.'),
     ];
   }
@@ -308,14 +308,14 @@ class MockMessagesDataSource implements MessagesDataSource {
               'rename columns, filter rows, and output to a new folder.'),
       ChatMessage(id: 'p2', role: MessageRole.assistant, createdAt: t(3),
           content: '```python\nimport pandas as pd\nfrom pathlib import Path\n\n'
-              "def process_csv(src: Path, dst: Path) -> None:\n    df = pd.read_csv(src)\n"
+              'def process_csv(src: Path, dst: Path) -> None:\n    df = pd.read_csv(src)\n'
               "    df.rename(columns={'old_name': 'new_name'}, inplace=True)\n"
               "    df = df[df['status'] == 'active']\n    df.to_csv(dst, index=False)\n\n"
-              "def batch_process(input_dir: str, output_dir: str) -> None:\n"
+              'def batch_process(input_dir: str, output_dir: str) -> None:\n'
               '    src_dir = Path(input_dir)\n    dst_dir = Path(output_dir)\n'
               '    dst_dir.mkdir(parents=True, exist_ok=True)\n'
               "    for csv_file in src_dir.glob('*.csv'):\n"
-              "        process_csv(csv_file, dst_dir / csv_file.name)\n"
+              '        process_csv(csv_file, dst_dir / csv_file.name)\n'
               "        print(f'Processed {csv_file.name}')\n\n"
               "if __name__ == '__main__':\n    batch_process('./input', './output')\n```\n\n"
               'Want me to add async support or better error handling?'),
