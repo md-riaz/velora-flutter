@@ -8,6 +8,8 @@ on:
       - 'packages/velora/pubspec.yaml'
       - 'examples/*/lib/**'
       - 'docs/**'
+      - 'mkdocs.yml'
+      - 'overrides/**'
       - '.github/workflows/docs.yml'
   workflow_dispatch:
 
@@ -34,6 +36,12 @@ jobs:
         with:
           channel: stable
           cache: true
+
+      - name: Install MkDocs Material
+        run: pip install mkdocs-material
+
+      - name: Build docs site
+        run: mkdocs build
 
       - name: Install dependencies
         working-directory: packages/velora
