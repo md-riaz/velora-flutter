@@ -27,18 +27,18 @@ jobs:
           cache: true
 
       - name: Install dependencies
-        working-directory: examples/claude_theme_demo
+        working-directory: examples/claude_clone
         run: flutter pub get
 
       - name: Build APK
-        working-directory: examples/claude_theme_demo
+        working-directory: examples/claude_clone
         run: flutter build apk --release
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: claude-theme-demo-apk
-          path: examples/claude_theme_demo/build/app/outputs/flutter-apk/app-release.apk
+          name: claude-clone-apk
+          path: examples/claude_clone/build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
 
   build-web:
@@ -53,18 +53,18 @@ jobs:
           cache: true
 
       - name: Install dependencies
-        working-directory: examples/claude_theme_demo
+        working-directory: examples/claude_clone
         run: flutter pub get
 
       - name: Build web
-        working-directory: examples/claude_theme_demo
-        run: flutter build web --release --base-href /claude_theme_demo/
+        working-directory: examples/claude_clone
+        run: flutter build web --release --base-href /claude_clone/
 
       - name: Upload web build
         uses: actions/upload-artifact@v4
         with:
-          name: claude-theme-demo-web
-          path: examples/claude_theme_demo/build/web
+          name: claude-clone-web
+          path: examples/claude_clone/build/web
           retention-days: 30
 
   release:
@@ -102,12 +102,12 @@ jobs:
         if: steps.tag_check.outputs.exists == 'false'
         uses: actions/download-artifact@v4
         with:
-          name: claude-theme-demo-apk
+          name: claude-clone-apk
           path: artifacts
 
       - name: Rename APK
         if: steps.tag_check.outputs.exists == 'false'
-        run: mv artifacts/app-release.apk artifacts/claude-theme-demo.apk
+        run: mv artifacts/app-release.apk artifacts/claude-clone.apk
 
       - name: Create GitHub Release
         if: steps.tag_check.outputs.exists == 'false'
@@ -115,4 +115,4 @@ jobs:
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           generate_release_notes: true
-          files: artifacts/claude-theme-demo.apk
+          files: artifacts/claude-clone.apk

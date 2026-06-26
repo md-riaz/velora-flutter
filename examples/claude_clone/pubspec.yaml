@@ -1,4 +1,4 @@
-name: claude_theme_demo
+name: claude_clone
 description: Claude AI mobile app clone — demonstrates Velora DX layer theming with a brand-specific color system, theme extensions, and light/dark mode persistence.
 publish_to: 'none'
 version: 1.0.0+1

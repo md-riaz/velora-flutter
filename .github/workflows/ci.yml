@@ -39,11 +39,11 @@ jobs:
             echo "No test files found — skipping"
           fi
 
-      - name: Install dependencies (claude_theme_demo)
-        working-directory: examples/claude_theme_demo
+      - name: Install dependencies (claude_clone)
+        working-directory: examples/claude_clone
         run: flutter pub get
 
-      - name: Analyze claude_theme_demo
-        working-directory: examples/claude_theme_demo
+      - name: Analyze claude_clone
+        working-directory: examples/claude_clone
         run: flutter analyze --no-fatal-infos
 

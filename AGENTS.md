@@ -21,7 +21,7 @@ The short version:
 
 **Decision shortcut** — if the code would need to be rewritten for a different-domain app, it's app-layer. If it references a domain model, route name, or brand token, it's app-layer. When unsure, consult the gray-zone verdicts table in the doc.
 
-Key patterns enforced in the demo (`examples/claude_theme_demo/`):
+Key patterns enforced in the demo (`examples/claude_clone/`):
 - Feature flags registered once in `main()`, not in controllers.
 - All mutation methods guard local-state updates with `if (error.value.isNotEmpty) return;` after `await run(...)`.
 - Optimistic updates roll back on failure.

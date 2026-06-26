@@ -57,14 +57,14 @@ jobs:
         uses: dawidd6/action-download-artifact@v6
         with:
           workflow: build.yml
-          name: claude_theme_demo-web
+          name: claude_clone-web
           path: _site/demo
           search_artifacts: true
           if_no_artifact_found: warn
 
       - name: Fix demo base href for Pages
         if: steps.demo-check.outcome == 'success'
-        run: sed -i 's|<base href="/claude_theme_demo/">|<base href="/velora-flutter/demo/">|' _site/demo/index.html
+        run: sed -i 's|<base href="/claude_clone/">|<base href="/velora-flutter/demo/">|' _site/demo/index.html
 
       - name: Copy landing page
         run: cp docs/index.html _site/index.html

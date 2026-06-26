@@ -44,7 +44,7 @@ These categories live in `packages/velora/lib/src/` and are re-exported through 
 
 ## What the App Owns
 
-These live in the consuming app (`examples/claude_theme_demo/` for the reference demo). They use framework services but carry all domain and brand knowledge.
+These live in the consuming app (`examples/claude_clone/` for the reference demo). They use framework services but carry all domain and brand knowledge.
 
 | Category | Examples from the demo | Rule that places it here |
 |---|---|---|
