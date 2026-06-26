@@ -618,7 +618,9 @@
       <a class="btn-outline" href="demo/">Live Demo</a>
     </div>
     <code class="install-snippet">
-      <span class="prompt">$</span>flutter pub add velora
+      <span class="prompt">#</span>pub.dev coming soon &nbsp;·&nbsp;
+      <a href="https://github.com/md-riaz/velora-flutter/blob/main/docs/getting-started.md"
+         style="color:var(--accent);text-decoration:none" rel="noopener">Getting Started →</a>
     </code>
   </div>
 
@@ -638,8 +640,11 @@
   }
 
   <span class="cls">Future</span>&lt;<span class="kw">void</span>&gt; _loadPosts() <span class="kw">async</span> {
-    posts.value = <span class="kw">await</span>
-      <span class="acc">Velora</span>.api.<span class="fn">get</span>(<span class="str">'/posts'</span>, parser: <span class="cls">Post</span>.<span class="fn">fromJson</span>);
+    <span class="kw">final</span> res = <span class="kw">await</span>
+      <span class="acc">Velora</span>.api.<span class="fn">get</span>&lt;<span class="cls">List</span>&lt;<span class="cls">Post</span>&gt;&gt;(<span class="str">'/posts'</span>,
+        parser: (d) =&gt; (d <span class="kw">as</span> <span class="cls">List</span>)
+            .<span class="fn">map</span>(<span class="cls">Post</span>.<span class="fn">fromJson</span>).<span class="fn">toList</span>());
+    posts.value = res.data ?? [];
   }
 }
 
