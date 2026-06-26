@@ -1,6 +1,5 @@
 import 'package:velora/velora.dart';
 
-import '../../routes/app_routes.dart';
 import 'conversation_model.dart';
 import 'conversations_datasource.dart';
 
