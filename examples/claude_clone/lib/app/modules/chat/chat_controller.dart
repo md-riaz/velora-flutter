@@ -17,7 +17,13 @@ class ChatController extends VeloraController with VeloraAttachmentsMixin {
   final inputController = TextEditingController();
   final scrollController = ScrollController();
 
-  late final Rx<ConversationModel> conversation;
+  // Eagerly initialized (not late final) — avoids LateInitializationError that corrupts GetX proxy state before _bootstrapFromId completes.
+  final conversation = Rx<ConversationModel>(ConversationModel(
+    id: '',
+    title: '',
+    lastMessage: '',
+    updatedAt: DateTime.utc(2020),
+  ));
 
   /// ID of the oldest loaded message — used as cursor for the next
   /// "load earlier" request.
@@ -39,7 +45,7 @@ class ChatController extends VeloraController with VeloraAttachmentsMixin {
     }
     final args = Get.arguments;
     if (args is ConversationModel && args.id == id) {
-      conversation = args.obs;
+      conversation.value = args;
       _loadMessages();
     } else {
       _bootstrapFromId(id);
@@ -55,7 +61,7 @@ class ChatController extends VeloraController with VeloraAttachmentsMixin {
       Get.back<void>();
       return;
     }
-    conversation = conv!.obs;
+    conversation.value = conv!;
     _loadMessages();
   }
 
