@@ -1,6 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/type.dart';
-import 'package:analyzer/error/error.dart' hide LintCode;
+import 'package:analyzer/error/error.dart';
 import 'package:analyzer/error/listener.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
@@ -73,7 +73,7 @@ class ObxMissingReactiveRead extends DartLintRule {
 
       for (final arg in expr.argumentList.arguments) {
         final valueExpr =
-            arg is NamedExpression ? arg.expression : arg as Expression;
+            arg is NamedExpression ? arg.expression : arg;
         final type = valueExpr.staticType;
         if (type != null && _isGetxRxType(type)) {
           reporter.reportErrorForNode(_code, valueExpr);

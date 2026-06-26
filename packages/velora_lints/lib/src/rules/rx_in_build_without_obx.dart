@@ -1,6 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/type.dart';
-import 'package:analyzer/error/error.dart' hide LintCode;
+import 'package:analyzer/error/error.dart';
 import 'package:analyzer/error/listener.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
@@ -130,7 +130,7 @@ class RxInBuildWithoutObx extends DartLintRule {
           final type = parameter.type;
           if (type is FunctionType) {
             final returnType = type.returnType;
-            if (returnType.isVoid ||
+            if (returnType is VoidType ||
                 (returnType is InterfaceType &&
                     returnType.isDartAsyncFuture)) {
               return true;
