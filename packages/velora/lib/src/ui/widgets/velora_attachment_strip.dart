@@ -44,7 +44,6 @@ class VeloraAttachmentStrip extends StatelessWidget {
     return Obx(() {
       if (attachments.isEmpty) return const SizedBox.shrink();
 
-      final items = attachments.value;
       final scheme = Theme.of(context).colorScheme;
 
       return Container(
@@ -58,13 +57,13 @@ class VeloraAttachmentStrip extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
-          itemCount: items.length + (onPickTap != null ? 1 : 0),
+          itemCount: attachments.length + (onPickTap != null ? 1 : 0),
           separatorBuilder: (_, __) => const SizedBox(width: 8),
           itemBuilder: (context, index) {
-            if (index == items.length) {
+            if (index == attachments.length) {
               return _AddMoreButton(onTap: onPickTap!, scheme: scheme);
             }
-            final a = items[index];
+            final a = attachments[index];
             return VeloraAttachmentChip(
               attachment: a,
               onRemove: onRemove != null ? () => onRemove!(a.id) : null,
