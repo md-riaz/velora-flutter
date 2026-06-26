@@ -1,0 +1,11 @@
+name: velora_lints
+description: Custom lint rules for projects built with the Velora framework.
+version: 0.0.1
+publish_to: none
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  analyzer: '>=6.0.0 <8.0.0'
+  custom_lint_builder: ^0.6.0
