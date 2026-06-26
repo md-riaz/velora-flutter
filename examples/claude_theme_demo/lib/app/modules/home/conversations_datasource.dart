@@ -4,6 +4,7 @@ import 'conversation_model.dart';
 
 abstract class ConversationsDataSource {
   Future<PaginatedData<ConversationModel>> getPage(int page);
+  Future<ConversationModel?> getById(String id);
   Future<ConversationModel> create(String title);
   Future<void> delete(String id);
   Future<void> rename(String id, String title);
@@ -32,6 +33,16 @@ class MockConversationsDataSource implements ConversationsDataSource {
       raw,
       (v) => ConversationModel.fromJson(v as Map<String, dynamic>),
     );
+  }
+
+  @override
+  Future<ConversationModel?> getById(String id) async {
+    await VeloraMockApi.ok<void>(null, delayMs: 50);
+    try {
+      return _store.firstWhere((c) => c.id == id);
+    } catch (_) {
+      return null;
+    }
   }
 
   @override
