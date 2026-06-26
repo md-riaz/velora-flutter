@@ -82,24 +82,15 @@ class ObxWithNoReads extends DartLintRule {
 class _ReactiveReadDetector extends RecursiveAstVisitor<void> {
   bool hasReactiveRead = false;
 
-  static const _reactiveProperties = {
-    'value',
-    'isEmpty',
-    'isNotEmpty',
-    'length',
-    'first',
-    'last',
-    'string',
-    'toJson',
-  };
-
   @override
   void visitPropertyAccess(PropertyAccess node) {
-    if (!hasReactiveRead &&
-        _reactiveProperties.contains(node.propertyName.name)) {
+    if (!hasReactiveRead) {
       final targetType = node.realTarget?.staticType;
       if (targetType != null && _isGetxRxType(targetType)) {
-        hasReactiveRead = true;
+        final name = node.propertyName.name;
+        if (name != 'hashCode' && name != 'runtimeType') {
+          hasReactiveRead = true;
+        }
       }
     }
     super.visitPropertyAccess(node);
@@ -107,14 +98,27 @@ class _ReactiveReadDetector extends RecursiveAstVisitor<void> {
 
   @override
   void visitPrefixedIdentifier(PrefixedIdentifier node) {
-    if (!hasReactiveRead &&
-        _reactiveProperties.contains(node.identifier.name)) {
+    if (!hasReactiveRead) {
       final prefixType = node.prefix.staticType;
       if (prefixType != null && _isGetxRxType(prefixType)) {
-        hasReactiveRead = true;
+        final name = node.identifier.name;
+        if (name != 'hashCode' && name != 'runtimeType') {
+          hasReactiveRead = true;
+        }
       }
     }
     super.visitPrefixedIdentifier(node);
+  }
+
+  @override
+  void visitMethodInvocation(MethodInvocation node) {
+    if (!hasReactiveRead) {
+      final targetType = node.realTarget?.staticType;
+      if (targetType != null && _isGetxRxType(targetType)) {
+        hasReactiveRead = true;
+      }
+    }
+    super.visitMethodInvocation(node);
   }
 
   // Also detect direct indexing on RxList — list[i] registers a subscription

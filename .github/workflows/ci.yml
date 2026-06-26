@@ -28,7 +28,7 @@ jobs:
 
       - name: Analyze velora_lints
         working-directory: packages/velora_lints
-        run: dart analyze --no-fatal-infos
+        run: dart analyze
 
       - name: Install dependencies (velora)
         working-directory: packages/velora

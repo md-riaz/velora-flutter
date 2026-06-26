@@ -42,7 +42,7 @@ class RxInBuildWithoutObx extends DartLintRule {
     errorSeverity: ErrorSeverity.WARNING,
   );
 
-  static const _reactiveWidgets = {'Obx', 'GetX', 'GetBuilder'};
+  static const _reactiveWidgets = {'Obx', 'GetX', 'GetBuilder', 'ObxValue'};
 
   @override
   void run(
@@ -50,15 +50,26 @@ class RxInBuildWithoutObx extends DartLintRule {
     ErrorReporter reporter,
     CustomLintContext context,
   ) {
-    context.registry.addPropertyAccess((node) {
-      if (node.propertyName.name != 'value') return;
+    void checkNode(Expression node, Expression? target, String propertyName) {
+      if (propertyName != 'value') return;
+      if (target == null) return;
 
-      final targetType = node.realTarget?.staticType;
+      final targetType = target.staticType;
       if (targetType == null || !_isGetxRxType(targetType)) return;
 
-      if (_isInsideBuildMethod(node) && !_isInsideReactiveScope(node)) {
+      if (_isInsideBuildMethod(node) &&
+          !_isInsideReactiveScope(node) &&
+          !_isInsideCallback(node)) {
         reporter.reportErrorForNode(_code, node);
       }
+    }
+
+    context.registry.addPropertyAccess((node) {
+      checkNode(node, node.realTarget, node.propertyName.name);
+    });
+
+    context.registry.addPrefixedIdentifier((node) {
+      checkNode(node, node.prefix, node.identifier.name);
     });
   }
 
@@ -74,7 +85,7 @@ class RxInBuildWithoutObx extends DartLintRule {
   }
 
   /// Returns true when [node] is directly inside a function expression that
-  /// is the builder argument of an `Obx`, `GetX`, or `GetBuilder` constructor.
+  /// is the builder argument of an `Obx`, `GetX`, `GetBuilder`, or `ObxValue`.
   static bool _isInsideReactiveScope(AstNode node) {
     AstNode? current = node.parent;
     while (current != null) {
@@ -91,6 +102,39 @@ class RxInBuildWithoutObx extends DartLintRule {
           if (call is InstanceCreationExpression) {
             final name = call.constructorName.type.name2.lexeme;
             if (_reactiveWidgets.contains(name)) return true;
+          }
+        }
+      }
+      // Stop searching once we leave the build method scope.
+      if (current is MethodDeclaration && current.name.lexeme == 'build') {
+        return false;
+      }
+      current = current.parent;
+    }
+    return false;
+  }
+
+  /// Returns true when [node] is inside an event handler or callback closure
+  /// (e.g., `onPressed`, `onChanged`, or any function returning void/Future).
+  static bool _isInsideCallback(AstNode node) {
+    AstNode? current = node.parent;
+    while (current != null) {
+      if (current is FunctionExpression) {
+        final parent = current.parent;
+        final Expression argument =
+            parent is NamedExpression ? parent : current;
+        final parameter = argument.staticParameterElement;
+        if (parameter != null) {
+          if (parameter.name.startsWith('on')) return true;
+
+          final type = parameter.type;
+          if (type is FunctionType) {
+            final returnType = type.returnType;
+            if (returnType.isVoid ||
+                (returnType is InterfaceType &&
+                    returnType.isDartAsyncFuture)) {
+              return true;
+            }
           }
         }
       }
