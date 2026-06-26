@@ -11,15 +11,8 @@ concurrency:
 
 jobs:
   build-android:
-    name: Build Android APKs
+    name: Build Android APK
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        example:
-          - name: claude_theme_demo
-            label: Claude Theme Demo
-          - name: velora_starter
-            label: Velora Starter
     steps:
       - uses: actions/checkout@v4
 
@@ -34,30 +27,23 @@ jobs:
           cache: true
 
       - name: Install dependencies
-        working-directory: examples/${{ matrix.example.name }}
+        working-directory: examples/claude_theme_demo
         run: flutter pub get
 
       - name: Build APK
-        working-directory: examples/${{ matrix.example.name }}
+        working-directory: examples/claude_theme_demo
         run: flutter build apk --release
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.example.name }}-apk
-          path: examples/${{ matrix.example.name }}/build/app/outputs/flutter-apk/app-release.apk
+          name: claude-theme-demo-apk
+          path: examples/claude_theme_demo/build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
 
   build-web:
-    name: Build Web Apps
+    name: Build Web App
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        example:
-          - name: claude_theme_demo
-            label: Claude Theme Demo
-          - name: velora_starter
-            label: Velora Starter
     steps:
       - uses: actions/checkout@v4
 
@@ -67,18 +53,18 @@ jobs:
           cache: true
 
       - name: Install dependencies
-        working-directory: examples/${{ matrix.example.name }}
+        working-directory: examples/claude_theme_demo
         run: flutter pub get
 
       - name: Build web
-        working-directory: examples/${{ matrix.example.name }}
-        run: flutter build web --release --base-href /${{ matrix.example.name }}/
+        working-directory: examples/claude_theme_demo
+        run: flutter build web --release --base-href /claude_theme_demo/
 
       - name: Upload web build
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.example.name }}-web
-          path: examples/${{ matrix.example.name }}/build/web
+          name: claude-theme-demo-web
+          path: examples/claude_theme_demo/build/web
           retention-days: 30
 
   release:
@@ -112,18 +98,16 @@ jobs:
           echo "Tag ${{ steps.version.outputs.tag }} already exists — skipping release."
           exit 0
 
-      - name: Download all APKs
+      - name: Download APK
         if: steps.tag_check.outputs.exists == 'false'
         uses: actions/download-artifact@v4
         with:
-          pattern: '*-apk'
+          name: claude-theme-demo-apk
           path: artifacts
 
-      - name: Rename APKs
+      - name: Rename APK
         if: steps.tag_check.outputs.exists == 'false'
-        run: |
-          mv artifacts/claude_theme_demo-apk/app-release.apk artifacts/claude-theme-demo.apk
-          mv artifacts/velora_starter-apk/app-release.apk artifacts/velora-starter.apk
+        run: mv artifacts/app-release.apk artifacts/claude-theme-demo.apk
 
       - name: Create GitHub Release
         if: steps.tag_check.outputs.exists == 'false'
@@ -131,6 +115,4 @@ jobs:
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           generate_release_notes: true
-          files: |
-            artifacts/claude-theme-demo.apk
-            artifacts/velora-starter.apk
+          files: artifacts/claude-theme-demo.apk

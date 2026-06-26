@@ -32,6 +32,7 @@ class EditProfileController extends VeloraFormController {
   }
 
   Future<void> save() async {
+    if (loading.value) return;
     clearErrors();
     final name = nameController.text.trim();
     final email = emailController.text.trim();
@@ -64,9 +65,11 @@ class EditProfileController extends VeloraFormController {
           permissions: current.permissions,
           features: current.features,
         );
+        Velora.toast.success('Profile updated');
+        Velora.nav.back();
+      } else {
+        Velora.toast.error('Failed to update profile: User session not found');
       }
-      Velora.toast.success('Profile updated');
-      Velora.nav.back();
     } catch (e) {
       Velora.toast.error(e.toString());
     } finally {
