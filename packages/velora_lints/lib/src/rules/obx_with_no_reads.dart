@@ -6,10 +6,9 @@ import 'package:analyzer/error/listener.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
 /// Flags any `Obx(...)` builder — arrow *or* block body — whose function
-/// body contains zero detectable reactive reads on GetX `Rx` types AND no
-/// access to any `GetxController` / `GetxService` subclass.
+/// body contains zero detectable reactive reads on GetX `Rx` types.
 ///
-/// ## Why not every Obx with a controller call?
+/// ## Controller members
 ///
 /// GetX controllers commonly expose computed getters that return plain Dart
 /// types (`bool`, `int`, `String`) while internally accessing reactive fields:
@@ -18,8 +17,10 @@ import 'package:custom_lint_builder/custom_lint_builder.dart';
 /// bool get isAuthenticated => Velora.auth.isAuthenticated.value;
 /// ```
 ///
-/// Static analysis cannot see through the getter boundary, so the rule
-/// conservatively skips Obx blocks that access any controller property.
+/// Static analysis cannot see through the getter boundary, so the rule treats
+/// controller properties/methods returning non-Rx types as reactive reads. Bare
+/// controller properties/getters returning Rx types are pass-throughs and must
+/// still be followed by an Rx read such as `.value`, `.isEmpty`, or `[index]`.
 /// The `obx_missing_reactive_read` rule covers the arrow-body Rx-arg case.
 ///
 /// ## Wrong — completely static builder
@@ -46,8 +47,8 @@ class ObxWithNoReads extends DartLintRule {
     name: 'obx_with_no_reads',
     problemMessage:
         'This Obx builder contains no reactive reads on any GetX Rx type or '
-        'GetxController — no subscription is registered and the widget '
-        'will never rebuild.',
+        'controller computed value — no subscription is registered and the '
+        'widget will never rebuild.',
     correctionMessage:
         'Read at least one reactive property inside the builder, '
         'or remove the Obx wrapper entirely.',
@@ -90,16 +91,20 @@ class _ReactiveReadDetector extends RecursiveAstVisitor<void> {
   bool hasReactiveRead = false;
 
   @override
+  void visitFunctionExpression(FunctionExpression node) {
+    // Obx subscriptions are registered only by reads that happen synchronously
+    // while the builder itself runs. Reads inside callbacks/closures execute
+    // later and must not suppress this lint.
+  }
+
+  @override
   void visitPropertyAccess(PropertyAccess node) {
     if (!hasReactiveRead) {
-      final targetType = node.realTarget.staticType;
-      if (targetType != null &&
-          (_isGetxRxType(targetType) || _isGetxController(targetType))) {
-        final name = node.propertyName.name;
-        if (name != 'hashCode' && name != 'runtimeType') {
-          hasReactiveRead = true;
-        }
-      }
+      _checkRead(
+        targetType: node.realTarget.staticType,
+        memberType: node.staticType,
+        name: node.propertyName.name,
+      );
     }
     super.visitPropertyAccess(node);
   }
@@ -107,14 +112,11 @@ class _ReactiveReadDetector extends RecursiveAstVisitor<void> {
   @override
   void visitPrefixedIdentifier(PrefixedIdentifier node) {
     if (!hasReactiveRead) {
-      final prefixType = node.prefix.staticType;
-      if (prefixType != null &&
-          (_isGetxRxType(prefixType) || _isGetxController(prefixType))) {
-        final name = node.identifier.name;
-        if (name != 'hashCode' && name != 'runtimeType') {
-          hasReactiveRead = true;
-        }
-      }
+      _checkRead(
+        targetType: node.prefix.staticType,
+        memberType: node.staticType,
+        name: node.identifier.name,
+      );
     }
     super.visitPrefixedIdentifier(node);
   }
@@ -122,26 +124,48 @@ class _ReactiveReadDetector extends RecursiveAstVisitor<void> {
   @override
   void visitMethodInvocation(MethodInvocation node) {
     if (!hasReactiveRead) {
-      final targetType = node.realTarget?.staticType;
-      if (targetType != null &&
-          (_isGetxRxType(targetType) || _isGetxController(targetType))) {
-        hasReactiveRead = true;
-      }
+      _checkRead(
+        targetType: node.realTarget?.staticType,
+        memberType: node.staticType,
+        name: node.methodName.name,
+      );
     }
     super.visitMethodInvocation(node);
   }
 
-  // Also detect direct indexing on RxList — list[i] registers a subscription
+  // Also detect direct indexing on RxList — list[i] registers a subscription.
   @override
   void visitIndexExpression(IndexExpression node) {
     if (!hasReactiveRead) {
-      final targetType = node.realTarget.staticType;
-      if (targetType != null &&
-          (_isGetxRxType(targetType) || _isGetxController(targetType))) {
-        hasReactiveRead = true;
-      }
+      _checkRead(
+        targetType: node.realTarget.staticType,
+        memberType: node.staticType,
+      );
     }
     super.visitIndexExpression(node);
+  }
+
+  void _checkRead({
+    required DartType? targetType,
+    required DartType? memberType,
+    String? name,
+  }) {
+    if (targetType == null) return;
+    if (name == 'hashCode' || name == 'runtimeType') return;
+
+    if (_isGetxRxType(targetType)) {
+      hasReactiveRead = true;
+      return;
+    }
+
+    if (_isGetxController(targetType) && _isKnownNonRxType(memberType)) {
+      hasReactiveRead = true;
+    }
+  }
+
+  static bool _isKnownNonRxType(DartType? type) {
+    if (type == null || type is DynamicType) return false;
+    return !_isGetxRxType(type);
   }
 
   /// Returns true for direct Rx types (RxInt, RxBool, RxList, Rx<T>, …) and
@@ -152,8 +176,7 @@ class _ReactiveReadDetector extends RecursiveAstVisitor<void> {
     for (final t in [type, ...type.allSupertypes]) {
       final element = t.element;
       final name = element.name;
-      if (name == null) continue;
-      final uri = element.library?.source?.uri.toString() ?? '';
+      final uri = element.library.source.uri.toString();
       if (uri.contains('package:get/') &&
           (name.startsWith('Rx') || name == 'GetListenable')) {
         return true;
@@ -163,18 +186,12 @@ class _ReactiveReadDetector extends RecursiveAstVisitor<void> {
   }
 
   /// Returns true for any GetxController / GetxService subclass.
-  ///
-  /// Accessing a property or method on a controller inside an Obx block may
-  /// trigger reactive subscriptions through computed getters even when the
-  /// getter's return type is a plain Dart type. We conservatively treat any
-  /// controller access as a potential reactive read to avoid false positives.
   static bool _isGetxController(DartType type) {
     if (type is! InterfaceType) return false;
     for (final t in [type, ...type.allSupertypes]) {
       final element = t.element;
       final name = element.name;
-      if (name == null) continue;
-      final uri = element.library?.source?.uri.toString() ?? '';
+      final uri = element.library.source.uri.toString();
       if (uri.contains('package:get/') &&
           (name == 'GetxController' ||
               name == 'GetxService' ||
