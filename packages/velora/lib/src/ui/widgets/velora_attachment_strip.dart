@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import '../../media/velora_attachment.dart';
 import 'velora_attachment_chip.dart';
@@ -10,18 +11,19 @@ const _kStripHeight = 136.0;
 /// Place above the input bar in chat or form screens.  Wire callbacks to
 /// your controller's [VeloraAttachmentsMixin] methods.
 ///
-/// The strip hides itself when [attachments] is empty.
+/// The strip subscribes to [attachments] reactively and hides itself when
+/// the list is empty — no [Obx] wrapper needed at the call site:
 ///
 /// ```dart
-/// Obx(() => VeloraAttachmentStrip(
+/// VeloraAttachmentStrip(
 ///   attachments: controller.attachments,
 ///   onPickTap: controller.showAttachmentPicker,
 ///   onRemove: controller.removeAttachment,
 ///   onRetry: controller.retryAttachment,
-/// ))
+/// )
 /// ```
 class VeloraAttachmentStrip extends StatelessWidget {
-  final List<VeloraAttachment> attachments;
+  final RxList<VeloraAttachment> attachments;
 
   /// Called when the user taps the "add more" button at the end of the strip.
   final VoidCallback? onPickTap;
@@ -39,36 +41,38 @@ class VeloraAttachmentStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (attachments.isEmpty) return const SizedBox.shrink();
+    return Obx(() {
+      if (attachments.isEmpty) return const SizedBox.shrink();
 
-    final scheme = Theme.of(context).colorScheme;
+      final scheme = Theme.of(context).colorScheme;
 
-    return Container(
-      height: _kStripHeight,
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        border: Border(
-          bottom: BorderSide(color: scheme.outlineVariant, width: 0.5),
+      return Container(
+        height: _kStripHeight,
+        decoration: BoxDecoration(
+          color: scheme.surface,
+          border: Border(
+            bottom: BorderSide(color: scheme.outlineVariant, width: 0.5),
+          ),
         ),
-      ),
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: attachments.length + (onPickTap != null ? 1 : 0),
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          if (index == attachments.length) {
-            return _AddMoreButton(onTap: onPickTap!, scheme: scheme);
-          }
-          final a = attachments[index];
-          return VeloraAttachmentChip(
-            attachment: a,
-            onRemove: onRemove != null ? () => onRemove!(a.id) : null,
-            onRetry: onRetry != null ? () => onRetry!(a.id) : null,
-          );
-        },
-      ),
-    );
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: attachments.length + (onPickTap != null ? 1 : 0),
+          separatorBuilder: (_, __) => const SizedBox(width: 8),
+          itemBuilder: (context, index) {
+            if (index == attachments.length) {
+              return _AddMoreButton(onTap: onPickTap!, scheme: scheme);
+            }
+            final a = attachments[index];
+            return VeloraAttachmentChip(
+              attachment: a,
+              onRemove: onRemove != null ? () => onRemove!(a.id) : null,
+              onRetry: onRetry != null ? () => onRetry!(a.id) : null,
+            );
+          },
+        ),
+      );
+    });
   }
 }
 

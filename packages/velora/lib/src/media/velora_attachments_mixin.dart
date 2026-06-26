@@ -25,14 +25,14 @@ import 'velora_upload_adapter.dart';
 /// }
 /// ```
 ///
-/// Wire the strip in your view:
+/// Wire the strip in your view — no `Obx` wrapper needed:
 /// ```dart
-/// Obx(() => VeloraAttachmentStrip(
+/// VeloraAttachmentStrip(
 ///   attachments: controller.attachments,
 ///   onPickTap: controller.showAttachmentPicker,
 ///   onRemove: controller.removeAttachment,
 ///   onRetry: controller.retryAttachment,
-/// ))
+/// )
 /// ```
 mixin VeloraAttachmentsMixin {
   final attachments = <VeloraAttachment>[].obs;

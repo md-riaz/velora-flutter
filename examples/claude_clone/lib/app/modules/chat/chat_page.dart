@@ -703,15 +703,12 @@ class _InputBar extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Obx(() {
-          if (controller.attachments.isEmpty) return const SizedBox.shrink();
-          return VeloraAttachmentStrip(
-            attachments: controller.attachments,
-            onPickTap: () => controller.showAttachmentPicker(),
-            onRemove: controller.removeAttachment,
-            onRetry: controller.retryAttachment,
-          );
-        }),
+        VeloraAttachmentStrip(
+          attachments: controller.attachments,
+          onPickTap: () => controller.showAttachmentPicker(),
+          onRemove: controller.removeAttachment,
+          onRetry: controller.retryAttachment,
+        ),
         Container(
           decoration: BoxDecoration(
             color: scheme.surface,

@@ -22,6 +22,14 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Install dependencies (velora_lints)
+        working-directory: packages/velora_lints
+        run: dart pub get
+
+      - name: Analyze velora_lints
+        working-directory: packages/velora_lints
+        run: dart analyze
+
       - name: Install dependencies (velora)
         working-directory: packages/velora
         run: flutter pub get
@@ -29,6 +37,10 @@ jobs:
       - name: Analyze velora package
         working-directory: packages/velora
         run: flutter analyze --no-fatal-infos
+
+      - name: Lint velora package
+        working-directory: packages/velora
+        run: dart run custom_lint --no-fatal-warnings
 
       - name: Run velora tests
         working-directory: packages/velora
@@ -46,4 +58,8 @@ jobs:
       - name: Analyze claude_clone
         working-directory: examples/claude_clone
         run: flutter analyze --no-fatal-infos
+
+      - name: Lint claude_clone
+        working-directory: examples/claude_clone
+        run: dart run custom_lint --no-fatal-warnings
 
