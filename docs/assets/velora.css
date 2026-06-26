@@ -1,0 +1,226 @@
+/* ── Velora brand for MkDocs Material ──────────────────────────── */
+
+/* Light scheme */
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color:              #D97757;
+  --md-primary-fg-color--light:       #E8916D;
+  --md-primary-fg-color--dark:        #C4653F;
+  --md-primary-bg-color:              #FFFFFF;
+  --md-primary-bg-color--light:       rgba(255,255,255,.7);
+  --md-accent-fg-color:               #D97757;
+  --md-accent-fg-color--transparent:  rgba(217,119,87,.1);
+  --md-accent-bg-color:               #FFFFFF;
+
+  /* Page background — warm off-white matching landing page */
+  --md-default-bg-color:              #F9F7F4;
+  --md-default-fg-color:              #161412;
+  --md-default-fg-color--light:       rgba(22,20,18,.54);
+  --md-default-fg-color--lighter:     rgba(22,20,18,.32);
+  --md-default-fg-color--lightest:    rgba(22,20,18,.07);
+
+  /* Inline code */
+  --md-code-bg-color:                 #F0EDE8;
+  --md-code-fg-color:                 #161412;
+
+  /* Admonitions */
+  --md-admonition-bg-color:           #FFFFFF;
+}
+
+/* Dark scheme */
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color:              #E8916D;
+  --md-primary-fg-color--light:       #F0A882;
+  --md-primary-fg-color--dark:        #D97757;
+  --md-primary-bg-color:              #1A1815;
+  --md-primary-bg-color--light:       rgba(255,255,255,.1);
+  --md-accent-fg-color:               #E8916D;
+  --md-accent-fg-color--transparent:  rgba(232,145,109,.1);
+  --md-accent-bg-color:               #1A1815;
+
+  /* Page background — near-black matching landing page */
+  --md-default-bg-color:              #111009;
+  --md-default-fg-color:              #EDE8E1;
+  --md-default-fg-color--light:       rgba(237,232,225,.54);
+  --md-default-fg-color--lighter:     rgba(237,232,225,.32);
+  --md-default-fg-color--lightest:    rgba(237,232,225,.07);
+
+  /* Inline code */
+  --md-code-bg-color:                 #1A1815;
+  --md-code-fg-color:                 #E2DDD6;
+
+  /* Sidebar */
+  --md-sidebar-bg-color:              #111009;
+}
+
+/* ── Header ─────────────────────────────────────────────────────── */
+.md-header {
+  box-shadow: none;
+  border-bottom: 1px solid var(--md-default-fg-color--lightest);
+  background-color: color-mix(in srgb, var(--md-default-bg-color) 85%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Logo — rounded corners already built into SVG rect */
+.md-logo img,
+.md-logo svg {
+  border-radius: 6px;
+  height: 26px;
+  width: 26px;
+}
+
+/* Site name next to logo */
+.md-header__title {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* ── Navigation ──────────────────────────────────────────────────── */
+.md-nav__title {
+  font-weight: 600;
+  font-size: .7rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--md-default-fg-color--light);
+}
+
+.md-nav__item--active > .md-nav__link {
+  color: var(--md-accent-fg-color);
+  font-weight: 500;
+}
+
+.md-nav__link:is(:focus, :hover) {
+  color: var(--md-accent-fg-color);
+}
+
+/* ── Content typography ──────────────────────────────────────────── */
+.md-typeset h1 {
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.md-typeset h2 {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.md-typeset h3 {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Mono font */
+.md-typeset code,
+.md-typeset pre,
+.md-typeset kbd {
+  font-family: 'IBM Plex Mono', 'Fira Code', 'Cascadia Code', monospace;
+}
+
+/* Inline code — warm pill */
+.md-typeset :not(pre) > code {
+  font-size: .82em;
+  padding: .1em .35em;
+  border-radius: 4px;
+}
+
+[data-md-color-scheme="default"] .md-typeset :not(pre) > code {
+  background-color: #F0EDE8;
+  color: #D97757;
+  border: none;
+}
+
+[data-md-color-scheme="slate"] .md-typeset :not(pre) > code {
+  background-color: #1A1815;
+  color: #E8916D;
+  border: none;
+}
+
+/* Code blocks */
+.md-typeset pre > code {
+  font-size: .82rem;
+  line-height: 1.75;
+}
+
+/* Links */
+.md-typeset a {
+  color: var(--md-accent-fg-color);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.md-typeset a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ── Card grid on Overview page ──────────────────────────────────── */
+.md-typeset .grid.cards > ul > li,
+.md-typeset .grid.cards > ol > li {
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 8px;
+  padding: 20px 22px;
+  transition: border-color .12s, box-shadow .12s;
+}
+
+.md-typeset .grid.cards > ul > li:hover,
+.md-typeset .grid.cards > ol > li:hover {
+  border-color: var(--md-accent-fg-color);
+  box-shadow: 0 0 0 1px var(--md-accent-fg-color);
+}
+
+.md-typeset .grid.cards > ul > li > :first-child .lg,
+.md-typeset .grid.cards > ol > li > :first-child .lg {
+  color: var(--md-accent-fg-color);
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────── */
+.md-typeset .md-button {
+  border-radius: 6px;
+  font-weight: 500;
+  letter-spacing: 0;
+  font-size: .9rem;
+}
+
+.md-typeset .md-button--primary {
+  background-color: var(--md-accent-fg-color);
+  border-color: var(--md-accent-fg-color);
+  color: #fff;
+}
+
+.md-typeset .md-button--primary:hover {
+  background-color: var(--md-primary-fg-color--dark);
+  border-color: var(--md-primary-fg-color--dark);
+  color: #fff;
+}
+
+/* ── Tables ──────────────────────────────────────────────────────── */
+.md-typeset table:not([class]) {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--md-default-fg-color--lightest);
+}
+
+.md-typeset table:not([class]) th {
+  background-color: var(--md-default-fg-color--lightest);
+  font-weight: 600;
+  font-size: .82rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+/* ── Footer ──────────────────────────────────────────────────────── */
+.md-footer {
+  border-top: 1px solid var(--md-default-fg-color--lightest);
+  background-color: var(--md-default-bg-color);
+}
+
+/* ── Search ──────────────────────────────────────────────────────── */
+.md-search__input {
+  border-radius: 6px;
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}

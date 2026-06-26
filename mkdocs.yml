@@ -1,0 +1,78 @@
+site_name: Velora
+site_description: Auth, API client, permissions, notifications, and scaffolded modules for Flutter — structured the way you already think after years of Laravel.
+site_url: https://md-riaz.github.io/velora-flutter/
+repo_url: https://github.com/md-riaz/velora-flutter
+repo_name: velora-flutter
+edit_uri: blob/main/docs/
+
+docs_dir: docs
+site_dir: _site/docs
+
+exclude_docs: |
+  index.html
+  README.md
+  mvp.md
+  ai-ready.md
+
+theme:
+  name: material
+  custom_dir: overrides
+  logo: assets/logo.svg
+  favicon: assets/favicon.svg
+  palette:
+    - scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Dark mode
+    - scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: Light mode
+  font:
+    text: IBM Plex Sans
+    code: IBM Plex Mono
+  features:
+    - navigation.instant
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - content.code.annotate
+    - search.highlight
+    - toc.follow
+
+markdown_extensions:
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+
+extra_css:
+  - assets/velora.css
+
+nav:
+  - Overview: index.md
+  - Build Your First App:
+    - 1. Install & Boot: getting-started.md
+    - 2. Architecture: architecture.md
+    - 3. Auth: auth.md
+    - 4. API Client: api-client.md
+    - 5. Permissions: permissions.md
+    - 6. Notifications: notifications.md
+    - 7. Scaffold a Module: scaffolding.md
+  - Reference:
+    - CLI Commands: commands.md
+    - Framework / App Boundary: framework-app-boundary.md
+  - Project:
+    - Contributing: contributing.md
+    - Roadmap: roadmap.md
