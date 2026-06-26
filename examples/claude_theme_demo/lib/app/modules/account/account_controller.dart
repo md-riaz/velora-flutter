@@ -32,6 +32,8 @@ class AccountController extends VeloraController {
     // so there is no real token to revoke and no remote endpoint to call.
     Velora.auth.currentUser.value = null;
     Velora.auth.state.value = SessionState.guest;
+    Velora.notify.notifications.clear();
+    Velora.notify.unreadCount.value = 0;
     Velora.nav.offAll(AppRoutes.login);
   }
 }

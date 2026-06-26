@@ -44,6 +44,7 @@ class NotificationsPage extends GetView<NotificationsController> {
             // In a real app: await Velora.notify.fetch();
           },
           child: ListView.separated(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.symmetric(vertical: 8),
             itemCount: notifications.length,
             separatorBuilder: (_, _) =>
