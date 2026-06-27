@@ -2,20 +2,20 @@
 
 /* Light scheme */
 [data-md-color-scheme="default"] {
-  --md-primary-fg-color:              #D97757;
-  --md-primary-fg-color--light:       #E8916D;
-  --md-primary-fg-color--dark:        #C4653F;
+  --md-primary-fg-color:              #B85A3A;
+  --md-primary-fg-color--light:       #D97757;
+  --md-primary-fg-color--dark:        #8F3F29;
   --md-primary-bg-color:              #FFFFFF;
-  --md-primary-bg-color--light:       rgba(255,255,255,.7);
-  --md-accent-fg-color:               #D97757;
-  --md-accent-fg-color--transparent:  rgba(217,119,87,.1);
+  --md-primary-bg-color--light:       rgba(255,255,255,.92);
+  --md-accent-fg-color:               #B85A3A;
+  --md-accent-fg-color--transparent:  rgba(184,90,58,.14);
   --md-accent-bg-color:               #FFFFFF;
 
   /* Page background — warm off-white matching landing page */
-  --md-default-bg-color:              #F9F7F4;
-  --md-default-fg-color:              #161412;
-  --md-default-fg-color--light:       rgba(22,20,18,.54);
-  --md-default-fg-color--lighter:     rgba(22,20,18,.32);
+  --md-default-bg-color:              #FFFFFF;
+  --md-default-fg-color:              #111827;
+  --md-default-fg-color--light:       rgba(17,24,39,.70);
+  --md-default-fg-color--lighter:     rgba(17,24,39,.46);
   --md-default-fg-color--lightest:    rgba(22,20,18,.07);
 
   /* Inline code */
