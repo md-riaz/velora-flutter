@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:velora/velora.dart';
@@ -11,6 +12,9 @@ import 'package:velora/velora.dart';
 void main() {
   setUp(() {
     Get.testMode = true;
+    // Back the secure enclave with an in-memory mock so token round-trips work
+    // under flutter_test without the (opt-in, off-by-default) plaintext fallback.
+    FlutterSecureStorage.setMockInitialValues({});
   });
 
   tearDown(() {
@@ -453,6 +457,58 @@ void main() {
       expect(storage.getJson('velora.auth.user'), isNull);
     },
   );
+  test('auth guard allows navigation when Velora is not booted', () {
+    // No AuthService registered → UI-only/dev mode, allow through.
+    expect(const VeloraAuthGuard().redirect('/dashboard'), isNull);
+  });
+
+  test('auth guard fails closed for unauthenticated users', () async {
+    final auth = await _authService();
+    Get.put<AuthService>(auth);
+    Get.put<VeloraConfig>(
+      const VeloraConfig(
+        appName: 'Test',
+        apiBaseUrl: 'https://example.test',
+        auth: VeloraAuthConfig(logoutRedirectRoute: '/login'),
+      ),
+    );
+
+    expect(const VeloraAuthGuard().redirect('/dashboard'), '/login');
+
+    auth.isAuthenticated.value = true;
+    expect(const VeloraAuthGuard().redirect('/dashboard'), isNull);
+  });
+
+  test('auth guard falls back to fallbackRoute when config is missing', () async {
+    // Booted (AuthService present) but config unavailable → must still deny.
+    Get.put<AuthService>(await _authService());
+    expect(
+      const VeloraAuthGuard(fallbackRoute: '/signin').redirect('/dashboard'),
+      '/signin',
+    );
+  });
+
+  test('storage never stores the token in plaintext by default', () async {
+    SharedPreferences.setMockInitialValues({});
+    final storage = await VeloraStorageService().init();
+    await storage.setToken('secret-token');
+
+    // Round-trips via the secure enclave...
+    expect(await storage.getToken(), 'secret-token');
+    // ...and leaves nothing in plaintext SharedPreferences.
+    expect(storage.get<String>('velora.auth.token'), isNull);
+    expect(storage.allowInsecureFallback, isFalse);
+  });
+
+  test('storage insecure fallback persists token to prefs when opted in', () async {
+    SharedPreferences.setMockInitialValues({});
+    final storage = await VeloraStorageService(
+      allowInsecureFallback: true,
+    ).init();
+    await storage.setToken('secret-token');
+
+    expect(await storage.getToken(), 'secret-token');
+  });
 }
 
 Future<AuthService> _authService() async {
