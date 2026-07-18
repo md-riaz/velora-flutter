@@ -132,6 +132,15 @@ class LaravelMediaAdapter implements VeloraUploadAdapter {
     VeloraAttachment attachment, {
     void Function(double progress)? onProgress,
   }) async {
+    final localPath = attachment.localPath;
+    if (localPath == null) {
+      throw ArgumentError.value(
+        attachment.id,
+        'attachment',
+        'Cannot upload an attachment without a local path (already remote?).',
+      );
+    }
+
     void reportProgress(int sent, int total) {
       if (total > 0) onProgress?.call(sent / total);
     }
@@ -144,7 +153,7 @@ class LaravelMediaAdapter implements VeloraUploadAdapter {
         endpoint,
         data: FormData.fromMap({
           'file': await MultipartFile.fromFile(
-            attachment.localPath!,
+            localPath,
             filename: attachment.name,
             contentType: attachment.mimeType != null
                 ? DioMediaType.parse(attachment.mimeType!)
@@ -157,7 +166,7 @@ class LaravelMediaAdapter implements VeloraUploadAdapter {
     } else {
       body = await Get.find<VeloraApiService>().uploadFile(
         endpoint,
-        filePath: attachment.localPath!,
+        filePath: localPath,
         filename: attachment.name,
         contentType: attachment.mimeType,
         onSendProgress: reportProgress,

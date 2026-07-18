@@ -1,5 +1,4 @@
 import java.util.Properties
-import java.io.FileInputStream
 
 plugins {
     id("com.android.application")
@@ -14,7 +13,7 @@ val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
 val hasReleaseKeystore = keystorePropertiesFile.exists()
 if (hasReleaseKeystore) {
-    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+    keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
 }
 
 android {
