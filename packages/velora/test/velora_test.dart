@@ -412,6 +412,7 @@ void main() {
         provider: PushProvider.none,
         requestPermissionAfterLogin: true,
       );
+      final nav = VeloraNav();
       final notify = NotificationService(
         repository: repository,
         pushAdapter: NoopPushAdapter(
@@ -422,11 +423,16 @@ void main() {
         auth: auth,
         feature: feature,
         permission: permission,
-        nav: VeloraNav(),
+        nav: nav,
         config: notificationConfig,
       );
       final lifecycle = VeloraLifecycleRegistry();
-      final coordinator = LogoutCoordinator(lifecycle: lifecycle);
+      final coordinator = LogoutCoordinator(
+        lifecycle: lifecycle,
+        auth: auth,
+        nav: nav,
+        logoutRedirectRoute: '/login',
+      );
       auth.attachLogoutCoordinator(coordinator);
 
       Get.put<AuthService>(auth);
@@ -485,12 +491,17 @@ void main() {
         'email': 'admin@example.test',
       });
       final lifecycle = VeloraLifecycleRegistry();
-      final coordinator = LogoutCoordinator(lifecycle: lifecycle);
       final auth = await AuthService(
         api: api,
         storage: storage,
         config: const VeloraAuthConfig(),
       ).init();
+      final coordinator = LogoutCoordinator(
+        lifecycle: lifecycle,
+        auth: auth,
+        nav: VeloraNav(),
+        logoutRedirectRoute: '/login',
+      );
       auth.attachLogoutCoordinator(coordinator);
 
       Get.put<AuthService>(auth);

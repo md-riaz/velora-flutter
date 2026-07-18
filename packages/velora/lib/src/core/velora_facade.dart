@@ -125,19 +125,24 @@ class Velora {
     final lifecycle = VeloraLifecycleRegistry();
     Get.put<VeloraLifecycleRegistry>(lifecycle, permanent: true);
 
-    final logoutCoordinator = LogoutCoordinator(lifecycle: lifecycle);
-    Get.put<LogoutCoordinator>(logoutCoordinator, permanent: true);
-
     final auth = await AuthService(
       api: api,
       storage: storage,
       config: config.auth,
     ).init();
     Get.put<AuthService>(auth, permanent: true);
-    auth.attachLogoutCoordinator(logoutCoordinator);
 
     final nav = VeloraNav();
     Get.put<VeloraNav>(nav, permanent: true);
+
+    final logoutCoordinator = LogoutCoordinator(
+      lifecycle: lifecycle,
+      auth: auth,
+      nav: nav,
+      logoutRedirectRoute: config.auth.logoutRedirectRoute,
+    );
+    Get.put<LogoutCoordinator>(logoutCoordinator, permanent: true);
+    auth.attachLogoutCoordinator(logoutCoordinator);
 
     final permission = PermissionService(
       auth: auth,

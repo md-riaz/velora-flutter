@@ -1,15 +1,23 @@
 import 'package:get/get.dart';
 
-import '../core/velora_facade.dart';
 import '../core/velora_lifecycle.dart';
 import '../routing/velora_nav.dart';
+import 'auth_service.dart';
 import 'session_state.dart';
 
 class LogoutCoordinator extends GetxService {
   final VeloraLifecycleRegistry lifecycle;
+  final AuthService auth;
+  final VeloraNav nav;
+  final String logoutRedirectRoute;
   Future<void>? _running;
 
-  LogoutCoordinator({required this.lifecycle});
+  LogoutCoordinator({
+    required this.lifecycle,
+    required this.auth,
+    required this.nav,
+    required this.logoutRedirectRoute,
+  });
 
   final RxBool isRunning = false.obs;
 
@@ -32,7 +40,7 @@ class LogoutCoordinator extends GetxService {
     required Future<void> Function() clearSession,
   }) async {
     isRunning.value = true;
-    Velora.auth.state.value = SessionState.loggingOut;
+    auth.state.value = SessionState.loggingOut;
 
     try {
       await lifecycle.beforeLogout();
@@ -49,16 +57,14 @@ class LogoutCoordinator extends GetxService {
       await clearSession();
       await lifecycle.onLogoutDispose();
     } finally {
-      Velora.auth.state.value = SessionState.guest;
+      auth.state.value = SessionState.guest;
       isRunning.value = false;
     }
   }
 
   Future<void> _navigateToGuestRoute() async {
-    if (!Get.isRegistered<VeloraNav>()) return;
-
     try {
-      await Velora.nav.offAll<void>(Velora.config.auth.logoutRedirectRoute);
+      await nav.offAll<void>(logoutRedirectRoute);
     } catch (_) {
       // Navigation is best-effort in tests and headless runtimes.
     }
