@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:velora/velora.dart';
 
 import 'conversation_model.dart';
@@ -12,8 +13,35 @@ class HomeController extends VeloraPaginatedController<ConversationModel> {
 
   final searchQuery = ''.obs;
 
+  /// Drives infinite scroll from a scroll listener rather than from the list's
+  /// build phase, so pagination is never triggered as a build side effect.
+  final scrollController = ScrollController();
+
+  static const _loadMoreThreshold = 300.0;
+
   HomeController({ConversationsDataSource? dataSource})
       : _dataSource = dataSource ?? MockConversationsDataSource();
+
+  @override
+  void onInit() {
+    super.onInit();
+    scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void onClose() {
+    scrollController.removeListener(_onScroll);
+    scrollController.dispose();
+    super.onClose();
+  }
+
+  void _onScroll() {
+    if (searchQuery.value.isNotEmpty || !scrollController.hasClients) return;
+    final position = scrollController.position;
+    if (position.pixels >= position.maxScrollExtent - _loadMoreThreshold) {
+      loadMore();
+    }
+  }
 
   @override
   Future<PaginatedData<ConversationModel>> fetchPage(int page) =>

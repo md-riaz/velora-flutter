@@ -5,6 +5,7 @@ import '../home/conversation_model.dart';
 import '../home/conversations_datasource.dart';
 import 'chat_message.dart';
 import 'messages_datasource.dart';
+import 'widgets/rename_dialog.dart';
 
 class ChatController extends VeloraController with VeloraAttachmentsMixin {
   final MessagesDataSource _messagesDs;
@@ -156,6 +157,21 @@ class ChatController extends VeloraController with VeloraAttachmentsMixin {
       messages.add(reply);
       inputController.clear();
       attachments.clear();
+
+      // Keep the conversation's list preview in sync so the home list doesn't
+      // show a stale last message. Persisted through the conversations data
+      // source (single write) rather than mutating a second store by hand.
+      final preview = text.isNotEmpty ? text : 'Attachment';
+      final updatedAt = DateTime.now();
+      await _conversationsDs.updateLastMessage(
+        conversation.value.id,
+        preview,
+        updatedAt: updatedAt,
+      );
+      conversation.value = conversation.value.copyWith(
+        lastMessage: preview,
+        updatedAt: updatedAt,
+      );
     } catch (e) {
       if (optimistic != null) messages.remove(optimistic);
       error.value = e.toString();
@@ -171,7 +187,7 @@ class ChatController extends VeloraController with VeloraAttachmentsMixin {
 
   Future<void> renameConversation() async {
     final newTitle = await Get.dialog<String>(
-      _RenameDialog(initialTitle: conversation.value.title),
+      RenameConversationDialog(initialTitle: conversation.value.title),
     );
     if (newTitle == null || newTitle.trim().isEmpty) return;
     final trimmed = newTitle.trim();
@@ -249,56 +265,5 @@ class ChatController extends VeloraController with VeloraAttachmentsMixin {
         );
       }
     });
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Rename dialog
-// ---------------------------------------------------------------------------
-
-class _RenameDialog extends StatefulWidget {
-  final String initialTitle;
-  const _RenameDialog({required this.initialTitle});
-
-  @override
-  State<_RenameDialog> createState() => _RenameDialogState();
-}
-
-class _RenameDialogState extends State<_RenameDialog> {
-  late final TextEditingController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(text: widget.initialTitle);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Rename conversation'),
-      content: TextField(
-        controller: _controller,
-        autofocus: true,
-        decoration: const InputDecoration(hintText: 'Conversation title'),
-        onSubmitted: (v) => Get.back(result: v),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Get.back<String>(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: () => Get.back(result: _controller.text),
-          child: const Text('Rename'),
-        ),
-      ],
-    );
   }
 }
