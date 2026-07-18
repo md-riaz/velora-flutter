@@ -160,7 +160,9 @@ void main() {
       );
       Get.put<PermissionService>(PermissionService(auth: auth));
 
-      final service = FeatureService();
+      final service = FeatureService(
+        permissionCheck: Get.find<PermissionService>().can,
+      );
       service.registerAll([
         const VeloraFeature(
           id: 'reports',
@@ -234,7 +236,7 @@ void main() {
     'feature service accepts an injected permission resolver without a registered PermissionService',
     () {
       final service = FeatureService(
-        permissionResolver: (permission) => permission == 'reports.view',
+        permissionCheck: (permission) => permission == 'reports.view',
       );
       service.register(
         const VeloraFeature(
@@ -324,22 +326,21 @@ void main() {
         token: 'push-token',
       );
       final localAdapter = InMemoryLocalNotificationAdapter();
+      final auth = await _authService();
+      final permission = PermissionService(auth: auth);
+      final feature = FeatureService(permissionCheck: permission.can);
+      const notificationConfig = VeloraNotificationConfig(
+        provider: PushProvider.none,
+      );
       final service = NotificationService(
         repository: repository,
         pushAdapter: pushAdapter,
         localAdapter: localAdapter,
-      );
-
-      Get.put<AuthService>(await _authService());
-      Get.put<PermissionService>(
-        PermissionService(auth: Get.find<AuthService>()),
-      );
-      Get.put<FeatureService>(FeatureService());
-      Get.put<VeloraNav>(VeloraNav());
-      Velora.config = const VeloraConfig(
-        appName: 'Test',
-        apiBaseUrl: 'https://example.test',
-        notifications: VeloraNotificationConfig(provider: PushProvider.none),
+        auth: auth,
+        feature: feature,
+        permission: permission,
+        nav: VeloraNav(),
+        config: notificationConfig,
       );
 
       await service.initForUser();
@@ -400,6 +401,17 @@ void main() {
       });
       final storage = await _storage();
       final repository = InMemoryNotificationRepository();
+      final auth = await AuthService(
+        api: api,
+        storage: storage,
+        config: const VeloraAuthConfig(),
+      ).init();
+      final permission = PermissionService(auth: auth);
+      final feature = FeatureService(permissionCheck: permission.can);
+      const notificationConfig = VeloraNotificationConfig(
+        provider: PushProvider.none,
+        requestPermissionAfterLogin: true,
+      );
       final notify = NotificationService(
         repository: repository,
         pushAdapter: NoopPushAdapter(
@@ -407,12 +419,12 @@ void main() {
           token: 'push-token',
         ),
         localAdapter: InMemoryLocalNotificationAdapter(),
+        auth: auth,
+        feature: feature,
+        permission: permission,
+        nav: VeloraNav(),
+        config: notificationConfig,
       );
-      final auth = await AuthService(
-        api: api,
-        storage: storage,
-        config: const VeloraAuthConfig(),
-      ).init();
       final lifecycle = VeloraLifecycleRegistry();
       final coordinator = LogoutCoordinator(lifecycle: lifecycle);
       auth.attachLogoutCoordinator(coordinator);
@@ -437,10 +449,7 @@ void main() {
       Velora.config = const VeloraConfig(
         appName: 'Test',
         apiBaseUrl: 'https://example.test',
-        notifications: VeloraNotificationConfig(
-          provider: PushProvider.none,
-          requestPermissionAfterLogin: true,
-        ),
+        notifications: notificationConfig,
       );
 
       await Velora.login({

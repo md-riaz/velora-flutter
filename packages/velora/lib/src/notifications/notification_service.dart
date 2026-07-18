@@ -3,7 +3,10 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
-import '../core/velora_facade.dart';
+import '../auth/auth_service.dart';
+import '../features/feature_service.dart';
+import '../permissions/permission_service.dart';
+import '../routing/velora_nav.dart';
 import 'adapters/local_notification_adapter.dart';
 import 'adapters/push_adapter.dart';
 import 'notification_config.dart';
@@ -22,6 +25,11 @@ class NotificationService {
   final NotificationRepository repository;
   final PushAdapter pushAdapter;
   final LocalNotificationAdapter localAdapter;
+  final AuthService auth;
+  final FeatureService feature;
+  final PermissionService permission;
+  final VeloraNav nav;
+  final VeloraNotificationConfig config;
 
   /// Optional presentation-layer navigation handler. When provided, the service
   /// delegates all tap routing to it instead of navigating itself — keeping
@@ -29,22 +37,17 @@ class NotificationService {
   /// falls back to config-driven routing (see [VeloraNotificationConfig]).
   final NotificationTapHandler? onNotificationTap;
 
-  final VeloraNotificationConfig? _config;
-
   NotificationService({
     required this.repository,
     required this.pushAdapter,
     required this.localAdapter,
+    required this.auth,
+    required this.feature,
+    required this.permission,
+    required this.nav,
+    required this.config,
     this.onNotificationTap,
-    VeloraNotificationConfig? config,
-  }) : _config = config;
-
-  /// Resolves to the injected config, falling back to the facade's
-  /// [Velora.config.notifications] when none was supplied — preserving
-  /// today's default runtime behavior while allowing unit tests to inject
-  /// a config without registering the full facade.
-  VeloraNotificationConfig get _notificationConfig =>
-      _config ?? Velora.config.notifications;
+  });
 
   final RxList<VeloraNotification> notifications = <VeloraNotification>[].obs;
   final RxInt unreadCount = 0.obs;
@@ -57,7 +60,7 @@ class NotificationService {
   StreamSubscription<PushMessage>? _openedSubscription;
 
   Future<void> initForUser() async {
-    if (!_notificationConfig.enabled || initialized.value) return;
+    if (!config.enabled || initialized.value) return;
 
     await localAdapter.init();
     await pushAdapter.init();
@@ -75,7 +78,7 @@ class NotificationService {
   }
 
   Future<bool> requestPermission() async {
-    if (!_notificationConfig.enabled) {
+    if (!config.enabled) {
       permissionGranted.value = false;
       return false;
     }
@@ -85,7 +88,7 @@ class NotificationService {
   }
 
   Future<void> registerDeviceToken() async {
-    if (!_notificationConfig.enabled) return;
+    if (!config.enabled) return;
 
     final token = await pushAdapter.getToken();
     if (token == null || token.isEmpty) return;
@@ -99,7 +102,7 @@ class NotificationService {
   }
 
   Future<void> fetch() async {
-    if (!_notificationConfig.enabled) return;
+    if (!config.enabled) return;
 
     final result = await repository.index();
     notifications.assignAll(result);
@@ -107,7 +110,7 @@ class NotificationService {
   }
 
   Future<void> markAsRead(String id) async {
-    if (!_notificationConfig.enabled) return;
+    if (!config.enabled) return;
 
     await repository.markAsRead(id);
 
@@ -122,7 +125,7 @@ class NotificationService {
   }
 
   Future<void> markAllAsRead() async {
-    if (!_notificationConfig.enabled) return;
+    if (!config.enabled) return;
 
     await repository.markAllAsRead();
     final now = DateTime.now();
@@ -139,7 +142,7 @@ class NotificationService {
     required String body,
     Map<String, dynamic> payload = const {},
   }) async {
-    if (!_notificationConfig.enabled) return;
+    if (!config.enabled) return;
 
     await localAdapter.show(title: title, body: body, payload: payload);
     lastEvent.value = NotificationEvent(
@@ -155,7 +158,7 @@ class NotificationService {
     required DateTime dateTime,
     Map<String, dynamic> payload = const {},
   }) async {
-    if (!_notificationConfig.enabled) return;
+    if (!config.enabled) return;
 
     await localAdapter.schedule(
       id: id,
@@ -179,19 +182,19 @@ class NotificationService {
   }
 
   bool canHandleNotification(VeloraNotification notification) {
-    if (!Velora.auth.check) return false;
+    if (!auth.check) return false;
 
-    final feature = notification.feature;
-    if (feature != null &&
-        feature.isNotEmpty &&
-        !Velora.feature.enabled(feature)) {
+    final requiredFeature = notification.feature;
+    if (requiredFeature != null &&
+        requiredFeature.isNotEmpty &&
+        !feature.enabled(requiredFeature)) {
       return false;
     }
 
-    final permission = notification.permission;
-    if (permission != null &&
-        permission.isNotEmpty &&
-        !Velora.permission.can(permission)) {
+    final requiredPermission = notification.permission;
+    if (requiredPermission != null &&
+        requiredPermission.isNotEmpty &&
+        !permission.can(requiredPermission)) {
       return false;
     }
 
@@ -207,7 +210,7 @@ class NotificationService {
     // Delegate navigation to the app when a handler is wired.
     final handler = onNotificationTap;
     if (handler != null) {
-      if (Velora.auth.check && canHandleNotification(notification)) {
+      if (auth.check && canHandleNotification(notification)) {
         await markAsRead(notification.id);
       }
       await handler(notification);
@@ -215,14 +218,14 @@ class NotificationService {
     }
 
     // Built-in fallback routing, using configurable routes (not hardcoded).
-    final routes = _notificationConfig;
-    if (!Velora.auth.check) {
-      Velora.nav.to(routes.unauthenticatedRoute);
+    final routes = config;
+    if (!auth.check) {
+      nav.to(routes.unauthenticatedRoute);
       return;
     }
 
     if (!canHandleNotification(notification)) {
-      Velora.nav.to(routes.forbiddenRoute);
+      nav.to(routes.forbiddenRoute);
       return;
     }
 
@@ -230,7 +233,7 @@ class NotificationService {
 
     final route = notification.route;
     if (route != null && route.isNotEmpty) {
-      Velora.nav.to(route);
+      nav.to(route);
     }
   }
 
@@ -267,7 +270,7 @@ class NotificationService {
 
       if (!canHandleNotification(notification)) return;
 
-      if (_notificationConfig.showForegroundRemoteAsLocal) {
+      if (config.showForegroundRemoteAsLocal) {
         await showLocal(
           title: notification.title,
           body: notification.body,
@@ -275,7 +278,7 @@ class NotificationService {
         );
       }
 
-      if (_notificationConfig.syncInAppNotificationsAfterPush) {
+      if (config.syncInAppNotificationsAfterPush) {
         await fetch();
       }
     });

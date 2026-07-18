@@ -136,6 +136,19 @@ class Velora {
     Get.put<AuthService>(auth, permanent: true);
     auth.attachLogoutCoordinator(logoutCoordinator);
 
+    final nav = VeloraNav();
+    Get.put<VeloraNav>(nav, permanent: true);
+
+    final permission = PermissionService(
+      auth: auth,
+      permissionResolver: config.auth.permissionResolver,
+    );
+    Get.put<PermissionService>(permission, permanent: true);
+
+    final feature = FeatureService(permissionCheck: permission.can);
+    Get.put<FeatureService>(feature, permanent: true);
+    lifecycle.register(feature);
+
     final notificationRemote = NotificationRemoteDataSource(
       api: api,
       config: config.notifications,
@@ -152,6 +165,10 @@ class Velora {
       pushAdapter: resolvedPushAdapter,
       localAdapter: InMemoryLocalNotificationAdapter(),
       onNotificationTap: onNotificationTap,
+      auth: auth,
+      feature: feature,
+      permission: permission,
+      nav: nav,
       config: config.notifications,
     );
     Get.put<VeloraNotify>(notify, permanent: true);
@@ -171,19 +188,8 @@ class Velora {
       ),
     );
 
-    Get.put<PermissionService>(
-      PermissionService(
-        auth: auth,
-        permissionResolver: config.auth.permissionResolver,
-      ),
-      permanent: true,
-    );
-    final feature = FeatureService();
-    Get.put<FeatureService>(feature, permanent: true);
-    lifecycle.register(feature);
     final themeService = await ThemeService(storage: storage).init();
     Get.put<ThemeService>(themeService, permanent: true);
-    Get.put<VeloraNav>(VeloraNav(), permanent: true);
     Get.put<VeloraToast>(VeloraToast(), permanent: true);
     Get.put<VeloraDialog>(VeloraDialog(), permanent: true);
     Get.put<VeloraLoader>(VeloraLoader(), permanent: true);
