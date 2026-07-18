@@ -46,6 +46,7 @@ export 'src/ui/widgets/velora_empty_state.dart';
 export 'src/ui/widgets/velora_error_view.dart';
 export 'src/ui/widgets/velora_form_field.dart';
 export 'src/ui/widgets/velora_attachment_chip.dart';
+export 'src/ui/widgets/velora_attachment_picker_sheet.dart';
 export 'src/ui/widgets/velora_attachment_strip.dart';
 export 'src/ui/widgets/velora_loading_button.dart';
 export 'src/validation/velora_controller.dart';

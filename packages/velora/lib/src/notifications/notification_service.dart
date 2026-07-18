@@ -10,15 +10,29 @@ import 'notification_event.dart';
 import 'notification_payload.dart';
 import 'notification_repository.dart';
 
+/// Called when a notification is tapped so the presentation layer can decide
+/// where to navigate. Return without navigating to suppress the built-in
+/// routing entirely.
+typedef NotificationTapHandler = Future<void> Function(
+  VeloraNotification notification,
+);
+
 class NotificationService {
   final NotificationRepository repository;
   final PushAdapter pushAdapter;
   final LocalNotificationAdapter localAdapter;
 
+  /// Optional presentation-layer navigation handler. When provided, the service
+  /// delegates all tap routing to it instead of navigating itself — keeping
+  /// navigation policy out of this state/service class. When null, the service
+  /// falls back to config-driven routing (see [VeloraNotificationConfig]).
+  final NotificationTapHandler? onNotificationTap;
+
   NotificationService({
     required this.repository,
     required this.pushAdapter,
     required this.localAdapter,
+    this.onNotificationTap,
   });
 
   final RxList<VeloraNotification> notifications = <VeloraNotification>[].obs;
@@ -179,13 +193,25 @@ class NotificationService {
       notification: notification,
     );
 
+    // Delegate navigation to the app when a handler is wired.
+    final handler = onNotificationTap;
+    if (handler != null) {
+      if (Velora.auth.check && canHandleNotification(notification)) {
+        await markAsRead(notification.id);
+      }
+      await handler(notification);
+      return;
+    }
+
+    // Built-in fallback routing, using configurable routes (not hardcoded).
+    final routes = Velora.config.notifications;
     if (!Velora.auth.check) {
-      Velora.nav.to('/login');
+      Velora.nav.to(routes.unauthenticatedRoute);
       return;
     }
 
     if (!canHandleNotification(notification)) {
-      Velora.nav.to('/403');
+      Velora.nav.to(routes.forbiddenRoute);
       return;
     }
 
