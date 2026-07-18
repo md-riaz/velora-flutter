@@ -384,24 +384,47 @@ void main() {
         api: api,
         storage: storage,
         config: const VeloraAuthConfig(),
-        notificationConfig: const VeloraNotificationConfig(
-          provider: PushProvider.none,
-        ),
       ).init();
-      auth.attachNotifications(notify);
+      final lifecycle = VeloraLifecycleRegistry();
+      final coordinator = LogoutCoordinator(lifecycle: lifecycle);
+      auth.attachLogoutCoordinator(coordinator);
+
+      Get.put<AuthService>(auth);
+      Get.put<NotificationService>(notify);
+      Get.put<VeloraApiService>(api);
+      Get.put<VeloraLifecycleRegistry>(lifecycle);
+      Get.put<LogoutCoordinator>(coordinator);
+
+      // Mirrors boot(): dispose notifications for the logged-out user via
+      // the Phase-1 logout-hook lifecycle, not AuthService itself.
+      lifecycle.register(
+        VeloraLogoutHook(
+          onBeforeLogout: () async {
+            if (!Get.isRegistered<NotificationService>()) return;
+            await Get.find<NotificationService>().disposeForUser();
+          },
+        ),
+      );
+
       Velora.config = const VeloraConfig(
         appName: 'Test',
         apiBaseUrl: 'https://example.test',
-        notifications: VeloraNotificationConfig(provider: PushProvider.none),
+        notifications: VeloraNotificationConfig(
+          provider: PushProvider.none,
+          requestPermissionAfterLogin: true,
+        ),
       );
 
-      await auth.login({'email': 'admin@example.test', 'password': 'secret'});
+      await Velora.login({
+        'email': 'admin@example.test',
+        'password': 'secret',
+      });
 
       expect(auth.check, isTrue);
       expect(notify.initialized.value, isTrue);
       expect(repository.registeredTokens.single['token'], 'push-token');
 
-      await auth.logout();
+      await Velora.logout();
 
       expect(auth.check, isFalse);
       expect(notify.initialized.value, isFalse);
@@ -430,7 +453,6 @@ void main() {
         api: api,
         storage: storage,
         config: const VeloraAuthConfig(),
-        notificationConfig: const VeloraNotificationConfig(enabled: false),
       ).init();
       auth.attachLogoutCoordinator(coordinator);
 

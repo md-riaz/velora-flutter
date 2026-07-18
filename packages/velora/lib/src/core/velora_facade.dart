@@ -55,8 +55,16 @@ class Velora {
   /// ```
   static T? userAs<T extends VeloraUser>() => auth.userAs<T>();
 
-  static Future<VeloraUser> login(Map<String, dynamic> credentials) =>
-      auth.login(credentials);
+  static Future<VeloraUser> login(Map<String, dynamic> credentials) async {
+    final user = await auth.login(credentials);
+    final n = config.notifications;
+    if (n.enabled &&
+        n.requestPermissionAfterLogin &&
+        Get.isRegistered<NotificationService>()) {
+      await Get.find<NotificationService>().initForUser();
+    }
+    return user;
+  }
 
   static Future<void> logout() => auth.logout();
 
@@ -124,7 +132,6 @@ class Velora {
       api: api,
       storage: storage,
       config: config.auth,
-      notificationConfig: config.notifications,
     ).init();
     Get.put<AuthService>(auth, permanent: true);
     auth.attachLogoutCoordinator(logoutCoordinator);
@@ -148,7 +155,6 @@ class Velora {
     );
     Get.put<VeloraNotify>(notify, permanent: true);
     Get.put<NotificationService>(notify, permanent: true);
-    auth.attachNotifications(notify);
     if (auth.check &&
         config.notifications.enabled &&
         config.notifications.requestPermissionAfterLogin) {

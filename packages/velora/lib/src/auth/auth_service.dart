@@ -2,8 +2,6 @@ import 'package:get/get.dart';
 
 import '../config/velora_config.dart';
 import '../http/velora_api_service.dart';
-import '../notifications/notification_config.dart';
-import '../notifications/notification_service.dart';
 import '../storage/velora_storage_service.dart';
 import 'auth_user.dart';
 import 'logout_coordinator.dart';
@@ -15,15 +13,12 @@ class AuthService extends GetxService {
   final VeloraApiService api;
   final VeloraStorageService storage;
   final VeloraAuthConfig config;
-  final VeloraNotificationConfig notificationConfig;
   LogoutCoordinator? _logoutCoordinator;
-  NotificationService? _notifications;
 
   AuthService({
     required this.api,
     required this.storage,
     required this.config,
-    this.notificationConfig = const VeloraNotificationConfig(),
   }) {
     ever<SessionState>(state, (value) {
       isAuthenticated.value = value == SessionState.authenticated;
@@ -41,10 +36,6 @@ class AuthService extends GetxService {
   }
   bool get check => state.value == SessionState.authenticated;
   bool get isLoggingOut => state.value == SessionState.loggingOut;
-
-  void attachNotifications(NotificationService notifications) {
-    _notifications = notifications;
-  }
 
   void attachLogoutCoordinator(LogoutCoordinator coordinator) {
     _logoutCoordinator = coordinator;
@@ -101,10 +92,6 @@ class AuthService extends GetxService {
       await storage.setJson(_userKey, user.toJson());
       currentUser.value = user;
       state.value = SessionState.authenticated;
-      if (notificationConfig.enabled &&
-          notificationConfig.requestPermissionAfterLogin) {
-        await _notifications?.initForUser();
-      }
       return user;
     } catch (_) {
       state.value = currentUser.value == null
@@ -127,13 +114,6 @@ class AuthService extends GetxService {
   }
 
   Future<void> _logoutWithoutCoordinator() async {
-    if (notificationConfig.enabled) {
-      try {
-        await _notifications?.disposeForUser();
-      } catch (_) {
-        // Notification teardown must not block local logout.
-      }
-    }
     state.value = SessionState.loggingOut;
     try {
       try {
