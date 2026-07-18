@@ -155,6 +155,15 @@ class Velora {
       await notify.initForUser();
     }
 
+    lifecycle.register(
+      const VeloraLogoutHook(onBeforeLogout: _disposeNotificationsForLogout),
+    );
+    lifecycle.register(
+      const VeloraLogoutHook(
+        onBeforeLogout: _cancelUserScopedRequestsForLogout,
+      ),
+    );
+
     Get.put<PermissionService>(
       PermissionService(
         auth: auth,
@@ -172,5 +181,21 @@ class Velora {
     Get.put<VeloraDialog>(VeloraDialog(), permanent: true);
     Get.put<VeloraLoader>(VeloraLoader(), permanent: true);
     Get.put<VeloraMediaService>(VeloraMediaService(), permanent: true);
+  }
+}
+
+Future<void> _disposeNotificationsForLogout() async {
+  if (!Get.isRegistered<NotificationService>()) return;
+
+  try {
+    await Get.find<NotificationService>().disposeForUser();
+  } catch (_) {
+    // Notification runtime may be absent or partly initialized.
+  }
+}
+
+Future<void> _cancelUserScopedRequestsForLogout() async {
+  if (Get.isRegistered<VeloraApiService>()) {
+    Get.find<VeloraApiService>().cancelUserScope();
   }
 }

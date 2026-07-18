@@ -2,9 +2,6 @@ import 'package:get/get.dart';
 
 import '../core/velora_facade.dart';
 import '../core/velora_lifecycle.dart';
-import '../features/feature_service.dart';
-import '../http/velora_api_service.dart';
-import '../notifications/notification_service.dart';
 import '../routing/velora_nav.dart';
 import 'session_state.dart';
 
@@ -38,9 +35,7 @@ class LogoutCoordinator extends GetxService {
     Velora.auth.state.value = SessionState.loggingOut;
 
     try {
-      await _disposeNotifications();
       await lifecycle.beforeLogout();
-      _cancelUserScopedRequests();
 
       try {
         await remoteLogout();
@@ -52,27 +47,10 @@ class LogoutCoordinator extends GetxService {
       await _nextFrame();
       await lifecycle.afterLogoutNavigation();
       await clearSession();
-      await _flushFeatures();
       await lifecycle.onLogoutDispose();
     } finally {
       Velora.auth.state.value = SessionState.guest;
       isRunning.value = false;
-    }
-  }
-
-  Future<void> _disposeNotifications() async {
-    if (!Get.isRegistered<NotificationService>()) return;
-
-    try {
-      await Get.find<NotificationService>().disposeForUser();
-    } catch (_) {
-      // Notification runtime may be absent or partly initialized.
-    }
-  }
-
-  void _cancelUserScopedRequests() {
-    if (Get.isRegistered<VeloraApiService>()) {
-      Get.find<VeloraApiService>().cancelUserScope();
     }
   }
 
@@ -84,11 +62,6 @@ class LogoutCoordinator extends GetxService {
     } catch (_) {
       // Navigation is best-effort in tests and headless runtimes.
     }
-  }
-
-  Future<void> _flushFeatures() async {
-    if (!Get.isRegistered<FeatureService>()) return;
-    await Get.find<FeatureService>().flushUserScope();
   }
 
   Future<void> _nextFrame() async {

@@ -97,7 +97,7 @@ class FeatureService extends GetxService with VeloraLogoutAwareDefaults {
   }
 
   @override
-  Future<void> onLogoutDispose() async {}
+  Future<void> onLogoutDispose() => flushUserScope();
 
   Future<void> _dispose(Iterable<Future<void> Function()> disposers) async {
     for (final disposer in disposers) {
