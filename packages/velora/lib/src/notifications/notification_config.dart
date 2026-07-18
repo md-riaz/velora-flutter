@@ -14,6 +14,14 @@ class VeloraNotificationConfig {
   final String markAsReadEndpoint;
   final String markAllAsReadEndpoint;
 
+  /// Route to send the user to when they tap a notification while
+  /// unauthenticated. Defaults to `'/login'`.
+  final String unauthenticatedRoute;
+
+  /// Route to send the user to when they tap a notification they are not
+  /// allowed to open (feature/permission gate failed). Defaults to `'/403'`.
+  final String forbiddenRoute;
+
   /// Converts a raw JSON map into your [VeloraNotification] model.
   ///
   /// If omitted, [AppNotification.fromJson] is used. Override when you have
@@ -37,6 +45,8 @@ class VeloraNotificationConfig {
     this.notificationsEndpoint = '/notifications',
     this.markAsReadEndpoint = '/notifications/{id}/read',
     this.markAllAsReadEndpoint = '/notifications/read-all',
+    this.unauthenticatedRoute = '/login',
+    this.forbiddenRoute = '/403',
     this.notificationParser,
   });
 }

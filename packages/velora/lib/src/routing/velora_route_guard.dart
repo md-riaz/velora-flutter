@@ -28,26 +28,65 @@ abstract class VeloraRouteGuard {
 /// Redirects unauthenticated users to the login route.
 ///
 /// Reads [VeloraAuthConfig.logoutRedirectRoute] from the registered config.
+///
+/// ## Fail-closed behaviour
+///
+/// The guard **denies** access (redirects to the login route) whenever it
+/// cannot confirm an authenticated session — an authentication control must
+/// never fail open. This includes the case where Velora has not been booted
+/// (no [AuthService] registered): a boot failure or initialization race must
+/// not turn a protected route into an open one.
+///
+/// For UI-only demos and widget tests that legitimately run without booting
+/// Velora, set [allowWhenUnbooted] to `true` to allow navigation through when
+/// no [AuthService] is registered.
 class VeloraAuthGuard extends VeloraRouteGuard {
-  const VeloraAuthGuard();
+  /// Route to redirect to when the auth check cannot be completed. Used only if
+  /// the registered [VeloraConfig] is also unavailable.
+  final String fallbackRoute;
+
+  /// When `true`, navigation is allowed if Velora has not been booted (no
+  /// [AuthService] registered). Off by default so an un-booted app fails closed.
+  final bool allowWhenUnbooted;
+
+  const VeloraAuthGuard({
+    this.fallbackRoute = '/login',
+    this.allowWhenUnbooted = false,
+  });
 
   @override
   String? redirect(String route) {
+    // Not booted at all: fail closed by default; allow only when explicitly
+    // opted in for UI-only demos/tests.
+    if (!Get.isRegistered<AuthService>()) {
+      return allowWhenUnbooted ? null : _loginRoute();
+    }
+
     try {
       final auth = Get.find<AuthService>();
       if (auth.isAuthenticated.value) return null;
-      final cfg = Get.find<VeloraConfig>();
-      return cfg.auth.logoutRedirectRoute;
+      return _loginRoute();
     } catch (_) {
-      // AuthService not registered — Velora.boot() was not called.
-      // Allow navigation so UI-only demos and tests work without full boot.
-      return null;
+      // Booted, but the check failed — fail closed.
+      return _loginRoute();
+    }
+  }
+
+  String _loginRoute() {
+    try {
+      return Get.find<VeloraConfig>().auth.logoutRedirectRoute;
+    } catch (_) {
+      return fallbackRoute;
     }
   }
 }
 
 /// Redirects already-authenticated users away from guest-only routes (e.g.
 /// login, register). Defaults to redirecting to '/'.
+///
+/// A guest guard failing open (letting an authenticated user reach a guest
+/// route) is not a security risk, so when booted-but-erroring it defaults to
+/// allowing the guest route through.
 class VeloraGuestGuard extends VeloraRouteGuard {
   final String authenticatedRoute;
 
@@ -55,6 +94,7 @@ class VeloraGuestGuard extends VeloraRouteGuard {
 
   @override
   String? redirect(String route) {
+    if (!Get.isRegistered<AuthService>()) return null;
     try {
       final auth = Get.find<AuthService>();
       return auth.isAuthenticated.value ? authenticatedRoute : null;

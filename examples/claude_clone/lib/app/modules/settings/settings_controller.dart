@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:velora/velora.dart';
 
-const _kFeatureVoice = 'chat.voice';
-const _kFeatureCanvas = 'chat.canvas';
-const _kFeatureCodeInterpreter = 'advanced.code_interpreter';
-const _kFeatureArtifacts = 'chat.artifacts';
+import '../../shared/feature_ids.dart';
 
 /// Demonstrates [ThemeService] and [FeatureService] patterns.
 ///
@@ -27,10 +24,10 @@ class SettingsController extends VeloraController {
   // ---------------------------------------------------------------------------
 
   static const demoFeatures = [
-    (id: _kFeatureVoice, label: 'Voice input', description: 'Speak instead of type'),
-    (id: _kFeatureCanvas, label: 'Canvas mode', description: 'Side-by-side editor view'),
-    (id: _kFeatureCodeInterpreter, label: 'Code interpreter', description: 'Run code in chat'),
-    (id: _kFeatureArtifacts, label: 'Artifacts', description: 'Render live previews'),
+    (id: AppFeatures.voice, label: 'Voice input', description: 'Speak instead of type'),
+    (id: AppFeatures.canvas, label: 'Canvas mode', description: 'Side-by-side editor view'),
+    (id: AppFeatures.codeInterpreter, label: 'Code interpreter', description: 'Run code in chat'),
+    (id: AppFeatures.artifacts, label: 'Artifacts', description: 'Render live previews'),
   ];
 
   bool isEnabled(String featureId) => Velora.feature.enabled(featureId);

@@ -1,9 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart' show Color;
 import 'package:get/get.dart';
-import 'package:image_picker/image_picker.dart';
 
+import '../ui/widgets/velora_attachment_picker_sheet.dart';
 import 'velora_attachment.dart';
-import 'velora_media_service.dart';
 import 'velora_upload_adapter.dart';
 
 /// Mix into any [GetxController] subclass to add reactive attachment
@@ -41,23 +40,32 @@ mixin VeloraAttachmentsMixin {
   /// Override in your controller to swap in the real upload adapter.
   VeloraUploadAdapter get uploadAdapter => const VeloraMockUploadAdapter();
 
-  /// Opens the source picker bottom sheet and adds the selected files.
+  /// Opens the source picker and adds the selected files.
   ///
   /// If [config.uploadImmediately] is true, picked files are uploaded right
   /// after the picker closes.
   Future<void> showAttachmentPicker([
     VeloraPickerConfig config = const VeloraPickerConfig(),
   ]) async {
-    final picked = await Get.bottomSheet<List<VeloraAttachment>>(
-      _AttachmentPickerSheet(config: config),
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-    );
+    final picked = await presentAttachmentPicker(config);
     if (picked == null || picked.isEmpty) return;
     for (final a in picked) {
       attachments.add(a);
     }
     if (config.uploadImmediately) await uploadAll();
+  }
+
+  /// Presents the picker UI and returns the chosen attachments (empty on
+  /// cancel, `null` if dismissed). Override to supply your own picker UI
+  /// without touching the pick/upload orchestration above.
+  Future<List<VeloraAttachment>?> presentAttachmentPicker(
+    VeloraPickerConfig config,
+  ) {
+    return Get.bottomSheet<List<VeloraAttachment>>(
+      VeloraAttachmentPickerSheet(config: config),
+      backgroundColor: const Color(0x00000000),
+      isScrollControlled: true,
+    );
   }
 
   /// Append a pre-built attachment (e.g. loaded from remote).
@@ -180,138 +188,4 @@ mixin VeloraAttachmentsMixin {
       .where((a) => a.mediaUuid != null)
       .map((a) => a.mediaUuid!)
       .toList();
-}
-
-// ---------------------------------------------------------------------------
-// Private picker bottom sheet
-// ---------------------------------------------------------------------------
-
-class _AttachmentPickerSheet extends StatelessWidget {
-  final VeloraPickerConfig config;
-  const _AttachmentPickerSheet({required this.config});
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    return Container(
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 12),
-            Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: scheme.outlineVariant,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              child: Text(
-                'Add attachment',
-                style:
-                    textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-              ),
-            ),
-            Divider(height: 1, color: scheme.outlineVariant),
-            if (config.allowCamera)
-              _PickerTile(
-                icon: Icons.camera_alt_outlined,
-                label: 'Camera',
-                onTap: () => _fromCamera(),
-              ),
-            if (config.allowGallery)
-              _PickerTile(
-                icon: Icons.photo_library_outlined,
-                label:
-                    config.allowMultiple ? 'Photo Library' : 'Choose Photo',
-                onTap: () => _fromGallery(),
-              ),
-            if (config.allowFiles)
-              _PickerTile(
-                icon: Icons.attach_file_rounded,
-                label: 'Files',
-                onTap: () => _fromFiles(),
-              ),
-            Divider(height: 1, color: scheme.outlineVariant),
-            _PickerTile(
-              icon: Icons.close,
-              label: 'Cancel',
-              onTap: () =>
-                  Get.back<List<VeloraAttachment>>(result: const []),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _fromCamera() async {
-    final a = await Get.find<VeloraMediaService>().pickImage(
-      source: ImageSource.camera,
-      imageQuality: config.imageQuality,
-    );
-    Get.back<List<VeloraAttachment>>(result: a != null ? [a] : const []);
-  }
-
-  Future<void> _fromGallery() async {
-    final media = Get.find<VeloraMediaService>();
-    if (config.allowMultiple) {
-      final list =
-          await media.pickMultiImage(imageQuality: config.imageQuality);
-      Get.back<List<VeloraAttachment>>(result: list);
-    } else {
-      final a = await media.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: config.imageQuality,
-      );
-      Get.back<List<VeloraAttachment>>(result: a != null ? [a] : const []);
-    }
-  }
-
-  Future<void> _fromFiles() async {
-    final media = Get.find<VeloraMediaService>();
-    if (config.allowMultiple) {
-      final list = await media.pickFiles(
-        allowedExtensions: config.allowedFileExtensions,
-      );
-      Get.back<List<VeloraAttachment>>(result: list);
-    } else {
-      final a = await media.pickFile(
-        allowedExtensions: config.allowedFileExtensions,
-      );
-      Get.back<List<VeloraAttachment>>(result: a != null ? [a] : const []);
-    }
-  }
-}
-
-class _PickerTile extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  const _PickerTile({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon),
-      title: Text(label),
-      onTap: onTap,
-    );
-  }
 }

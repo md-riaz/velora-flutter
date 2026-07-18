@@ -20,6 +20,14 @@ import 'velora_attachment.dart';
 /// For the full integrated flow (bottom sheet picker + reactive attachment
 /// list + upload progress) use [VeloraAttachmentsMixin] in your controller.
 class VeloraMediaService extends GetxService {
+  /// When `true`, platform errors (permission denied, channel failure) are
+  /// rethrown so callers can react, while a user cancel still returns `null`/`[]`
+  /// (the pickers return null on cancel rather than throwing). Off by default to
+  /// preserve the fire-and-forget picking flow.
+  final bool rethrowErrors;
+
+  VeloraMediaService({this.rethrowErrors = false});
+
   final _img = ImagePicker();
 
   /// Pick a single image from [source].
@@ -46,6 +54,7 @@ class VeloraMediaService extends GetxService {
         sizeBytes: await file.length(),
       );
     } catch (_) {
+      if (rethrowErrors) rethrow;
       return null;
     }
   }
@@ -73,6 +82,7 @@ class VeloraMediaService extends GetxService {
         ),
       );
     } catch (_) {
+      if (rethrowErrors) rethrow;
       return [];
     }
   }
@@ -99,6 +109,7 @@ class VeloraMediaService extends GetxService {
         sizeBytes: f.size,
       );
     } catch (_) {
+      if (rethrowErrors) rethrow;
       return null;
     }
   }
@@ -126,6 +137,7 @@ class VeloraMediaService extends GetxService {
           )
           .toList();
     } catch (_) {
+      if (rethrowErrors) rethrow;
       return [];
     }
   }

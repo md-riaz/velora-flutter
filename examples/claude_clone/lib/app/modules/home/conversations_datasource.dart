@@ -10,6 +10,14 @@ abstract class ConversationsDataSource {
   Future<void> rename(String id, String title);
   Future<void> toggleStar(String id);
   Future<void> clearHistory(String id);
+
+  /// Updates the conversation's list preview (last message + timestamp) so the
+  /// conversations list stays consistent after a new message is sent.
+  Future<void> updateLastMessage(
+    String id,
+    String lastMessage, {
+    DateTime? updatedAt,
+  });
 }
 
 /// In-memory mock that simulates the real `/api/conversations` REST endpoints
@@ -88,6 +96,22 @@ class MockConversationsDataSource implements ConversationsDataSource {
     final idx = _store.indexWhere((c) => c.id == id);
     if (idx != -1) {
       _store[idx] = _store[idx].copyWith(lastMessage: '', updatedAt: DateTime.now());
+    }
+  }
+
+  @override
+  Future<void> updateLastMessage(
+    String id,
+    String lastMessage, {
+    DateTime? updatedAt,
+  }) async {
+    await VeloraMockApi.ok<void>(null, delayMs: 50);
+    final idx = _store.indexWhere((c) => c.id == id);
+    if (idx != -1) {
+      _store[idx] = _store[idx].copyWith(
+        lastMessage: lastMessage,
+        updatedAt: updatedAt ?? DateTime.now(),
+      );
     }
   }
 

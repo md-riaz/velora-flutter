@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:get/get.dart' hide Response;
+import 'package:get/get.dart' hide FormData, MultipartFile, Response;
 
 import '../config/velora_config.dart';
 import '../storage/velora_storage_service.dart';
@@ -139,6 +139,49 @@ class VeloraApiService extends GetxService {
       ),
       parser,
     );
+  }
+
+  /// Multipart file upload that returns the raw decoded response body (no
+  /// success/data envelope unwrapping), so endpoints returning a flat record
+  /// (e.g. a media object with `id` / `url`) work directly.
+  ///
+  /// Building [FormData] internally keeps callers (upload adapters) off the raw
+  /// [dio] client while still applying the base URL, auth header, cancellation,
+  /// and error normalization the service centralizes.
+  Future<Map<String, dynamic>> uploadFile(
+    String path, {
+    required String filePath,
+    String field = 'file',
+    String? filename,
+    String? contentType,
+    Map<String, dynamic> fields = const {},
+    void Function(int sent, int total)? onSendProgress,
+    bool userScoped = true,
+  }) async {
+    final formData = FormData.fromMap({
+      ...fields,
+      field: await MultipartFile.fromFile(
+        filePath,
+        filename: filename,
+        contentType: contentType != null
+            ? DioMediaType.parse(contentType)
+            : null,
+      ),
+    });
+    try {
+      final response = await dio.post<Object?>(
+        path,
+        data: formData,
+        onSendProgress: onSendProgress,
+        cancelToken: userScoped ? _userCancelToken : null,
+      );
+      final data = response.data;
+      if (data is Map<String, dynamic>) return data;
+      if (data is Map) return Map<String, dynamic>.from(data);
+      return <String, dynamic>{};
+    } on DioException catch (error) {
+      throw _normalize(error);
+    }
   }
 
   Future<ApiResponse<T>> _send<T>(

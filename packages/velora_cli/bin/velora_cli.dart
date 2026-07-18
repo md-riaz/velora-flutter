@@ -933,7 +933,7 @@ String _remoteDataSource(String name, String className) =>
 
 import '../models/{{name}}_model.dart';
 
-class {{className}}RemoteDataSource implements VeloraRemoteDataSource<{{className}}Model> {
+class {{className}}RemoteDataSource implements VeloraRemoteDataSource<{{className}}Model, int> {
   final String endpoint;
 
   const {{className}}RemoteDataSource({this.endpoint = '/{{name}}'});
@@ -1008,7 +1008,7 @@ String _repository(String name, String className) =>
 import '../models/${name}_model.dart';
 import '${name}_remote_data_source.dart';
 
-class ${className}Repository implements VeloraRepository<${className}Model> {
+class ${className}Repository implements VeloraRepository<${className}Model, int> {
   final ${className}RemoteDataSource remoteDataSource;
 
   const ${className}Repository(this.remoteDataSource);

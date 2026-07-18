@@ -20,6 +20,7 @@ class HomePage extends GetView<HomeController> {
       backgroundColor: scheme.surface,
       drawer: _AppDrawer(controller: controller),
       body: CustomScrollView(
+        controller: controller.scrollController,
         slivers: [
           SliverAppBar(
             pinned: true,
@@ -194,10 +195,8 @@ class HomePage extends GetView<HomeController> {
             return SliverList.builder(
               itemCount: items.length,
               itemBuilder: (context, index) {
-                if (controller.searchQuery.value.isEmpty &&
-                    index >= items.length - 3) {
-                  controller.loadMore();
-                }
+                // Pagination is driven by HomeController's scroll listener,
+                // not from here — item builders must stay side-effect free.
                 final conv = items[index];
                 final tile = _ConversationTile(
                   conversation: conv,

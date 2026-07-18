@@ -91,6 +91,11 @@ class Velora {
     /// closures) or any other [PushAdapter] implementation. Defaults to
     /// [NoopPushAdapter] when omitted.
     PushAdapter? pushAdapter,
+
+    /// Optional handler invoked when a notification is tapped, so the app owns
+    /// navigation instead of the notification service. When omitted, the
+    /// service falls back to the routes in [VeloraNotificationConfig].
+    NotificationTapHandler? onNotificationTap,
   }) async {
     Velora.config = config;
 
@@ -139,6 +144,7 @@ class Velora {
       repository: notificationRepository,
       pushAdapter: resolvedPushAdapter,
       localAdapter: InMemoryLocalNotificationAdapter(),
+      onNotificationTap: onNotificationTap,
     );
     Get.put<VeloraNotify>(notify, permanent: true);
     Get.put<NotificationService>(notify, permanent: true);

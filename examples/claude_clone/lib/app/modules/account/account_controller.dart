@@ -1,7 +1,5 @@
 import 'package:velora/velora.dart';
 
-import '../../routes/app_routes.dart';
-
 /// Demonstrates [AuthService] patterns in Velora.
 ///
 /// In a real app:
@@ -28,13 +26,12 @@ class AccountController extends VeloraController {
       message: 'Are you sure you want to sign out?',
     );
     if (!confirmed) return;
-    // Direct state reset — no HTTP call. The session was created by mock login,
-    // so there is no real token to revoke and no remote endpoint to call.
-    Velora.auth.currentUser.value = null;
-    Velora.auth.state.value = SessionState.guest;
-    Velora.notify.notifications.clear();
-    Velora.notify.unreadCount.value = 0;
-    Velora.nav.offAll(AppRoutes.login);
+    // Delegate to the framework's logout so every user-scoped service
+    // (notifications, feature flags, in-flight requests, navigation) is torn
+    // down through the LogoutCoordinator — instead of this module hand-resetting
+    // another module's state. The remote logout call is best-effort and is
+    // skipped/ignored when offline or unauthenticated.
+    await Velora.logout();
   }
 }
 

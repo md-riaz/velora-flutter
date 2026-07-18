@@ -1,5 +1,7 @@
 import 'package:velora/velora.dart';
 
+import '../../shared/feature_ids.dart';
+
 /// Demonstrates [NotificationService] patterns in Velora.
 ///
 /// In a real app [Velora.notify.fetch()] loads notifications from the server.
@@ -29,7 +31,7 @@ class NotificationsController extends VeloraController {
         type: 'feature',
         title: 'Canvas mode available',
         body: 'Try the new side-by-side canvas editor in your next chat.',
-        feature: 'chat.canvas',
+        feature: AppFeatures.canvas,
         createdAt: now.subtract(const Duration(hours: 2)),
       ),
       AppNotification(
