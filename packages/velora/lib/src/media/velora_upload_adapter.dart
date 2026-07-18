@@ -111,9 +111,10 @@ class VeloraMockUploadAdapter implements VeloraUploadAdapter {
 ///
 /// ## Custom Dio instance
 ///
-/// By default the adapter uses `Velora.api.dio` (already authenticated via
-/// the Bearer token interceptor set up in [VeloraApiService]).  Pass your
-/// own [Dio] only if you need a separate HTTP client:
+/// By default the adapter uploads through [VeloraApiService.uploadFile] (already
+/// authenticated via the Bearer token interceptor and error-normalized). Pass
+/// your own [Dio] only if you need a separate HTTP client that bypasses the
+/// service:
 /// ```dart
 /// LaravelMediaAdapter(dio: myCustomDio, endpoint: '/api/v2/media')
 /// ```
@@ -126,30 +127,43 @@ class LaravelMediaAdapter implements VeloraUploadAdapter {
     Dio? dio,
   }) : _customDio = dio;
 
-  Dio get _dio => _customDio ?? Get.find<VeloraApiService>().dio;
-
   @override
   Future<VeloraUploadResult> upload(
     VeloraAttachment attachment, {
     void Function(double progress)? onProgress,
   }) async {
-    final formData = FormData.fromMap({
-      'file': await MultipartFile.fromFile(
-        attachment.localPath!,
+    void reportProgress(int sent, int total) {
+      if (total > 0) onProgress?.call(sent / total);
+    }
+
+    final Map<String, dynamic> body;
+    final customDio = _customDio;
+    if (customDio != null) {
+      // Advanced escape hatch: a fully separate client, bypassing the service.
+      final response = await customDio.post<Map<String, dynamic>>(
+        endpoint,
+        data: FormData.fromMap({
+          'file': await MultipartFile.fromFile(
+            attachment.localPath!,
+            filename: attachment.name,
+            contentType: attachment.mimeType != null
+                ? DioMediaType.parse(attachment.mimeType!)
+                : null,
+          ),
+        }),
+        onSendProgress: reportProgress,
+      );
+      body = response.data ?? <String, dynamic>{};
+    } else {
+      body = await Get.find<VeloraApiService>().uploadFile(
+        endpoint,
+        filePath: attachment.localPath!,
         filename: attachment.name,
-        contentType: attachment.mimeType != null
-            ? DioMediaType.parse(attachment.mimeType!)
-            : null,
-      ),
-    });
-    final response = await _dio.post<Map<String, dynamic>>(
-      endpoint,
-      data: formData,
-      onSendProgress: (sent, total) {
-        if (total > 0) onProgress?.call(sent / total);
-      },
-    );
-    final body = response.data ?? <String, dynamic>{};
+        contentType: attachment.mimeType,
+        onSendProgress: reportProgress,
+      );
+    }
+
     final url = _firstNonEmpty(body, const ['original_url', 'url', 'path']);
     if (url.isEmpty) {
       throw Exception(
