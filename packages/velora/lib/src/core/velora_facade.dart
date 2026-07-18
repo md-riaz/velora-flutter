@@ -152,6 +152,7 @@ class Velora {
       pushAdapter: resolvedPushAdapter,
       localAdapter: InMemoryLocalNotificationAdapter(),
       onNotificationTap: onNotificationTap,
+      config: config.notifications,
     );
     Get.put<VeloraNotify>(notify, permanent: true);
     Get.put<NotificationService>(notify, permanent: true);

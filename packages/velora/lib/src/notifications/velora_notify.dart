@@ -6,5 +6,6 @@ class VeloraNotify extends NotificationService {
     required super.pushAdapter,
     required super.localAdapter,
     super.onNotificationTap,
+    super.config,
   });
 }

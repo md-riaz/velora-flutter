@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import '../core/velora_facade.dart';
 import 'adapters/local_notification_adapter.dart';
 import 'adapters/push_adapter.dart';
+import 'notification_config.dart';
 import 'notification_event.dart';
 import 'notification_payload.dart';
 import 'notification_repository.dart';
@@ -28,12 +29,22 @@ class NotificationService {
   /// falls back to config-driven routing (see [VeloraNotificationConfig]).
   final NotificationTapHandler? onNotificationTap;
 
+  final VeloraNotificationConfig? _config;
+
   NotificationService({
     required this.repository,
     required this.pushAdapter,
     required this.localAdapter,
     this.onNotificationTap,
-  });
+    VeloraNotificationConfig? config,
+  }) : _config = config;
+
+  /// Resolves to the injected config, falling back to the facade's
+  /// [Velora.config.notifications] when none was supplied — preserving
+  /// today's default runtime behavior while allowing unit tests to inject
+  /// a config without registering the full facade.
+  VeloraNotificationConfig get _notificationConfig =>
+      _config ?? Velora.config.notifications;
 
   final RxList<VeloraNotification> notifications = <VeloraNotification>[].obs;
   final RxInt unreadCount = 0.obs;
@@ -46,7 +57,7 @@ class NotificationService {
   StreamSubscription<PushMessage>? _openedSubscription;
 
   Future<void> initForUser() async {
-    if (!Velora.config.notifications.enabled || initialized.value) return;
+    if (!_notificationConfig.enabled || initialized.value) return;
 
     await localAdapter.init();
     await pushAdapter.init();
@@ -64,7 +75,7 @@ class NotificationService {
   }
 
   Future<bool> requestPermission() async {
-    if (!Velora.config.notifications.enabled) {
+    if (!_notificationConfig.enabled) {
       permissionGranted.value = false;
       return false;
     }
@@ -74,7 +85,7 @@ class NotificationService {
   }
 
   Future<void> registerDeviceToken() async {
-    if (!Velora.config.notifications.enabled) return;
+    if (!_notificationConfig.enabled) return;
 
     final token = await pushAdapter.getToken();
     if (token == null || token.isEmpty) return;
@@ -88,7 +99,7 @@ class NotificationService {
   }
 
   Future<void> fetch() async {
-    if (!Velora.config.notifications.enabled) return;
+    if (!_notificationConfig.enabled) return;
 
     final result = await repository.index();
     notifications.assignAll(result);
@@ -96,7 +107,7 @@ class NotificationService {
   }
 
   Future<void> markAsRead(String id) async {
-    if (!Velora.config.notifications.enabled) return;
+    if (!_notificationConfig.enabled) return;
 
     await repository.markAsRead(id);
 
@@ -111,7 +122,7 @@ class NotificationService {
   }
 
   Future<void> markAllAsRead() async {
-    if (!Velora.config.notifications.enabled) return;
+    if (!_notificationConfig.enabled) return;
 
     await repository.markAllAsRead();
     final now = DateTime.now();
@@ -128,7 +139,7 @@ class NotificationService {
     required String body,
     Map<String, dynamic> payload = const {},
   }) async {
-    if (!Velora.config.notifications.enabled) return;
+    if (!_notificationConfig.enabled) return;
 
     await localAdapter.show(title: title, body: body, payload: payload);
     lastEvent.value = NotificationEvent(
@@ -144,7 +155,7 @@ class NotificationService {
     required DateTime dateTime,
     Map<String, dynamic> payload = const {},
   }) async {
-    if (!Velora.config.notifications.enabled) return;
+    if (!_notificationConfig.enabled) return;
 
     await localAdapter.schedule(
       id: id,
@@ -204,7 +215,7 @@ class NotificationService {
     }
 
     // Built-in fallback routing, using configurable routes (not hardcoded).
-    final routes = Velora.config.notifications;
+    final routes = _notificationConfig;
     if (!Velora.auth.check) {
       Velora.nav.to(routes.unauthenticatedRoute);
       return;
@@ -256,7 +267,7 @@ class NotificationService {
 
       if (!canHandleNotification(notification)) return;
 
-      if (Velora.config.notifications.showForegroundRemoteAsLocal) {
+      if (_notificationConfig.showForegroundRemoteAsLocal) {
         await showLocal(
           title: notification.title,
           body: notification.body,
@@ -264,7 +275,7 @@ class NotificationService {
         );
       }
 
-      if (Velora.config.notifications.syncInAppNotificationsAfterPush) {
+      if (_notificationConfig.syncInAppNotificationsAfterPush) {
         await fetch();
       }
     });

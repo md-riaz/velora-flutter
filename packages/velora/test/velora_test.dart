@@ -230,6 +230,34 @@ void main() {
     },
   );
 
+  test(
+    'feature service accepts an injected permission resolver without a registered PermissionService',
+    () {
+      final service = FeatureService(
+        permissionResolver: (permission) => permission == 'reports.view',
+      );
+      service.register(
+        const VeloraFeature(
+          id: 'reports',
+          name: 'Reports',
+          permission: 'reports.view',
+        ),
+      );
+      service.register(
+        const VeloraFeature(
+          id: 'billing',
+          name: 'Billing',
+          permission: 'billing.view',
+        ),
+      );
+      service.enable('reports');
+      service.enable('billing');
+
+      expect(service.canAccess('reports'), isTrue);
+      expect(service.canAccess('billing'), isFalse);
+    },
+  );
+
   test('theme service tracks mode changes', () {
     final service = ThemeService();
 
