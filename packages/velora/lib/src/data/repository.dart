@@ -1,8 +1,12 @@
 /// Contract for a resource repository.
 ///
 /// [T] is the model type and [ID] is the identifier type — use `String` for
-/// UUID-keyed resources or `int` for auto-increment IDs. Defaults to `int` for
-/// backwards compatibility.
+/// UUID-keyed resources or `int` for auto-increment IDs.
+///
+/// > Note: this is a breaking change from the previous single-parameter
+/// > `VeloraRepository<T>` (which hardcoded `int` ids). Dart has no default
+/// > type arguments, so existing implementations must add the id type, e.g.
+/// > `implements VeloraRepository<UserModel, int>`.
 abstract class VeloraRepository<T, ID> {
   Future<List<T>> index();
   Future<T> show(ID id);

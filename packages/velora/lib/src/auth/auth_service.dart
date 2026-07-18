@@ -148,13 +148,20 @@ class AuthService extends GetxService {
   }
 
   Future<void> _remoteLogout() async {
+    // Nothing to revoke without a token (e.g. a mock/local-only session), so
+    // skip the network round-trip that would otherwise block logout.
+    final token = await storage.getToken();
+    if (token == null || token.isEmpty) return;
     await api.post<Object?>(config.logoutEndpoint, userScoped: false);
   }
 
   Future<void> _clearLocalSession() async {
-    await storage.clearToken();
-    await storage.remove(_userKey);
+    // Clear the logical session first so the app is logged out even if the
+    // secure-token delete surfaces a keychain/keystore error (which we let
+    // propagate rather than swallow).
     currentUser.value = null;
+    await storage.remove(_userKey);
+    await storage.clearToken();
   }
 
   Future<VeloraUser?> me() async {

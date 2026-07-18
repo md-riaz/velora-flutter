@@ -457,9 +457,16 @@ void main() {
       expect(storage.getJson('velora.auth.user'), isNull);
     },
   );
-  test('auth guard allows navigation when Velora is not booted', () {
-    // No AuthService registered → UI-only/dev mode, allow through.
-    expect(const VeloraAuthGuard().redirect('/dashboard'), isNull);
+  test('auth guard fails closed when Velora is not booted', () {
+    // No AuthService registered → fail closed by default (redirect).
+    expect(const VeloraAuthGuard().redirect('/dashboard'), '/login');
+  });
+
+  test('auth guard allows unbooted navigation only when opted in', () {
+    expect(
+      const VeloraAuthGuard(allowWhenUnbooted: true).redirect('/dashboard'),
+      isNull,
+    );
   });
 
   test('auth guard fails closed for unauthenticated users', () async {
@@ -500,15 +507,74 @@ void main() {
     expect(storage.allowInsecureFallback, isFalse);
   });
 
+  test('storage rethrows when secure storage fails and fallback is off', () async {
+    SharedPreferences.setMockInitialValues({});
+    final storage = await VeloraStorageService(
+      secureStorage: _ThrowingSecureStorage(),
+    ).init();
+
+    await expectLater(storage.setToken('secret-token'), throwsA(anything));
+    // Nothing was written to plaintext prefs.
+    expect(storage.get<String>('velora.auth.token'), isNull);
+  });
+
   test('storage insecure fallback persists token to prefs when opted in', () async {
     SharedPreferences.setMockInitialValues({});
     final storage = await VeloraStorageService(
+      secureStorage: _ThrowingSecureStorage(),
       allowInsecureFallback: true,
     ).init();
-    await storage.setToken('secret-token');
 
+    // Secure storage throws → the token round-trips through SharedPreferences.
+    await storage.setToken('secret-token');
+    expect(storage.get<String>('velora.auth.token'), 'secret-token');
     expect(await storage.getToken(), 'secret-token');
   });
+}
+
+/// Secure-storage double whose operations always throw, to exercise the
+/// plaintext-fallback / fail-closed branches of [VeloraStorageService].
+class _ThrowingSecureStorage extends FlutterSecureStorage {
+  const _ThrowingSecureStorage();
+
+  Never _boom() => throw Exception('secure storage unavailable');
+
+  @override
+  Future<void> write({
+    required String key,
+    required String? value,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async =>
+      _boom();
+
+  @override
+  Future<String?> read({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async =>
+      _boom();
+
+  @override
+  Future<void> delete({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async =>
+      _boom();
 }
 
 Future<AuthService> _authService() async {

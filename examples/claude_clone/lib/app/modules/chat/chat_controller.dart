@@ -158,6 +158,10 @@ class ChatController extends VeloraController with VeloraAttachmentsMixin {
       inputController.clear();
       attachments.clear();
 
+      // The primary send succeeded — don't roll back the user message if a
+      // non-fatal secondary side effect (preview update) throws below.
+      optimistic = null;
+
       // Keep the conversation's list preview in sync so the home list doesn't
       // show a stale last message. Persisted through the conversations data
       // source (single write) rather than mutating a second store by hand.

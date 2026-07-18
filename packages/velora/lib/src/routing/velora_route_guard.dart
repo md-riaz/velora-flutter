@@ -31,23 +31,36 @@ abstract class VeloraRouteGuard {
 ///
 /// ## Fail-closed behaviour
 ///
-/// If [AuthService] is registered but the authentication check throws, the
-/// guard **denies** access (redirects to [fallbackRoute]) rather than letting
-/// the request through — an authentication control must never fail open. The
-/// guard only allows navigation without a check when Velora has not been booted
-/// at all (no [AuthService] registered), which is the intended affordance for
-/// UI-only demos and widget tests.
+/// The guard **denies** access (redirects to the login route) whenever it
+/// cannot confirm an authenticated session — an authentication control must
+/// never fail open. This includes the case where Velora has not been booted
+/// (no [AuthService] registered): a boot failure or initialization race must
+/// not turn a protected route into an open one.
+///
+/// For UI-only demos and widget tests that legitimately run without booting
+/// Velora, set [allowWhenUnbooted] to `true` to allow navigation through when
+/// no [AuthService] is registered.
 class VeloraAuthGuard extends VeloraRouteGuard {
   /// Route to redirect to when the auth check cannot be completed. Used only if
   /// the registered [VeloraConfig] is also unavailable.
   final String fallbackRoute;
 
-  const VeloraAuthGuard({this.fallbackRoute = '/login'});
+  /// When `true`, navigation is allowed if Velora has not been booted (no
+  /// [AuthService] registered). Off by default so an un-booted app fails closed.
+  final bool allowWhenUnbooted;
+
+  const VeloraAuthGuard({
+    this.fallbackRoute = '/login',
+    this.allowWhenUnbooted = false,
+  });
 
   @override
   String? redirect(String route) {
-    // Not booted at all → dev/UI-only mode: allow through.
-    if (!Get.isRegistered<AuthService>()) return null;
+    // Not booted at all: fail closed by default; allow only when explicitly
+    // opted in for UI-only demos/tests.
+    if (!Get.isRegistered<AuthService>()) {
+      return allowWhenUnbooted ? null : _loginRoute();
+    }
 
     try {
       final auth = Get.find<AuthService>();

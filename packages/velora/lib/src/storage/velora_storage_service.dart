@@ -96,14 +96,21 @@ class VeloraStorageService extends GetxService {
   Future<void> setToken(String token) async {
     try {
       await _secureStorage.write(key: _tokenKey, value: token);
-      // Purge any stale plaintext copy left by a previous insecure fallback.
-      await _prefs.remove(_tokenKey);
     } catch (error, stackTrace) {
       if (!allowInsecureFallback) {
         _warnSecureStorageUnavailable('write', error, stackTrace);
         rethrow;
       }
       await _prefs.setString(_tokenKey, token);
+      return;
+    }
+    // Secure write succeeded — purge any stale plaintext copy from a previous
+    // insecure fallback. A cleanup failure must NOT re-trigger the fallback, so
+    // it lives outside the write try/catch above.
+    try {
+      await _prefs.remove(_tokenKey);
+    } catch (_) {
+      // Best-effort cleanup; the authoritative token is already in the enclave.
     }
   }
 
@@ -130,9 +137,15 @@ class VeloraStorageService extends GetxService {
   Future<String?> _readTokenForKey(String key) async {
     try {
       final secure = await _secureStorage.read(key: key);
-      if (secure != null) return secure;
+      if (secure != null) {
+        // Purge any stale plaintext copy so old bearer tokens don't linger.
+        await _prefs.remove(key);
+        return secure;
+      }
     } catch (error, stackTrace) {
       if (!allowInsecureFallback) {
+        // We refuse to read plaintext — make sure none is left readable.
+        await _prefs.remove(key);
         _warnSecureStorageUnavailable('read', error, stackTrace);
         rethrow;
       }
@@ -141,13 +154,22 @@ class VeloraStorageService extends GetxService {
   }
 
   Future<void> _deleteTokenForKey(String key) async {
+    Object? secureError;
+    StackTrace secureStack = StackTrace.empty;
     try {
       await _secureStorage.delete(key: key);
-    } catch (_) {
-      // Secure enclave unavailable — the plaintext removal below still runs so
-      // any fallback copy is cleared regardless.
+    } catch (error, stackTrace) {
+      secureError = error;
+      secureStack = stackTrace;
     }
+    // Always remove the plaintext copy regardless of the secure-delete outcome.
     await _prefs.remove(key);
+    // Surface a secure-delete failure so logout can't report success while a
+    // recoverable token remains in the keychain/keystore.
+    if (secureError != null) {
+      _warnSecureStorageUnavailable('delete', secureError, secureStack);
+      Error.throwWithStackTrace(secureError, secureStack);
+    }
   }
 
   void _warnSecureStorageUnavailable(

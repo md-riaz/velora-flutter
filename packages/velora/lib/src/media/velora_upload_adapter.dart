@@ -133,7 +133,7 @@ class LaravelMediaAdapter implements VeloraUploadAdapter {
     void Function(double progress)? onProgress,
   }) async {
     final localPath = attachment.localPath;
-    if (localPath == null) {
+    if (localPath == null || localPath.isEmpty) {
       throw ArgumentError.value(
         attachment.id,
         'attachment',

@@ -23,8 +23,32 @@ import '../../media/velora_media_service.dart';
 class VeloraAttachmentPickerSheet extends StatelessWidget {
   final VeloraPickerConfig config;
 
+  /// Sheet title. Override for localization or different wording.
+  final String title;
+
+  /// Camera row label.
+  final String cameraLabel;
+
+  /// Gallery row label when picking multiple images.
+  final String galleryLabel;
+
+  /// Gallery row label when picking a single image.
+  final String choosePhotoLabel;
+
+  /// Files row label.
+  final String filesLabel;
+
+  /// Cancel row label.
+  final String cancelLabel;
+
   const VeloraAttachmentPickerSheet({
     this.config = const VeloraPickerConfig(),
+    this.title = 'Add attachment',
+    this.cameraLabel = 'Camera',
+    this.galleryLabel = 'Photo Library',
+    this.choosePhotoLabel = 'Choose Photo',
+    this.filesLabel = 'Files',
+    this.cancelLabel = 'Cancel',
     super.key,
   });
 
@@ -55,7 +79,7 @@ class VeloraAttachmentPickerSheet extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               child: Text(
-                'Add attachment',
+                title,
                 style:
                     textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
@@ -64,25 +88,25 @@ class VeloraAttachmentPickerSheet extends StatelessWidget {
             if (config.allowCamera)
               _PickerTile(
                 icon: Icons.camera_alt_outlined,
-                label: 'Camera',
+                label: cameraLabel,
                 onTap: _fromCamera,
               ),
             if (config.allowGallery)
               _PickerTile(
                 icon: Icons.photo_library_outlined,
-                label: config.allowMultiple ? 'Photo Library' : 'Choose Photo',
+                label: config.allowMultiple ? galleryLabel : choosePhotoLabel,
                 onTap: _fromGallery,
               ),
             if (config.allowFiles)
               _PickerTile(
                 icon: Icons.attach_file_rounded,
-                label: 'Files',
+                label: filesLabel,
                 onTap: _fromFiles,
               ),
             Divider(height: 1, color: scheme.outlineVariant),
             _PickerTile(
               icon: Icons.close,
-              label: 'Cancel',
+              label: cancelLabel,
               onTap: () => Get.back<List<VeloraAttachment>>(result: const []),
             ),
             const SizedBox(height: 8),
