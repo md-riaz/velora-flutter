@@ -68,6 +68,26 @@ jobs:
             echo "No test files found — skipping"
           fi
 
+      - name: Install dependencies (velora_db)
+        working-directory: packages/velora_db
+        run: flutter pub get
+
+      - name: Analyze velora_db package
+        working-directory: packages/velora_db
+        run: flutter analyze --no-fatal-infos
+
+      - name: Ensure libsqlite3 is available for velora_db tests
+        run: sudo apt-get update && sudo apt-get install -y libsqlite3-0 libsqlite3-dev
+
+      - name: Run velora_db tests
+        working-directory: packages/velora_db
+        run: |
+          if [ -d "test" ] && find test -name '*_test.dart' -print -quit | grep -q .; then
+            flutter test --coverage
+          else
+            echo "No test files found — skipping"
+          fi
+
       - name: Install dependencies (claude_clone)
         working-directory: examples/claude_clone
         run: flutter pub get

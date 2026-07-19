@@ -1,0 +1,613 @@
+import 'dart:io';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:velora/velora.dart';
+import 'package:velora_db/velora_db.dart';
+
+void main() {
+  setUpAll(() {
+    sqfliteFfiInit();
+  });
+
+  setUp(() {
+    Get.testMode = true;
+  });
+
+  tearDown(() {
+    Get.reset();
+  });
+
+  group('VeloraMigrationRunner', () {
+    test('onCreate runs all migrations in version order', () async {
+      final applied = <int>[];
+      final runner = VeloraMigrationRunner([
+        _RecordingMigration(2, applied),
+        _RecordingMigration(1, applied),
+        _RecordingMigration(3, applied),
+      ]);
+
+      final db = await _openRaw();
+      await runner.onCreate(db, 3);
+      expect(applied, [1, 2, 3]);
+      await db.close();
+    });
+
+    test('onUpgrade runs only migrations with version in (old, new]', () async {
+      final applied = <int>[];
+      final runner = VeloraMigrationRunner([
+        _RecordingMigration(1, applied),
+        _RecordingMigration(2, applied),
+        _RecordingMigration(3, applied),
+        _RecordingMigration(4, applied),
+      ]);
+
+      final db = await _openRaw();
+      await runner.onUpgrade(db, 2, 4);
+      expect(applied, [3, 4]);
+      await db.close();
+    });
+
+    test('rejects duplicate versions with a clear ArgumentError', () {
+      expect(
+        () => VeloraMigrationRunner([
+          _RecordingMigration(1, []),
+          _RecordingMigration(1, []),
+        ]),
+        throwsArgumentError,
+      );
+    });
+
+    test(
+      'VeloraDatabase: opening at a higher version runs onUpgrade for the '
+      'new migrations only, and PRAGMA user_version ends at the max version',
+      () async {
+        final dir = await Directory.systemTemp.createTemp('velora_db_test');
+        final path = p.join(dir.path, 'upgrade_test.db');
+        addTearDown(() => dir.delete(recursive: true));
+
+        // Fresh database at version 1: only the v1 migration runs (onCreate).
+        var db = await VeloraDatabase(
+          databaseName: path,
+          version: 1,
+          migrations: [_CreateTodosTable()],
+          factory: databaseFactoryFfi,
+        ).open();
+        expect(await db.db.getVersion(), 1);
+        await db.db.insert('todos', {'title': 'seed', 'done': 0});
+        await db.close();
+
+        // Reopen at version 2 with an additional migration: only the v2
+        // migration should run (onUpgrade), not v1 again.
+        final upgradeCalls = <int>[];
+        db = await VeloraDatabase(
+          databaseName: path,
+          version: 2,
+          migrations: [
+            _CreateTodosTable(),
+            _AddArchivedColumn(onApplied: upgradeCalls),
+          ],
+          factory: databaseFactoryFfi,
+        ).open();
+
+        expect(upgradeCalls, [2]);
+        expect(await db.db.getVersion(), 2);
+        // The pre-existing row survived the upgrade, and the new column is
+        // usable.
+        final rows = await db.db.query('todos');
+        expect(rows, hasLength(1));
+        await db.db.update('todos', {'archived': 1}, where: 'title = ?', whereArgs: ['seed']);
+        final updated = await db.db.query('todos', where: 'archived = ?', whereArgs: [1]);
+        expect(updated, hasLength(1));
+        await db.close();
+      },
+    );
+  });
+
+  group('QueryBuilder', () {
+    late VeloraDatabase db;
+
+    setUp(() async {
+      db = await _openTodosDb();
+      await db.db.insert('todos', {'title': 'alpha', 'done': 0});
+      await db.db.insert('todos', {'title': 'beta', 'done': 1});
+      await db.db.insert('todos', {'title': 'gamma', 'done': 0});
+    });
+
+    tearDown(() => db.close());
+
+    test('where filters by equality', () async {
+      final rows = await QueryBuilder('todos').where('title', 'beta').get(db.db);
+      expect(rows, hasLength(1));
+      expect(rows.single['title'], 'beta');
+    });
+
+    test('whereOp supports comparison operators', () async {
+      final rows =
+          await QueryBuilder('todos').whereOp('done', '!=', 0).get(db.db);
+      expect(rows, hasLength(1));
+      expect(rows.single['title'], 'beta');
+    });
+
+    test('whereOp rejects an unsupported operator', () {
+      expect(
+        () => QueryBuilder('todos').whereOp('done', 'OR 1=1 --', 0),
+        throwsArgumentError,
+      );
+    });
+
+    test('rejects an invalid column name', () {
+      expect(
+        () => QueryBuilder('todos').where('title; DROP TABLE todos', 'x'),
+        throwsArgumentError,
+      );
+    });
+
+    test('orderBy sorts ascending and descending', () async {
+      final asc = await QueryBuilder('todos').orderBy('title').get(db.db);
+      expect(asc.map((r) => r['title']), ['alpha', 'beta', 'gamma']);
+
+      final desc =
+          await QueryBuilder('todos').orderBy('title', desc: true).get(db.db);
+      expect(desc.map((r) => r['title']), ['gamma', 'beta', 'alpha']);
+    });
+
+    test('limit and offset page through results', () async {
+      final page = await QueryBuilder('todos')
+          .orderBy('title')
+          .limit(1)
+          .offset(1)
+          .get(db.db);
+      expect(page, hasLength(1));
+      expect(page.single['title'], 'beta');
+    });
+
+    test('first returns the first matching row or null', () async {
+      final found = await QueryBuilder('todos').where('title', 'alpha').first(db.db);
+      expect(found?['title'], 'alpha');
+
+      final missing =
+          await QueryBuilder('todos').where('title', 'nope').first(db.db);
+      expect(missing, isNull);
+    });
+
+    test('count returns the number of matching rows', () async {
+      expect(await QueryBuilder('todos').count(db.db), 3);
+      expect(await QueryBuilder('todos').where('done', 0).count(db.db), 2);
+    });
+
+    test(
+      'a value containing a quote or semicolon is bound as data, not SQL',
+      () async {
+        const dangerous = "O'Brien; DROP TABLE todos;--";
+        await db.db.insert('todos', {'title': dangerous, 'done': 0});
+
+        final rows =
+            await QueryBuilder('todos').where('title', dangerous).get(db.db);
+        expect(rows, hasLength(1));
+        expect(rows.single['title'], dangerous);
+
+        // The table must still exist and contain all 4 rows -- if the value
+        // had been interpolated instead of parameterized, the DROP TABLE
+        // would have executed and this query would throw or return nothing.
+        expect(await QueryBuilder('todos').count(db.db), 4);
+      },
+    );
+  });
+
+  group('VeloraTable', () {
+    late VeloraDatabase db;
+    late VeloraTable<TodoModel, int> table;
+
+    setUp(() async {
+      db = await _openTodosDb();
+      table = VeloraTable<TodoModel, int>(
+        db: db.db,
+        table: 'todos',
+        fromMap: TodoModel.fromJson,
+        toMap: (todo) => todo.toJson(),
+      );
+    });
+
+    tearDown(() => db.close());
+
+    test('insert then find round-trips a model', () async {
+      final id = await table.insert(const TodoModel(title: 'Buy milk').toJson());
+      final found = await table.find(id);
+      expect(found, isNotNull);
+      expect(found!.title, 'Buy milk');
+      expect(found.done, isFalse);
+    });
+
+    test('create inserts and returns the hydrated model', () async {
+      final created = await table.create(const TodoModel(title: 'Walk dog').toJson());
+      expect(created.id, isNotNull);
+      expect(created.title, 'Walk dog');
+    });
+
+    test('all returns every row', () async {
+      await table.create(const TodoModel(title: 'one').toJson());
+      await table.create(const TodoModel(title: 'two').toJson());
+      final all = await table.all();
+      expect(all.map((t) => t.title), containsAll(['one', 'two']));
+    });
+
+    test('where returns matching rows as models', () async {
+      await table.create(const TodoModel(title: 'done-one', done: true).toJson());
+      await table.create(const TodoModel(title: 'not-done', done: false).toJson());
+      final done = await table.where('done', 1);
+      expect(done, hasLength(1));
+      expect(done.single.title, 'done-one');
+    });
+
+    test('update mutates the row', () async {
+      final created = await table.create(const TodoModel(title: 'original').toJson());
+      final affected = await table.update(created.id!, {'title': 'renamed'});
+      expect(affected, 1);
+      final reloaded = await table.find(created.id!);
+      expect(reloaded!.title, 'renamed');
+    });
+
+    test('delete removes the row', () async {
+      final created = await table.create(const TodoModel(title: 'temp').toJson());
+      final affected = await table.delete(created.id!);
+      expect(affected, 1);
+      expect(await table.find(created.id!), isNull);
+    });
+
+    test('count reflects the number of rows', () async {
+      expect(await table.count(), 0);
+      await table.create(const TodoModel(title: 'x').toJson());
+      await table.create(const TodoModel(title: 'y').toJson());
+      expect(await table.count(), 2);
+    });
+  });
+
+  group('VeloraDbRepository', () {
+    late VeloraDatabase db;
+    late VeloraDbRepository<TodoModel, int> repository;
+
+    setUp(() async {
+      db = await _openTodosDb();
+      final table = VeloraTable<TodoModel, int>(
+        db: db.db,
+        table: 'todos',
+        fromMap: TodoModel.fromJson,
+        toMap: (todo) => todo.toJson(),
+      );
+      repository = VeloraDbRepository<TodoModel, int>(table);
+    });
+
+    tearDown(() => db.close());
+
+    test('store returns the created model with an id', () async {
+      final created = await repository.store(const TodoModel(title: 'first').toJson());
+      expect(created.id, isNotNull);
+      expect(created.title, 'first');
+    });
+
+    test('index lists all stored models', () async {
+      await repository.store(const TodoModel(title: 'a').toJson());
+      await repository.store(const TodoModel(title: 'b').toJson());
+      final all = await repository.index();
+      expect(all, hasLength(2));
+    });
+
+    test('show returns the model by id', () async {
+      final created = await repository.store(const TodoModel(title: 'findme').toJson());
+      final shown = await repository.show(created.id!);
+      expect(shown.title, 'findme');
+    });
+
+    test('show throws for a missing id', () async {
+      expect(() => repository.show(999999), throwsA(isA<StateError>()));
+    });
+
+    test('update mutates and returns the model', () async {
+      final created = await repository.store(const TodoModel(title: 'old').toJson());
+      final updated = await repository.update(created.id!, {'title': 'new'});
+      expect(updated.title, 'new');
+    });
+
+    test('destroy removes the model', () async {
+      final created = await repository.store(const TodoModel(title: 'bye').toJson());
+      await repository.destroy(created.id!);
+      expect(() => repository.show(created.id!), throwsA(isA<StateError>()));
+    });
+  });
+
+  group('VeloraDbPlugin', () {
+    test(
+      'a bare VeloraDbPlugin(factory: ...) — all other params defaulted — '
+      'registers and opens a working empty database',
+      () async {
+        // This mirrors exactly what `velora install velora_db` wires into
+        // `Velora.boot(plugins: [VeloraDbPlugin()])` — no databaseName,
+        // version, or migrations supplied — except the ffi factory is
+        // injected here so the test runs headless. databaseName defaults to
+        // 'app.db', a relative path, which `databaseFactoryFfi` resolves
+        // against the current working directory — so run from a scratch
+        // temp dir to avoid dropping a real app.db file next to the
+        // package's own source.
+        final tempDir = await Directory.systemTemp.createTemp(
+          'velora_db_default_ctor_',
+        );
+        final originalCwd = Directory.current;
+        addTearDown(() {
+          Directory.current = originalCwd;
+          if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
+        });
+        Directory.current = tempDir;
+
+        const config = VeloraConfig(appName: 'Test', apiBaseUrl: 'https://example.test');
+        final context = VeloraContext(config);
+        Get.put<VeloraLifecycleRegistry>(VeloraLifecycleRegistry());
+
+        final plugin = VeloraDbPlugin(factory: databaseFactoryFfi);
+        await plugin.register(context);
+
+        expect(plugin.databaseName, 'app.db');
+        expect(plugin.version, 1);
+        expect(plugin.migrations, isEmpty);
+        expect(VeloraDb.instance, isA<VeloraDatabase>());
+
+        // The empty database is still usable: create a table by hand and
+        // query it through the facade, proving the connection is live.
+        await VeloraDb.db.execute('''
+          CREATE TABLE todos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            done INTEGER NOT NULL DEFAULT 0
+          )
+        ''');
+        final table = VeloraDb.table<TodoModel, int>(
+          table: 'todos',
+          fromMap: TodoModel.fromJson,
+          toMap: (todo) => todo.toJson(),
+        );
+        final created = await table.create(const TodoModel(title: 'default-ctor').toJson());
+        expect(created.title, 'default-ctor');
+        expect(await table.count(), 1);
+
+        await VeloraDb.instance.close();
+      },
+    );
+
+    test('register opens a working, queryable database', () async {
+      const config = VeloraConfig(appName: 'Test', apiBaseUrl: 'https://example.test');
+      final context = VeloraContext(config);
+      Get.put<VeloraLifecycleRegistry>(VeloraLifecycleRegistry());
+
+      final plugin = VeloraDbPlugin(
+        databaseName: inMemoryDatabasePath,
+        version: 1,
+        migrations: [_CreateTodosTable()],
+        factory: databaseFactoryFfi,
+      );
+      await plugin.register(context);
+
+      expect(VeloraDb.instance, isA<VeloraDatabase>());
+      final table = VeloraDb.table<TodoModel, int>(
+        table: 'todos',
+        fromMap: TodoModel.fromJson,
+        toMap: (todo) => todo.toJson(),
+      );
+      final created = await table.create(const TodoModel(title: 'via facade').toJson());
+      expect(created.title, 'via facade');
+      expect(await table.count(), 1);
+
+      await VeloraDb.instance.close();
+    });
+
+    test(
+      'clearOnLogout wipes only the listed table, keeps others and the '
+      'connection intact',
+      () async {
+        const config = VeloraConfig(appName: 'Test', apiBaseUrl: 'https://example.test');
+        final context = VeloraContext(config);
+        final lifecycle = VeloraLifecycleRegistry();
+        Get.put<VeloraLifecycleRegistry>(lifecycle);
+
+        final plugin = VeloraDbPlugin(
+          databaseName: inMemoryDatabasePath,
+          version: 2,
+          migrations: [_CreateTodosTable(), _CreateNotesTable()],
+          factory: databaseFactoryFfi,
+          clearOnLogout: ['todos'],
+        );
+        await plugin.register(context);
+
+        final db = VeloraDb.instance;
+        await db.db.insert('todos', {'title': 'secret todo', 'done': 0});
+        await db.db.insert('notes', {'body': 'keep me'});
+
+        await lifecycle.beforeLogout();
+
+        final todos = await db.db.query('todos');
+        expect(todos, isEmpty);
+
+        // Non-listed table is untouched and the connection is still open.
+        final notes = await db.db.query('notes');
+        expect(notes, hasLength(1));
+        expect(notes.single['body'], 'keep me');
+
+        await db.close();
+      },
+    );
+
+    test(
+      'onLogout callback runs a custom delete against the live db',
+      () async {
+        const config = VeloraConfig(appName: 'Test', apiBaseUrl: 'https://example.test');
+        final context = VeloraContext(config);
+        final lifecycle = VeloraLifecycleRegistry();
+        Get.put<VeloraLifecycleRegistry>(lifecycle);
+
+        var onLogoutCalled = false;
+        final plugin = VeloraDbPlugin(
+          databaseName: inMemoryDatabasePath,
+          version: 1,
+          migrations: [_CreateNotesTable()],
+          factory: databaseFactoryFfi,
+          onLogout: (db) async {
+            onLogoutCalled = true;
+            await db.delete('notes', where: 'body = ?', whereArgs: ['secret']);
+          },
+        );
+        await plugin.register(context);
+
+        final db = VeloraDb.instance;
+        await db.db.insert('notes', {'body': 'secret'});
+        await db.db.insert('notes', {'body': 'public'});
+
+        await lifecycle.beforeLogout();
+
+        expect(onLogoutCalled, isTrue);
+        final remaining = await db.db.query('notes');
+        expect(remaining, hasLength(1));
+        expect(remaining.single['body'], 'public');
+
+        await db.close();
+      },
+    );
+
+    test(
+      'registers no logout hook when neither clearOnLogout nor onLogout is set',
+      () async {
+        const config = VeloraConfig(appName: 'Test', apiBaseUrl: 'https://example.test');
+        final context = VeloraContext(config);
+        final lifecycle = VeloraLifecycleRegistry();
+        Get.put<VeloraLifecycleRegistry>(lifecycle);
+
+        final plugin = VeloraDbPlugin(
+          databaseName: inMemoryDatabasePath,
+          version: 1,
+          migrations: [_CreateTodosTable()],
+          factory: databaseFactoryFfi,
+        );
+        await plugin.register(context);
+
+        final db = VeloraDb.instance;
+        await db.db.insert('todos', {'title': 'stays', 'done': 0});
+
+        // Should not throw and should not touch the data -- there is simply
+        // no participant registered for this plugin.
+        await lifecycle.beforeLogout();
+
+        expect(await db.db.query('todos'), hasLength(1));
+        await db.close();
+      },
+    );
+  });
+}
+
+Future<Database> _openRaw() {
+  return databaseFactoryFfi.openDatabase(
+    inMemoryDatabasePath,
+    options: OpenDatabaseOptions(version: 1, onCreate: (db, version) async {}),
+  );
+}
+
+Future<VeloraDatabase> _openTodosDb() {
+  return VeloraDatabase(
+    databaseName: inMemoryDatabasePath,
+    version: 1,
+    migrations: [_CreateTodosTable()],
+    factory: databaseFactoryFfi,
+  ).open();
+}
+
+class _RecordingMigration extends VeloraMigration {
+  @override
+  final int version;
+  final List<int> applied;
+
+  _RecordingMigration(this.version, this.applied);
+
+  @override
+  Future<void> up(Database db) async {
+    applied.add(version);
+  }
+}
+
+class _CreateTodosTable extends VeloraMigration {
+  @override
+  int get version => 1;
+
+  @override
+  Future<void> up(Database db) async {
+    await db.execute('''
+      CREATE TABLE todos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        done INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+  }
+}
+
+class _CreateNotesTable extends VeloraMigration {
+  @override
+  int get version => 2;
+
+  @override
+  Future<void> up(Database db) async {
+    await db.execute('''
+      CREATE TABLE notes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        body TEXT NOT NULL
+      )
+    ''');
+  }
+}
+
+class _AddArchivedColumn extends VeloraMigration {
+  final List<int> onApplied;
+
+  _AddArchivedColumn({required this.onApplied});
+
+  @override
+  int get version => 2;
+
+  @override
+  Future<void> up(Database db) async {
+    onApplied.add(version);
+    await db.execute(
+      'ALTER TABLE todos ADD COLUMN archived INTEGER NOT NULL DEFAULT 0',
+    );
+  }
+}
+
+/// Sample model used only in this test suite, mirroring the plain-Dart model
+/// convention (`const` constructor, `fromJson`/`toJson`) used across Velora
+/// packages -- not part of `velora_db`'s public API.
+class TodoModel {
+  final int? id;
+  final String title;
+  final bool done;
+
+  const TodoModel({this.id, required this.title, this.done = false});
+
+  factory TodoModel.fromJson(Map<String, dynamic> json) {
+    return TodoModel(
+      id: _toInt(json['id']),
+      title: json['title']?.toString() ?? '',
+      done: json['done'] == 1 || json['done'] == true,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      if (id != null) 'id': id,
+      'title': title,
+      'done': done ? 1 : 0,
+    };
+  }
+
+  static int? _toInt(Object? value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    return int.tryParse(value.toString());
+  }
+}

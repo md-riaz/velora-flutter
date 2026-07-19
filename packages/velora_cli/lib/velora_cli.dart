@@ -33,6 +33,20 @@ const veloraPackageCatalog = <String, VeloraPackageInstall>{
       'Note: until velora_offline is published to pub.dev, use a git or path dependency override.',
     ],
   ),
+  'velora_db': VeloraPackageInstall(
+    name: 'velora_db',
+    constraint: '^0.0.1',
+    importLine: "import 'package:velora_db/velora_db.dart';",
+    pluginExpr: 'VeloraDbPlugin()',
+    notes: [
+      'Added velora_db and wired VeloraDbPlugin() into Velora.boot().',
+      'Configure it: pass databaseName, version, and a migrations list to VeloraDbPlugin(...) — the wired call opens an empty database named app.db at version 1.',
+      'Define a table with a VeloraMigration and query it via VeloraDb.table<Model, int>(...) or a VeloraDbRepository.',
+      'To clear user-scoped data on logout (shared devices), pass clearOnLogout: [...tables] to VeloraDbPlugin.',
+      'WEB: run `dart run sqflite_common_ffi_web:setup` once to add the SQLite WASM/worker assets (web uses IndexedDB-backed SQLite).',
+      'Note: until velora_db is published to pub.dev, use a git or path dependency override.',
+    ],
+  ),
 };
 
 /// The location of the top-level `dependencies:` block within a

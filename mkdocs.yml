@@ -76,6 +76,7 @@ nav:
     - Plugins: plugins.md
   - Official Packages:
     - velora_offline: packages/offline.md
+    - velora_db: packages/db.md
   - Project:
     - Contributing: contributing.md
     - Roadmap: roadmap.md
