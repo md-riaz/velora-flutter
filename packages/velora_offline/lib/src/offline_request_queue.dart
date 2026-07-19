@@ -14,6 +14,12 @@ class OfflineRequestQueue {
 
   bool _isFlushing = false;
 
+  /// Whether [flush] is currently replaying the queue. While `true`, the
+  /// [OfflineQueueInterceptor] skips enqueuing new failures, since those
+  /// failures are replays whose errors would otherwise grow the queue
+  /// without bound.
+  bool get isFlushing => _isFlushing;
+
   OfflineRequestQueue({required this.storage, required this.api});
 
   /// Restores any previously persisted queue. Returns `this` for fluent

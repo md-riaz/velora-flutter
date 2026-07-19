@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:dio/dio.dart';
 import 'package:velora/velora.dart';
 
 import 'connectivity_service.dart';
@@ -17,8 +20,21 @@ import 'offline_request_queue.dart';
 class VeloraOfflinePlugin extends VeloraPlugin {
   final ConnectivitySource source;
 
-  VeloraOfflinePlugin({ConnectivitySource? source})
-      : source = source ?? ConnectivityPlusSource();
+  /// Additional request paths to never queue, merged with the auth
+  /// endpoints ([VeloraAuthConfig.loginEndpoint],
+  /// [VeloraAuthConfig.logoutEndpoint], [VeloraAuthConfig.meEndpoint]), which
+  /// are always excluded regardless of this set.
+  final Set<String> excludedPaths;
+
+  /// Optional additional predicate for excluding requests from the queue.
+  /// Return `false` to skip queuing a given request.
+  final bool Function(RequestOptions options)? shouldQueue;
+
+  VeloraOfflinePlugin({
+    ConnectivitySource? source,
+    this.excludedPaths = const {},
+    this.shouldQueue,
+  }) : source = source ?? ConnectivityPlusSource();
 
   @override
   String get name => 'velora_offline';
@@ -34,13 +50,31 @@ class VeloraOfflinePlugin extends VeloraPlugin {
     ).load();
     context.put<OfflineRequestQueue>(queue);
 
-    context.addInterceptor(OfflineQueueInterceptor(queue));
+    final auth = context.config.auth;
+    context.addInterceptor(
+      OfflineQueueInterceptor(
+        queue,
+        excludedPaths: {
+          auth.loginEndpoint,
+          auth.logoutEndpoint,
+          auth.meEndpoint,
+          ...excludedPaths,
+        },
+        shouldQueue: shouldQueue,
+      ),
+    );
 
     connectivity.onOnline(() => queue.flush());
 
     context.onBeforeLogout(() async {
       await queue.clear();
     });
+
+    // Replay anything persisted from a previous session immediately if
+    // we're already online, rather than waiting for a connectivity cycle.
+    if (connectivity.isOnline.value && queue.pending.isNotEmpty) {
+      unawaited(queue.flush());
+    }
   }
 }
 
