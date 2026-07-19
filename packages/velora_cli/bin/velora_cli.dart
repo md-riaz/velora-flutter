@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
+import 'package:velora_cli/velora_cli.dart';
 
 void main(List<String> arguments) {
   if (arguments.isEmpty || arguments.first == 'help') {
@@ -19,6 +20,8 @@ void main(List<String> arguments) {
       _makeNotifications(arguments.skip(1).toList());
     case 'install:push':
       _installPush(arguments.skip(1).toList());
+    case 'install':
+      _install(arguments.skip(1).toList());
     case 'doctor':
       _doctor();
     default:
@@ -34,6 +37,10 @@ void _printHelp() {
   stdout.writeln('  velora make:notifications');
   stdout.writeln('  velora install:push --fcm');
   stdout.writeln('  velora install:push --local');
+  stdout.writeln(
+    '  velora install <package> [--no-pub-get] [--no-wire]  '
+    '(e.g. velora install velora_offline)',
+  );
   stdout.writeln('  velora doctor');
 }
 
@@ -334,6 +341,118 @@ void _installPush(List<String> args) {
     _localNotificationAdapter(),
   );
   stdout.writeln('Installed local notification placeholder.');
+}
+
+void _install(List<String> args) {
+  final flags = <String>{'--no-pub-get', '--no-wire'};
+  final positional = args.where((arg) => !flags.contains(arg)).toList();
+  final noPubGet = args.contains('--no-pub-get');
+  final noWire = args.contains('--no-wire');
+
+  if (positional.isEmpty) {
+    _fail(
+      'Missing package name. Available packages: '
+      '${veloraPackageCatalog.keys.join(', ')}',
+    );
+  }
+  final name = positional.first;
+  final package = veloraPackageCatalog[name];
+  if (package == null) {
+    _fail(
+      "Unknown package '$name'. Available packages: "
+      '${veloraPackageCatalog.keys.join(', ')}',
+    );
+  }
+
+  final pubspecFile = File(p.join(Directory.current.path, 'pubspec.yaml'));
+  if (!pubspecFile.existsSync()) {
+    _fail('Run this inside a Velora app (no pubspec.yaml found).');
+  }
+
+  final updatedPubspec = addDependencyToPubspec(
+    pubspecFile.readAsStringSync(),
+    package.name,
+    package.constraint,
+  );
+  pubspecFile.writeAsStringSync(updatedPubspec);
+  stdout.writeln('Added ${package.name}: ${package.constraint} to pubspec.yaml.');
+
+  if (!noWire) {
+    final mainFile = File(p.join(Directory.current.path, 'lib', 'main.dart'));
+    if (!mainFile.existsSync()) {
+      stdout.writeln(
+        'Could not find lib/main.dart. Wire it manually: add '
+        '${package.importLine} and pass plugins: [${package.pluginExpr}] '
+        'to Velora.boot(...).',
+      );
+    } else {
+      final result = wirePluginIntoBoot(
+        mainFile.readAsStringSync(),
+        importLine: package.importLine,
+        pluginExpr: package.pluginExpr,
+      );
+      mainFile.writeAsStringSync(result.content);
+      if (result.wired) {
+        stdout.writeln('Wired ${package.pluginExpr} into Velora.boot().');
+      } else {
+        stdout.writeln(
+          'Could not find Velora.boot(...) in lib/main.dart. Wire it '
+          'manually: add plugins: [${package.pluginExpr}] to Velora.boot(...).',
+        );
+      }
+    }
+  }
+
+  if (!noPubGet) {
+    var success = false;
+    String? lastError;
+    try {
+      final flutterResult = Process.runSync(
+        'flutter',
+        <String>['pub', 'get'],
+        workingDirectory: Directory.current.path,
+      );
+      success = flutterResult.exitCode == 0;
+      if (!success) lastError = flutterResult.stderr.toString();
+    } catch (_) {
+      // flutter not on PATH — fall through to dart.
+    }
+    if (!success) {
+      try {
+        final dartResult = Process.runSync(
+          'dart',
+          <String>['pub', 'get'],
+          workingDirectory: Directory.current.path,
+        );
+        success = dartResult.exitCode == 0;
+        if (!success) lastError = dartResult.stderr.toString();
+      } catch (_) {
+        // dart not on PATH either — leave `lastError` as whatever the
+        // flutter attempt captured (or null, if that one threw too).
+      }
+    }
+    if (!success) {
+      stdout.writeln(
+        'Warning: could not run `flutter pub get` or `dart pub get` '
+        'automatically. Run one of them manually to fetch ${package.name}.',
+      );
+      if (lastError != null && lastError.trim().isNotEmpty) {
+        stdout.writeln(lastError.trim());
+      }
+    }
+  }
+
+  if (noWire) {
+    stdout.writeln(
+      '--no-wire was passed: the dependency was added but Velora.boot() '
+      'was NOT updated. Add plugins: [${package.pluginExpr}] yourself.',
+    );
+  } else {
+    for (final note in package.notes) {
+      stdout.writeln(note);
+    }
+  }
+  stdout.writeln('Installed ${package.name}.');
 }
 
 void _doctor() {
