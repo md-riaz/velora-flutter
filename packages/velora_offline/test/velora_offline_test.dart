@@ -34,7 +34,7 @@ void main() {
       await Future<void>.delayed(Duration.zero);
       expect(service.isOnline.value, isTrue);
 
-      service.dispose();
+      service.onClose();
     });
 
     test('fires onOnline callbacks only on offline -> online transition', () async {
@@ -60,7 +60,7 @@ void main() {
       await Future<void>.delayed(Duration.zero);
       expect(calls, 1);
 
-      service.dispose();
+      service.onClose();
     });
   });
 
@@ -192,6 +192,86 @@ void main() {
         expect(queue.pending, isEmpty);
         final reloaded = await OfflineRequestQueue(storage: storage, api: api).load();
         expect(reloaded.pending, isEmpty);
+      },
+    );
+
+    test(
+      'flush keeps a request on transient 408/429 but discards a 400',
+      () async {
+        final receivedPaths = <String>[];
+        final statusCodes = <String, int>{
+          '/notes/timeout': 408,
+          '/notes/rate-limited': 429,
+          '/notes/bad': 400,
+        };
+        final api = await _apiService((options) {
+          receivedPaths.add(options.path);
+          final statusCode = statusCodes[options.path]!;
+          return _jsonResponse(statusCode, {'message': 'nope'});
+        });
+
+        // Each sub-case gets its own storage so persisted state from one
+        // queue can't leak into the next via a shared storage key.
+
+        // 408: transient, must be kept.
+        SharedPreferences.setMockInitialValues({});
+        final timeoutQueue = await OfflineRequestQueue(
+          storage: await VeloraStorageService().init(),
+          api: api,
+        ).load();
+        await timeoutQueue.enqueue(
+          OfflineRequest(
+            id: '1',
+            method: 'POST',
+            path: '/notes/timeout',
+            data: {'title': 'first'},
+            createdAt: DateTime(2026, 1, 1),
+          ),
+        );
+        await timeoutQueue.flush();
+        expect(timeoutQueue.pending, hasLength(1));
+
+        // 429: transient, must be kept.
+        SharedPreferences.setMockInitialValues({});
+        final rateLimitedQueue = await OfflineRequestQueue(
+          storage: await VeloraStorageService().init(),
+          api: api,
+        ).load();
+        await rateLimitedQueue.enqueue(
+          OfflineRequest(
+            id: '2',
+            method: 'POST',
+            path: '/notes/rate-limited',
+            data: {'title': 'second'},
+            createdAt: DateTime(2026, 1, 1),
+          ),
+        );
+        await rateLimitedQueue.flush();
+        expect(rateLimitedQueue.pending, hasLength(1));
+
+        // 400: permanent, must be discarded.
+        SharedPreferences.setMockInitialValues({});
+        final badQueue = await OfflineRequestQueue(
+          storage: await VeloraStorageService().init(),
+          api: api,
+        ).load();
+        await badQueue.enqueue(
+          OfflineRequest(
+            id: '3',
+            method: 'POST',
+            path: '/notes/bad',
+            data: {'title': 'third'},
+            createdAt: DateTime(2026, 1, 1),
+          ),
+        );
+        await badQueue.flush();
+        expect(badQueue.pending, isEmpty);
+
+        expect(receivedPaths, [
+          '/notes/timeout',
+          '/notes/rate-limited',
+          '/notes/bad',
+        ]);
       },
     );
 
@@ -389,7 +469,7 @@ void main() {
         expect(VeloraOffline.connectivity, isA<ConnectivityService>());
         expect(VeloraOffline.queue, isA<OfflineRequestQueue>());
         expect(VeloraOffline.isOnline, isFalse);
-        expect(api.dio.interceptors.length, greaterThan(1));
+        expect(api.dio.interceptors, contains(isA<OfflineQueueInterceptor>()));
 
         await VeloraOffline.queue.enqueue(
           OfflineRequest(
@@ -408,6 +488,19 @@ void main() {
         expect(receivedPaths, ['/notes']);
         expect(VeloraOffline.queue.pending, isEmpty);
         expect(VeloraOffline.isOnline, isTrue);
+
+        // Enqueue a fresh item so beforeLogout()'s clear() is actually
+        // exercised, rather than operating on an already-empty queue.
+        await VeloraOffline.queue.enqueue(
+          OfflineRequest(
+            id: '2',
+            method: 'POST',
+            path: '/notes',
+            data: {'title': 'queued before logout'},
+            createdAt: DateTime(2026, 1, 1),
+          ),
+        );
+        expect(VeloraOffline.queue.pending, isNotEmpty);
 
         await lifecycle.beforeLogout();
         expect(VeloraOffline.queue.pending, isEmpty);

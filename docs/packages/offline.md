@@ -59,7 +59,7 @@ Queued writes persist across app restarts (backed by `VeloraStorageService`), an
 
 ## How replay works
 
-`OfflineRequestQueue.flush()` replays queued requests strictly in order, through the same `VeloraApiService` used everywhere else in the app (so auth headers and interceptors still apply). If a replay fails, `flush()` stops immediately and leaves the remaining items queued — it never throws, and it never reorders or drops a write.
+`OfflineRequestQueue.flush()` replays queued requests strictly in order, through the same `VeloraApiService` used everywhere else in the app (so auth headers and interceptors still apply). It never throws, and it never reorders. A transient failure — no connectivity, a 5xx server error, or a `408`/`429` response — halts the flush immediately and leaves that item and everything behind it queued for the next reconnect. A permanent `4xx` response (any other client error — the request can never succeed as-is, a "poison pill") is discarded, and the flush continues with the next item.
 
 ## Testing without platform plugins
 

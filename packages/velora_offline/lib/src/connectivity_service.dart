@@ -45,8 +45,10 @@ class ConnectivityService extends GetxService {
     }
   }
 
-  void dispose() {
+  @override
+  void onClose() {
     _subscription?.cancel();
     _subscription = null;
+    super.onClose();
   }
 }

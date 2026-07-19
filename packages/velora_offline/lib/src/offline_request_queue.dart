@@ -50,12 +50,13 @@ class OfflineRequestQueue {
 
   /// Replays queued requests in order via the matching `api.<method>` call.
   /// Stops at the first failure that isn't a permanent client error (still
-  /// offline, or the server is down) so ordering is preserved and the
-  /// remaining items stay queued. A 4xx `ApiException` is treated as a
-  /// poison pill: the request can never succeed as-is, so it is discarded
-  /// rather than blocking the rest of the queue forever. Reentrancy-safe —
-  /// a concurrent call (e.g. two rapid reconnect events) is a no-op. Never
-  /// throws — a failed replay just leaves the queue as-is.
+  /// offline, the server is down, or a transient `408`/`429` response) so
+  /// ordering is preserved and the remaining items stay queued. Any other
+  /// 4xx `ApiException` is treated as a poison pill: the request can never
+  /// succeed as-is, so it is discarded rather than blocking the rest of the
+  /// queue forever. Reentrancy-safe — a concurrent call (e.g. two rapid
+  /// reconnect events) is a no-op. Never throws — a failed replay just
+  /// leaves the queue as-is.
   Future<void> flush() async {
     if (_isFlushing) return;
     _isFlushing = true;
@@ -65,20 +66,25 @@ class OfflineRequestQueue {
         try {
           await _replay(request);
         } catch (e) {
-          if (e is ApiException &&
-              e.statusCode != null &&
-              e.statusCode! >= 400 &&
-              e.statusCode! < 500) {
-            // Permanent client error: discard and keep going.
-            pending.removeAt(0);
+          final statusCode = e is ApiException ? e.statusCode : null;
+          if (statusCode != null &&
+              statusCode >= 400 &&
+              statusCode < 500 &&
+              statusCode != 408 &&
+              statusCode != 429) {
+            // Permanent client error: discard and keep going. Removed by
+            // identity (not index) so a concurrent clear() during the
+            // await above can't cause a RangeError or drop the wrong item.
+            pending.remove(request);
             await _persist();
             continue;
           }
-          // Still offline, server error, or unknown failure: halt and keep
+          // Still offline, server error, or a transient client error
+          // (408 Request Timeout / 429 Too Many Requests): halt and keep
           // the queue for the next reconnect.
           return;
         }
-        pending.removeAt(0);
+        pending.remove(request);
         await _persist();
       }
     } finally {
