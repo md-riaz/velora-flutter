@@ -405,6 +405,7 @@ void _install(List<String> args) {
 
   if (!noPubGet) {
     var success = false;
+    String? lastError;
     try {
       final flutterResult = Process.runSync(
         'flutter',
@@ -412,6 +413,7 @@ void _install(List<String> args) {
         workingDirectory: Directory.current.path,
       );
       success = flutterResult.exitCode == 0;
+      if (!success) lastError = flutterResult.stderr.toString();
     } catch (_) {
       // flutter not on PATH — fall through to dart.
     }
@@ -423,8 +425,10 @@ void _install(List<String> args) {
           workingDirectory: Directory.current.path,
         );
         success = dartResult.exitCode == 0;
+        if (!success) lastError = dartResult.stderr.toString();
       } catch (_) {
-        // dart not on PATH either.
+        // dart not on PATH either — leave `lastError` as whatever the
+        // flutter attempt captured (or null, if that one threw too).
       }
     }
     if (!success) {
@@ -432,11 +436,21 @@ void _install(List<String> args) {
         'Warning: could not run `flutter pub get` or `dart pub get` '
         'automatically. Run one of them manually to fetch ${package.name}.',
       );
+      if (lastError != null && lastError.trim().isNotEmpty) {
+        stdout.writeln(lastError.trim());
+      }
     }
   }
 
-  for (final note in package.notes) {
-    stdout.writeln(note);
+  if (noWire) {
+    stdout.writeln(
+      '--no-wire was passed: the dependency was added but Velora.boot() '
+      'was NOT updated. Add plugins: [${package.pluginExpr}] yourself.',
+    );
+  } else {
+    for (final note in package.notes) {
+      stdout.writeln(note);
+    }
   }
   stdout.writeln('Installed ${package.name}.');
 }

@@ -116,6 +116,26 @@ dependencies:
     });
 
     test(
+      'leaves an existing 4-space-indented dependency unchanged '
+      '(idempotent regardless of indentation width)',
+      () {
+        const pubspec = '''name: demo
+dependencies:
+    velora_offline: ^9.9.9
+    flutter:
+        sdk: flutter
+''';
+        final updated = addDependencyToPubspec(
+          pubspec,
+          'velora_offline',
+          '^0.0.1',
+        );
+        expect(updated, pubspec);
+        expect('velora_offline:'.allMatches(updated).length, 1);
+      },
+    );
+
+    test(
       'still adds to dependencies: when the name only exists under '
       'dev_dependencies:',
       () {
@@ -275,6 +295,108 @@ Future<void> main() async {
       );
       expect(result.wired, isFalse);
     });
+
+    test(
+      'wires the real Velora.boot( call even when a doc comment and a '
+      'string literal mention Velora.boot( first, leaving them untouched',
+      () {
+        const commentLine = '/// See Velora.boot(...) for setup.';
+        const stringLine = "const note = 'call Velora.boot() first';";
+        const main =
+            "import 'package:velora/velora.dart';\n"
+            '\n'
+            '$commentLine\n'
+            '$stringLine\n'
+            '\n'
+            'Future<void> main() async {\n'
+            '  await Velora.boot(config: config);\n'
+            '}\n';
+        final result = wirePluginIntoBoot(
+          main,
+          importLine: importLine,
+          pluginExpr: pluginExpr,
+        );
+        expect(result.wired, isTrue);
+        // The comment and string lines are byte-for-byte preserved.
+        expect(result.content, contains(commentLine));
+        expect(result.content, contains(stringLine));
+        // The plugin was wired into the real call, not the fake mentions.
+        expect(
+          result.content,
+          contains(
+            'Velora.boot(config: config, plugins: [VeloraOfflinePlugin()])',
+          ),
+        );
+        // Only the real call gained a plugins: argument.
+        expect('plugins:'.allMatches(result.content).length, 1);
+      },
+    );
+  });
+
+  group('wirePluginIntoBoot: pre-existing non-literal plugins: argument', () {
+    const importLine = "import 'package:velora_offline/velora_offline.dart';";
+    const pluginExpr = 'VeloraOfflinePlugin()';
+
+    test(
+      'does not insert a second plugins: when the argument is an identifier',
+      () {
+        const main = '''import 'package:velora/velora.dart';
+
+Future<void> main() async {
+  await Velora.boot(plugins: appPlugins);
+}
+''';
+        final result = wirePluginIntoBoot(
+          main,
+          importLine: importLine,
+          pluginExpr: pluginExpr,
+        );
+        expect(result.wired, isFalse);
+        expect('plugins:'.allMatches(result.content).length, 1);
+        expect(result.content, contains('plugins: appPlugins'));
+      },
+    );
+
+    test(
+      'does not insert a second plugins: when the argument is a const list '
+      'literal, and leaves it unchanged',
+      () {
+        const main = '''import 'package:velora/velora.dart';
+
+Future<void> main() async {
+  await Velora.boot(plugins: const [Foo()]);
+}
+''';
+        final result = wirePluginIntoBoot(
+          main,
+          importLine: importLine,
+          pluginExpr: pluginExpr,
+        );
+        expect(result.wired, isFalse);
+        expect('plugins:'.allMatches(result.content).length, 1);
+        expect(result.content, contains('plugins: const [Foo()]'));
+      },
+    );
+
+    test('still merges into a plain inline plugins: [...] literal', () {
+      const main = '''import 'package:velora/velora.dart';
+
+Future<void> main() async {
+  await Velora.boot(plugins: [Foo()]);
+}
+''';
+      final result = wirePluginIntoBoot(
+        main,
+        importLine: importLine,
+        pluginExpr: pluginExpr,
+      );
+      expect(result.wired, isTrue);
+      expect(
+        result.content,
+        contains('plugins: [VeloraOfflinePlugin(), Foo()]'),
+      );
+      expect('plugins:'.allMatches(result.content).length, 1);
+    });
   });
 
   test('catalog contains velora_offline', () {
@@ -334,4 +456,139 @@ Future<void> main() async {
       contains("import 'package:velora_offline/velora_offline.dart';"),
     );
   });
+
+  test(
+    'install --no-wire adds the dependency but leaves main.dart untouched '
+    'and does not print the false wiring claim',
+    () async {
+      final temp = Directory.systemTemp.createTempSync(
+        'velora_cli_install_no_wire_',
+      );
+      addTearDown(() {
+        if (temp.existsSync()) temp.deleteSync(recursive: true);
+      });
+
+      final packageRoot = Directory.current.path;
+      Future<ProcessResult> runCli(List<String> args) {
+        return Process.run(Platform.resolvedExecutable, <String>[
+          '$packageRoot/bin/velora_cli.dart',
+          ...args,
+        ], workingDirectory: Directory.current.path);
+      }
+
+      final app = Directory('${temp.path}/app')..createSync();
+      File('${app.path}/pubspec.yaml').writeAsStringSync('''name: demo
+dependencies:
+  flutter:
+    sdk: flutter
+''');
+      Directory('${app.path}/lib').createSync();
+      const originalMain = '''
+Future<void> main() async {
+  await Velora.boot(config: config);
+}
+''';
+      File('${app.path}/lib/main.dart').writeAsStringSync(originalMain);
+
+      final original = Directory.current;
+      ProcessResult install;
+      try {
+        Directory.current = app;
+        install = await runCli(<String>[
+          'install',
+          'velora_offline',
+          '--no-pub-get',
+          '--no-wire',
+        ]);
+        expect(install.exitCode, 0, reason: install.stderr.toString());
+      } finally {
+        Directory.current = original;
+      }
+
+      final pubspecContent = File(
+        '${app.path}/pubspec.yaml',
+      ).readAsStringSync();
+      expect(pubspecContent, contains('velora_offline:'));
+
+      final mainContent = File('${app.path}/lib/main.dart').readAsStringSync();
+      expect(mainContent, originalMain);
+
+      final stdoutText = install.stdout.toString();
+      expect(
+        stdoutText,
+        isNot(
+          contains(
+            'Added velora_offline and wired VeloraOfflinePlugin() into '
+            'Velora.boot().',
+          ),
+        ),
+      );
+      expect(stdoutText, contains('--no-wire was passed'));
+      expect(stdoutText, contains('plugins: [VeloraOfflinePlugin()]'));
+    },
+  );
+
+  test(
+    'install with an unknown package name fails loudly without touching '
+    'pubspec.yaml or main.dart',
+    () async {
+      final temp = Directory.systemTemp.createTempSync(
+        'velora_cli_install_unknown_',
+      );
+      addTearDown(() {
+        if (temp.existsSync()) temp.deleteSync(recursive: true);
+      });
+
+      final packageRoot = Directory.current.path;
+      Future<ProcessResult> runCli(List<String> args) {
+        return Process.run(Platform.resolvedExecutable, <String>[
+          '$packageRoot/bin/velora_cli.dart',
+          ...args,
+        ], workingDirectory: Directory.current.path);
+      }
+
+      final app = Directory('${temp.path}/app')..createSync();
+      const originalPubspec = '''name: demo
+dependencies:
+  flutter:
+    sdk: flutter
+''';
+      File('${app.path}/pubspec.yaml').writeAsStringSync(originalPubspec);
+      Directory('${app.path}/lib').createSync();
+      const originalMain = '''
+Future<void> main() async {
+  await Velora.boot(config: config);
+}
+''';
+      File('${app.path}/lib/main.dart').writeAsStringSync(originalMain);
+
+      final original = Directory.current;
+      ProcessResult install;
+      try {
+        Directory.current = app;
+        install = await runCli(<String>[
+          'install',
+          'velora_nope',
+          '--no-pub-get',
+        ]);
+      } finally {
+        Directory.current = original;
+      }
+
+      expect(install.exitCode, isNot(0));
+      final combinedOutput =
+          install.stdout.toString() + install.stderr.toString();
+      expect(combinedOutput, contains("Unknown package 'velora_nope'"));
+      expect(combinedOutput, contains('velora_offline'));
+
+      expect(
+        File('${app.path}/pubspec.yaml').readAsStringSync(),
+        originalPubspec,
+      );
+      expect(
+        File('${app.path}/lib/main.dart').readAsStringSync(),
+        originalMain,
+      );
+    },
+  );
 }
