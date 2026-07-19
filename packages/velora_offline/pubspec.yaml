@@ -1,0 +1,26 @@
+name: velora_offline
+description: Connectivity awareness and an offline request queue for Velora apps.
+version: 0.0.1
+publish_to: none
+
+environment:
+  sdk: ^3.11.1
+  flutter: '>=3.27.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  velora:
+    path: ../velora
+  connectivity_plus: ^6.0.0
+  dio: ^5.9.0
+  get: ^4.7.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_secure_storage: ^10.0.0-beta.4
+  shared_preferences: ^2.5.3
+
+flutter:
