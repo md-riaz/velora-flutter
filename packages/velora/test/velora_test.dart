@@ -401,10 +401,17 @@ void main() {
       });
       final storage = await _storage();
       final repository = InMemoryNotificationRepository();
+      // Declared before `auth` so the login hook below can close over it —
+      // it is only invoked once login() runs, by which point `notify` has
+      // already been assigned below, making this deterministic.
+      late final NotificationService notify;
       final auth = await AuthService(
         api: api,
         storage: storage,
         config: const VeloraAuthConfig(),
+        onLoginSuccess: (user) async {
+          await notify.initForUser();
+        },
       ).init();
       final permission = PermissionService(auth: auth);
       final feature = FeatureService(permissionCheck: permission.can);
@@ -413,7 +420,7 @@ void main() {
         requestPermissionAfterLogin: true,
       );
       final nav = VeloraNav();
-      final notify = NotificationService(
+      notify = NotificationService(
         repository: repository,
         pushAdapter: NoopPushAdapter(
           permissionGranted: true,

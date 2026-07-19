@@ -94,25 +94,37 @@ class NotificationService {
     if (token == null || token.isEmpty) return;
 
     pushToken.value = token;
-    await repository.registerDeviceToken(
-      token: token,
-      provider: pushAdapter.provider,
-      platform: VeloraPlatform.current,
-    );
+    try {
+      await repository.registerDeviceToken(
+        token: token,
+        provider: pushAdapter.provider,
+        platform: VeloraPlatform.current,
+      );
+    } catch (_) {
+      // best-effort; local state still updates
+    }
   }
 
   Future<void> fetch() async {
     if (!config.enabled) return;
 
-    final result = await repository.index();
-    notifications.assignAll(result);
+    try {
+      final result = await repository.index();
+      notifications.assignAll(result);
+    } catch (_) {
+      // best-effort; local state still updates
+    }
     _recalculateUnread();
   }
 
   Future<void> markAsRead(String id) async {
     if (!config.enabled) return;
 
-    await repository.markAsRead(id);
+    try {
+      await repository.markAsRead(id);
+    } catch (_) {
+      // best-effort; local state still updates
+    }
 
     final index = notifications.indexWhere((item) => item.id == id);
     if (index != -1) {
@@ -127,7 +139,11 @@ class NotificationService {
   Future<void> markAllAsRead() async {
     if (!config.enabled) return;
 
-    await repository.markAllAsRead();
+    try {
+      await repository.markAllAsRead();
+    } catch (_) {
+      // best-effort; local state still updates
+    }
     final now = DateTime.now();
     notifications.assignAll(
       notifications
@@ -238,24 +254,27 @@ class NotificationService {
   }
 
   Future<void> disposeForUser() async {
-    final token = pushToken.value;
-    if (token != null && token.isNotEmpty) {
-      await repository.unregisterDeviceToken(token: token);
+    try {
+      final token = pushToken.value;
+      if (token != null && token.isNotEmpty) {
+        await repository.unregisterDeviceToken(token: token);
+      }
+
+      await pushAdapter.deleteToken();
+      await pushAdapter.dispose();
+    } finally {
+      await _foregroundSubscription?.cancel();
+      await _openedSubscription?.cancel();
+      _foregroundSubscription = null;
+      _openedSubscription = null;
+
+      notifications.clear();
+      unreadCount.value = 0;
+      permissionGranted.value = false;
+      initialized.value = false;
+      pushToken.value = null;
+      lastEvent.value = null;
     }
-
-    await pushAdapter.deleteToken();
-    await _foregroundSubscription?.cancel();
-    await _openedSubscription?.cancel();
-    _foregroundSubscription = null;
-    _openedSubscription = null;
-    await pushAdapter.dispose();
-
-    notifications.clear();
-    unreadCount.value = 0;
-    permissionGranted.value = false;
-    initialized.value = false;
-    pushToken.value = null;
-    lastEvent.value = null;
   }
 
   void _listenToForegroundMessages() {

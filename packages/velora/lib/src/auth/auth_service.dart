@@ -13,12 +13,18 @@ class AuthService extends GetxService {
   final VeloraApiService api;
   final VeloraStorageService storage;
   final VeloraAuthConfig config;
+
+  /// Optional hook invoked after a successful login (e.g. to sync feature
+  /// entitlements or initialize notifications). A failure here must never
+  /// fail login itself — see the try/catch around its invocation below.
+  final Future<void> Function(VeloraUser user)? onLoginSuccess;
   LogoutCoordinator? _logoutCoordinator;
 
   AuthService({
     required this.api,
     required this.storage,
     required this.config,
+    this.onLoginSuccess,
   }) {
     ever<SessionState>(state, (value) {
       isAuthenticated.value = value == SessionState.authenticated;
@@ -92,6 +98,11 @@ class AuthService extends GetxService {
       await storage.setJson(_userKey, user.toJson());
       currentUser.value = user;
       state.value = SessionState.authenticated;
+      try {
+        await onLoginSuccess?.call(user);
+      } catch (_) {
+        // A post-login hook failure (features/notifications) must not fail login.
+      }
       return user;
     } catch (_) {
       state.value = currentUser.value == null

@@ -55,16 +55,8 @@ class Velora {
   /// ```
   static T? userAs<T extends VeloraUser>() => auth.userAs<T>();
 
-  static Future<VeloraUser> login(Map<String, dynamic> credentials) async {
-    final user = await auth.login(credentials);
-    final n = config.notifications;
-    if (n.enabled &&
-        n.requestPermissionAfterLogin &&
-        Get.isRegistered<NotificationService>()) {
-      await Get.find<NotificationService>().initForUser();
-    }
-    return user;
-  }
+  static Future<VeloraUser> login(Map<String, dynamic> credentials) =>
+      auth.login(credentials);
 
   static Future<void> logout() => auth.logout();
 
@@ -129,6 +121,25 @@ class Velora {
       api: api,
       storage: storage,
       config: config.auth,
+      onLoginSuccess: (user) async {
+        // Resolve dependents lazily via Get.find so this hook is unaffected
+        // by construction order in boot() (feature/notify are registered
+        // after auth below).
+        if (Get.isRegistered<FeatureService>()) {
+          Get.find<FeatureService>().syncFromUserFeatures(user.features);
+        }
+
+        final n = config.notifications;
+        if (n.enabled &&
+            n.requestPermissionAfterLogin &&
+            Get.isRegistered<NotificationService>()) {
+          try {
+            await Get.find<NotificationService>().initForUser();
+          } catch (_) {
+            // Notification init failure must not block/fail the primary login flow.
+          }
+        }
+      },
     ).init();
     Get.put<AuthService>(auth, permanent: true);
 
@@ -178,18 +189,26 @@ class Velora {
     );
     Get.put<VeloraNotify>(notify, permanent: true);
     Get.put<NotificationService>(notify, permanent: true);
+    if (auth.check && auth.user != null) {
+      feature.syncFromUserFeatures(auth.user!.features);
+    }
     if (auth.check &&
         config.notifications.enabled &&
         config.notifications.requestPermissionAfterLogin) {
-      await notify.initForUser();
+      try {
+        await notify.initForUser();
+      } catch (_) {
+        // A boot-time notification failure must not leave the locator
+        // partially initialized.
+      }
     }
 
     lifecycle.register(
-      const VeloraLogoutHook(onBeforeLogout: _disposeNotificationsForLogout),
-    );
-    lifecycle.register(
-      const VeloraLogoutHook(
-        onBeforeLogout: _cancelUserScopedRequestsForLogout,
+      VeloraLogoutHook(
+        onBeforeLogout: () async {
+          await _disposeNotificationsForLogout();
+          await _cancelUserScopedRequestsForLogout();
+        },
       ),
     );
 

@@ -54,8 +54,11 @@ class LogoutCoordinator extends GetxService {
       await _navigateToGuestRoute();
       await _nextFrame();
       await lifecycle.afterLogoutNavigation();
-      await clearSession();
-      await lifecycle.onLogoutDispose();
+      try {
+        await clearSession();
+      } finally {
+        await lifecycle.onLogoutDispose();
+      }
     } finally {
       auth.state.value = SessionState.guest;
       isRunning.value = false;
