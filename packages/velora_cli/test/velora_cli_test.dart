@@ -399,6 +399,114 @@ Future<void> main() async {
     });
   });
 
+  group('mainCallsVeloraBoot', () {
+    test('is false when Velora.boot( only appears in a // comment', () {
+      const main = '''
+// TODO: call Velora.boot( here once config is ready.
+void main() {}
+''';
+      expect(mainCallsVeloraBoot(main), isFalse);
+    });
+
+    test('is false when Velora.boot( only appears in a string literal', () {
+      const main = '''
+void main() {
+  print('remember to call Velora.boot(...)');
+}
+''';
+      expect(mainCallsVeloraBoot(main), isFalse);
+    });
+
+    test('is true for a real Velora.boot( call', () {
+      const main = '''
+import 'package:velora/velora.dart';
+
+Future<void> main() async {
+  await Velora.boot(config: config);
+}
+''';
+      expect(mainCallsVeloraBoot(main), isTrue);
+    });
+
+    test('is true for Velora.boot ( with a space before the paren', () {
+      const main = '''
+import 'package:velora/velora.dart';
+
+Future<void> main() async {
+  await Velora.boot (config: config);
+}
+''';
+      expect(mainCallsVeloraBoot(main), isTrue);
+    });
+  });
+
+  group('bootWiresPlugin', () {
+    const pluginExpr = 'VeloraOfflinePlugin()';
+
+    test(
+      'is false when the plugin expr only appears in a comment, not the '
+      'plugins: list',
+      () {
+        const main = '''
+import 'package:velora/velora.dart';
+
+// VeloraOfflinePlugin() still needs to be added below.
+Future<void> main() async {
+  await Velora.boot(config: config);
+}
+''';
+        expect(bootWiresPlugin(main, pluginExpr), isFalse);
+      },
+    );
+
+    test(
+      'is false when the plugin expr only appears in a string literal',
+      () {
+        const main = '''
+import 'package:velora/velora.dart';
+
+const note = 'VeloraOfflinePlugin() still needs to be added below.';
+
+Future<void> main() async {
+  await Velora.boot(config: config);
+}
+''';
+        expect(bootWiresPlugin(main, pluginExpr), isFalse);
+      },
+    );
+
+    test(
+      'is false when the plugin expr appears elsewhere in the file but not '
+      'inside the boot plugins: list',
+      () {
+        const main = '''
+import 'package:velora/velora.dart';
+
+final unrelated = VeloraOfflinePlugin();
+
+Future<void> main() async {
+  await Velora.boot(config: config);
+}
+''';
+        expect(bootWiresPlugin(main, pluginExpr), isFalse);
+      },
+    );
+
+    test('is true when the plugin expr is actually in the plugins: list', () {
+      const main = '''
+import 'package:velora/velora.dart';
+
+Future<void> main() async {
+  await Velora.boot(
+    config: config,
+    plugins: [VeloraOfflinePlugin()],
+  );
+}
+''';
+      expect(bootWiresPlugin(main, pluginExpr), isTrue);
+    });
+  });
+
   test('catalog contains velora_offline', () {
     expect(veloraPackageCatalog.containsKey('velora_offline'), isTrue);
     final package = veloraPackageCatalog['velora_offline']!;
@@ -642,7 +750,9 @@ Future<void> main() async {
           ..createSync();
 
         final noPubspecResult = await runDoctor(noPubspecDir.path);
-        expect(noPubspecResult.exitCode, isNot(0));
+        // `_fail` always sets `exitCode = 64` — assert the exact contract,
+        // not just "some failure code".
+        expect(noPubspecResult.exitCode, 64);
         expect(
           noPubspecResult.stdout.toString() +
               noPubspecResult.stderr.toString(),
@@ -660,7 +770,7 @@ dependencies:
 ''');
 
         final notVeloraResult = await runDoctor(notVeloraDir.path);
-        expect(notVeloraResult.exitCode, isNot(0));
+        expect(notVeloraResult.exitCode, 64);
         expect(
           notVeloraResult.stdout.toString() +
               notVeloraResult.stderr.toString(),
@@ -702,5 +812,109 @@ Future<void> main() async {
         expect(output, contains('not wired'));
       },
     );
+
+    test(
+      'still warns declared-but-not-wired when the plugin expr only '
+      'appears in a comment in main.dart',
+      () async {
+        final temp = Directory.systemTemp.createTempSync(
+          'velora_cli_doctor_commented_plugin_',
+        );
+        addTearDown(() {
+          if (temp.existsSync()) temp.deleteSync(recursive: true);
+        });
+
+        final app = Directory('${temp.path}/app')..createSync();
+        File('${app.path}/pubspec.yaml').writeAsStringSync('''name: demo
+dependencies:
+  flutter:
+    sdk: flutter
+  velora: ^0.0.1
+  velora_offline: ^0.0.1
+''');
+        Directory('${app.path}/lib').createSync();
+        File('${app.path}/lib/main.dart').writeAsStringSync('''
+// TODO: wire VeloraOfflinePlugin() into Velora.boot() below.
+Future<void> main() async {
+  await Velora.boot(config: config);
+}
+''');
+
+        final result = await runDoctor(app.path);
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+        final output = result.stdout.toString();
+        expect(output, contains('velora_offline'));
+        expect(output, contains('not wired'));
+      },
+    );
+
+    test(
+      'recognizes a Velora project when dependencies: has a trailing '
+      'inline comment',
+      () async {
+        final temp = Directory.systemTemp.createTempSync(
+          'velora_cli_doctor_dep_comment_',
+        );
+        addTearDown(() {
+          if (temp.existsSync()) temp.deleteSync(recursive: true);
+        });
+
+        final app = Directory('${temp.path}/app')..createSync();
+        File('${app.path}/pubspec.yaml').writeAsStringSync('''name: demo
+dependencies: # runtime deps
+  flutter:
+    sdk: flutter
+  velora: ^0.0.1
+''');
+        Directory('${app.path}/lib').createSync();
+        File('${app.path}/lib/main.dart').writeAsStringSync('''
+Future<void> main() async {
+  await Velora.boot(config: config);
+}
+''');
+
+        final result = await runDoctor(app.path);
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+        expect(
+          result.stdout.toString(),
+          contains('pubspec.yaml declares a `velora` dependency'),
+        );
+      },
+    );
   });
+
+  test(
+    'main() reports a clean message (not a raw stack trace) when a command '
+    'throws an unexpected, non-_CliExit exception',
+    () async {
+      // `velora new <name>` calls `Directory(name).createSync(recursive:
+      // true)`. If a plain *file* already exists at that exact path, the OS
+      // refuses to create a directory there and Dart surfaces a
+      // FileSystemException — a real, uncontrived exception that isn't
+      // routed through `_fail`/`_CliExit`, so it should land in main()'s
+      // `catch (error)` branch.
+      final temp = Directory.systemTemp.createTempSync(
+        'velora_cli_unexpected_error_',
+      );
+      addTearDown(() {
+        if (temp.existsSync()) temp.deleteSync(recursive: true);
+      });
+
+      File('${temp.path}/app').writeAsStringSync('not a directory');
+
+      final packageRoot = Directory.current.path;
+      final result = await Process.run(Platform.resolvedExecutable, <String>[
+        '$packageRoot/bin/velora_cli.dart',
+        'new',
+        'app',
+      ], workingDirectory: temp.path);
+
+      final combined = result.stdout.toString() + result.stderr.toString();
+      expect(result.exitCode, 1);
+      expect(combined, contains('An unexpected error occurred'));
+      // No raw Dart stack trace should leak to the user.
+      expect(combined, isNot(contains('Unhandled exception')));
+      expect(combined, isNot(contains('#0 ')));
+    },
+  );
 }

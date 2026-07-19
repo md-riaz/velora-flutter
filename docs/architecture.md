@@ -43,7 +43,7 @@ class UsersModule {
 
 A page gets its controller straight from the module factory (`UsersModule.controller()`). There's no runtime lookup by type, so a missing or mistyped dependency is a compile error, not a "controller not found" crash at runtime.
 
-Services in this pattern are **plain Dart classes — not `GetxService`** — that hold business logic and delegate to a repository. They are not meant to be an app-wide singleton state store; if two screens need the same data, either share a repository/data-source instance across the module factories that need it, or model the shared piece as its own controller. Framework-internal services such as `LogoutCoordinator` happen to extend `GetxService` for lifecycle reasons, but that's an implementation detail inside the `velora` package — app code doesn't need `GetxService` and shouldn't introduce app-level ones.
+Services in this pattern are **plain Dart classes — not `GetxService`** — that hold business logic and delegate to a repository. A service is not an app-wide singleton by default, but it *is* where shared/business data belongs: if two screens need the same data, share a repository/data-source instance (or a plain service wrapping it) across the module factories that need it. Controllers stay screen-local — they hold their own UI state and delegate everything else, never the other way around. Framework-internal services such as `LogoutCoordinator` happen to extend `GetxService` for lifecycle reasons, but that's an implementation detail inside the `velora` package — app code doesn't need `GetxService` and shouldn't introduce app-level ones.
 
 ## Controllers own their own Rx state
 
@@ -61,7 +61,7 @@ class UsersController extends VeloraController {
 }
 ```
 
-For list screens, `VeloraPaginatedController<T>` (page-number pagination) and `VeloraCursorController<T, C>` (cursor pagination) add `items`, `hasMore`, `reload()`, and `loadMore()` on top of the same `loading`/`error`/`run()` base — **the controller itself owns the Rx list**, not a separate service. For forms, `VeloraFormController` adds an `errors` map keyed by field name. There is no rule that shared or business state must live in a `GetxService`; a `VeloraController` subclass owning it directly is the normal, blessed pattern.
+For list screens, `VeloraPaginatedController<T>` (page-number pagination) and `VeloraCursorController<T, C>` (cursor pagination) add `items`, `hasMore`, `reload()`, and `loadMore()` on top of the same `loading`/`error`/`run()` base — **the controller itself owns that screen's Rx list**, not a separate service. For forms, `VeloraFormController` adds an `errors` map keyed by field name. This screen-local Rx state (`loading`/`error`/`items`/`errors`) is the only state a controller should own directly; shared or cross-screen business data belongs in a plain service wired through the module factory — not in a `GetxService`, and not duplicated across controllers.
 
 ## A concrete example: the generated `users` module
 
@@ -151,7 +151,7 @@ so a test, or a different environment, can pass a `RemoteConversationsDataSource
 The generated scaffold above is the minimal shape `make:module` produces. `examples/claude_clone` is a larger, hand-built app that follows the same DI philosophy but adapts it per screen — it's a richer reference, not the CLI's baseline:
 
 - `HomeController extends VeloraPaginatedController<ConversationModel>` talks directly to a `ConversationsDataSource`, skipping a dedicated repository/service layer for that screen, and overrides `fetchPage` to get pagination for free.
-- Routing uses GetX's declarative `GetPage`/`AppPages` list, with an inline `BindingsBuilder` per route doing the one-line DI, e.g.:
+- Routing uses GetX's declarative `GetPage`/`AppPages` list. Each route's `binding: BindingsBuilder(...)` is *only* how that route constructs its page's controller — a routing convenience, not a dependency-injection strategy:
 
   ```dart
   GetPage(
@@ -162,9 +162,9 @@ The generated scaffold above is the minimal shape `make:module` produces. `examp
   ),
   ```
 
-  This is different from the minimal `velora new` scaffold, which wires a `MaterialApp` to a hand-written `switch` in `AppRouter.onGenerateRoute` instead (see [Scaffolding](scaffolding.md)). Both are valid entry points; `claude_clone` shows a GetX-routing-based alternative for a larger app, while the generated scaffold favors an explicit, dependency-free `Navigator` switch.
+  This is different from the minimal `velora new` scaffold, which wires a `MaterialApp` to a hand-written `switch` in `AppRouter.onGenerateRoute` and constructs controllers straight from a `{name}_module.dart` factory (see [Scaffolding](scaffolding.md)). `claude_clone`'s `BindingsBuilder`/`Get.lazyPut` is a one-off consequence of that example choosing GetX's declarative routing — it is **not** an endorsed alternative for dependency injection, and app code should not adopt `Bindings`/`Get.lazyPut` as its DI mechanism.
 
-Both approaches share the same rule: **each layer only talks to the layer directly below it**, and dependencies are supplied either as constructor arguments or via a single `Get.lazyPut` call at the route — never through an app-level `GetxService` or a `Bindings` subclass that resolves dependencies implicitly across the app.
+The blessed pattern, everywhere, is the module factory: `{ClassName}Module.controller()` constructs the full dependency chain by hand and hands the caller a ready controller, exactly as shown in the generated `users` module example above. Notice that even inside `claude_clone`'s `BindingsBuilder`, the thing actually being constructed is still `HomeController()` — a plain constructor call, not a service-locator lookup of something pre-registered elsewhere. `Get.lazyPut`/`Get.find()` as a general-purpose locator, and an app-level `Bindings` subclass that resolves dependencies implicitly across the app, remain out of scope for app code regardless of which routing style you pick.
 
 ## Key rules
 
@@ -172,7 +172,7 @@ Both approaches share the same rule: **each layer only talks to the layer direct
 - **Services**, when used, must not call `Get.back()`, push routes, or show dialogs — those are controller/navigation concerns.
 - **Data sources** are the only layer that knows whether data comes from the network, local storage, or a mock/fake.
 - **`VeloraController.run()`** (and the `reload()`/`loadMore()` it powers on `VeloraPaginatedController`/`VeloraCursorController`) is the standard wrapper for async work — use it everywhere loading/error state is needed.
-- Wiring is explicit: a per-module factory (or a route's `BindingsBuilder`) constructs and injects dependencies by hand. There is no app-level `GetxService` and no `Bindings` subclass to introduce.
+- **Wiring is explicit and constructor-based**: a per-module factory (`{name}_module.dart`) constructs and injects dependencies by hand. This is the one blessed DI pattern for app code — there is no app-level `GetxService` and no `Bindings` subclass for dependency injection. (`claude_clone`'s per-route `BindingsBuilder` is a GetX routing convenience for constructing that route's controller, not an app-wide DI mechanism — don't copy it into your own dependency wiring.)
 
 ---
 

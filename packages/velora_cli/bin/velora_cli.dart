@@ -467,31 +467,6 @@ void _install(List<String> args) {
   stdout.writeln('Installed ${package.name}.');
 }
 
-/// Returns whether [name] is declared *under the top-level `dependencies:`
-/// block* of a `pubspec.yaml` [content] string (a `dev_dependencies:` or
-/// `dependency_overrides:` entry with the same name does not count). Mirrors
-/// the block-scoping logic in [addDependencyToPubspec] so `doctor` and
-/// `install` agree on what "declared" means.
-bool _pubspecDeclaresDependency(String content, String name) {
-  final depBlockPattern = RegExp(r'^dependencies:\s*$', multiLine: true);
-  final match = depBlockPattern.firstMatch(content);
-  if (match == null) return false;
-
-  final blockStart = match.end;
-  final topLevelKeyPattern = RegExp(r'^[^\s#].*$', multiLine: true);
-  final nextTopLevelKeys = topLevelKeyPattern.allMatches(content, blockStart);
-  final blockEnd = nextTopLevelKeys.isEmpty
-      ? content.length
-      : nextTopLevelKeys.first.start;
-  final blockBody = content.substring(blockStart, blockEnd);
-
-  final depPattern = RegExp(
-    '^\\s+${RegExp.escape(name)}\\s*:',
-    multiLine: true,
-  );
-  return depPattern.hasMatch(blockBody);
-}
-
 void _doctor() {
   stdout.writeln('Velora doctor');
   stdout.writeln('Project: ${Directory.current.path}');
@@ -502,7 +477,7 @@ void _doctor() {
     _fail('✗ No pubspec.yaml — run `velora doctor` from your app root.');
   }
   final pubspecContent = pubspecFile.readAsStringSync();
-  if (!_pubspecDeclaresDependency(pubspecContent, 'velora')) {
+  if (!pubspecDeclaresDependency(pubspecContent, 'velora')) {
     _fail('✗ Not a Velora project: `velora` is not in dependencies.');
   }
   stdout.writeln('✓ pubspec.yaml declares a `velora` dependency.');
@@ -520,7 +495,7 @@ void _doctor() {
     warn('lib/main.dart not found.');
   } else {
     mainContent = mainFile.readAsStringSync();
-    if (!mainContent.contains('Velora.boot(')) {
+    if (!mainCallsVeloraBoot(mainContent)) {
       warn('lib/main.dart does not call Velora.boot()');
     } else {
       stdout.writeln('✓ lib/main.dart calls Velora.boot().');
@@ -530,8 +505,8 @@ void _doctor() {
   // Check 3: every installable package that IS a dependency should also be
   // wired into Velora.boot(). Read-only — never modifies main.dart.
   for (final package in veloraPackageCatalog.values) {
-    if (!_pubspecDeclaresDependency(pubspecContent, package.name)) continue;
-    if (mainContent.contains(package.pluginExpr)) {
+    if (!pubspecDeclaresDependency(pubspecContent, package.name)) continue;
+    if (bootWiresPlugin(mainContent, package.pluginExpr)) {
       stdout.writeln('✓ ${package.name} is wired into Velora.boot().');
     } else {
       warn(
@@ -1235,10 +1210,9 @@ String _repository(String name, String className) =>
     '''import 'package:velora/velora.dart';
 
 import '../models/${name}_model.dart';
-import '${name}_remote_data_source.dart';
 
 class ${className}Repository implements VeloraRepository<${className}Model, int> {
-  final ${className}RemoteDataSource remoteDataSource;
+  final VeloraRemoteDataSource<${className}Model, int> remoteDataSource;
 
   const ${className}Repository(this.remoteDataSource);
 

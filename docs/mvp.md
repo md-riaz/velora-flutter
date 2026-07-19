@@ -10,7 +10,8 @@ Velora MVP focuses on Laravel-like productivity for Flutter apps.
 - Laravel REST API defaults.
 - Sanctum token authentication defaults.
 - Role and permission helpers.
-- GetX routing, dependency injection, controllers, and services.
+- GetX declarative routing (`GetPage`/`Navigator`).
+- Dependency injection via plain constructor injection in each module's factory, controllers, and services.
 - CRUD-oriented scaffolding.
 
 ## Already shipped beyond the original MVP
