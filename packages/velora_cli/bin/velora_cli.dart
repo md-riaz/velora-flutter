@@ -9,23 +9,30 @@ void main(List<String> arguments) {
     return;
   }
 
-  switch (arguments.first) {
-    case 'new':
-      _new(arguments.skip(1).toList());
-    case 'make:module':
-      _makeModule(arguments.skip(1).toList());
-    case 'make:auth':
-      _makeAuth(arguments.skip(1).toList());
-    case 'make:notifications':
-      _makeNotifications(arguments.skip(1).toList());
-    case 'install:push':
-      _installPush(arguments.skip(1).toList());
-    case 'install':
-      _install(arguments.skip(1).toList());
-    case 'doctor':
-      _doctor();
-    default:
-      _fail('Unknown command: ${arguments.first}');
+  // `_fail` sets `exitCode` and throws `_CliExit` to abort the current command.
+  // Catch it here so the process exits with that code instead of crashing with
+  // an uncaught-exception stack trace.
+  try {
+    switch (arguments.first) {
+      case 'new':
+        _new(arguments.skip(1).toList());
+      case 'make:module':
+        _makeModule(arguments.skip(1).toList());
+      case 'make:auth':
+        _makeAuth(arguments.skip(1).toList());
+      case 'make:notifications':
+        _makeNotifications(arguments.skip(1).toList());
+      case 'install:push':
+        _installPush(arguments.skip(1).toList());
+      case 'install':
+        _install(arguments.skip(1).toList());
+      case 'doctor':
+        _doctor();
+      default:
+        _fail('Unknown command: ${arguments.first}');
+    }
+  } on _CliExit {
+    // Message already printed by `_fail`; `exitCode` is already set.
   }
 }
 
@@ -455,11 +462,101 @@ void _install(List<String> args) {
   stdout.writeln('Installed ${package.name}.');
 }
 
+/// Returns whether [name] is declared *under the top-level `dependencies:`
+/// block* of a `pubspec.yaml` [content] string (a `dev_dependencies:` or
+/// `dependency_overrides:` entry with the same name does not count). Mirrors
+/// the block-scoping logic in [addDependencyToPubspec] so `doctor` and
+/// `install` agree on what "declared" means.
+bool _pubspecDeclaresDependency(String content, String name) {
+  final depBlockPattern = RegExp(r'^dependencies:\s*$', multiLine: true);
+  final match = depBlockPattern.firstMatch(content);
+  if (match == null) return false;
+
+  final blockStart = match.end;
+  final topLevelKeyPattern = RegExp(r'^[^\s#].*$', multiLine: true);
+  final nextTopLevelKeys = topLevelKeyPattern.allMatches(content, blockStart);
+  final blockEnd = nextTopLevelKeys.isEmpty
+      ? content.length
+      : nextTopLevelKeys.first.start;
+  final blockBody = content.substring(blockStart, blockEnd);
+
+  final depPattern = RegExp(
+    '^\\s+${RegExp.escape(name)}\\s*:',
+    multiLine: true,
+  );
+  return depPattern.hasMatch(blockBody);
+}
+
 void _doctor() {
   stdout.writeln('Velora doctor');
-  stdout.writeln('Dart: ${Platform.version.split('\n').first}');
   stdout.writeln('Project: ${Directory.current.path}');
-  stdout.writeln('Status: OK');
+
+  // Check 1 (hard fail): must be run inside a Velora project.
+  final pubspecFile = File(p.join(Directory.current.path, 'pubspec.yaml'));
+  if (!pubspecFile.existsSync()) {
+    _fail('✗ No pubspec.yaml — run `velora doctor` from your app root.');
+  }
+  final pubspecContent = pubspecFile.readAsStringSync();
+  if (!_pubspecDeclaresDependency(pubspecContent, 'velora')) {
+    _fail('✗ Not a Velora project: `velora` is not in dependencies.');
+  }
+  stdout.writeln('✓ pubspec.yaml declares a `velora` dependency.');
+
+  var hasWarning = false;
+  void warn(String message) {
+    hasWarning = true;
+    stdout.writeln('⚠ $message');
+  }
+
+  // Check 2: lib/main.dart exists and calls Velora.boot().
+  final mainFile = File(p.join(Directory.current.path, 'lib', 'main.dart'));
+  var mainContent = '';
+  if (!mainFile.existsSync()) {
+    warn('lib/main.dart not found.');
+  } else {
+    mainContent = mainFile.readAsStringSync();
+    if (!mainContent.contains('Velora.boot(')) {
+      warn('lib/main.dart does not call Velora.boot()');
+    } else {
+      stdout.writeln('✓ lib/main.dart calls Velora.boot().');
+    }
+  }
+
+  // Check 3: every installable package that IS a dependency should also be
+  // wired into Velora.boot(). Read-only — never modifies main.dart.
+  for (final package in veloraPackageCatalog.values) {
+    if (!_pubspecDeclaresDependency(pubspecContent, package.name)) continue;
+    if (mainContent.contains(package.pluginExpr)) {
+      stdout.writeln('✓ ${package.name} is wired into Velora.boot().');
+    } else {
+      warn(
+        '${package.name} is declared in pubspec.yaml but ${package.pluginExpr} '
+        'is not wired into Velora.boot(). Wire `plugins: [${package.pluginExpr}]` '
+        'into Velora.boot(...) or re-run `velora install ${package.name}`.',
+      );
+    }
+  }
+
+  // Check 4: toolchain versions. Never let a missing executable crash
+  // doctor — mirrors the guarded Process.runSync pattern in `_install`.
+  stdout.writeln('Dart: ${Platform.version.split('\n').first}');
+  String flutterVersion;
+  try {
+    final result = Process.runSync('flutter', <String>['--version']);
+    final firstLine = result.stdout.toString().split('\n').first.trim();
+    flutterVersion = firstLine.isEmpty
+        ? 'flutter --version produced no output.'
+        : firstLine;
+  } catch (_) {
+    flutterVersion = 'not found on PATH.';
+  }
+  stdout.writeln('Flutter: $flutterVersion');
+
+  if (hasWarning) {
+    stdout.writeln('Velora doctor finished with warnings — see ⚠ lines above.');
+  } else {
+    stdout.writeln('Velora doctor: all checks passed.');
+  }
 }
 
 void _writeAi(String root, String title) {

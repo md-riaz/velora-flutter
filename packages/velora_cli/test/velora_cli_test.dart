@@ -591,4 +591,116 @@ Future<void> main() async {
       );
     },
   );
+
+  group('doctor', () {
+    Future<ProcessResult> runDoctor(String workingDirectory) {
+      final packageRoot = Directory.current.path;
+      return Process.run(Platform.resolvedExecutable, <String>[
+        '$packageRoot/bin/velora_cli.dart',
+        'doctor',
+      ], workingDirectory: workingDirectory);
+    }
+
+    test('passes in a valid Velora project and reports the passing checks', () async {
+      final temp = Directory.systemTemp.createTempSync('velora_cli_doctor_ok_');
+      addTearDown(() {
+        if (temp.existsSync()) temp.deleteSync(recursive: true);
+      });
+
+      final app = Directory('${temp.path}/app')..createSync();
+      File('${app.path}/pubspec.yaml').writeAsStringSync('''name: demo
+dependencies:
+  flutter:
+    sdk: flutter
+  velora: ^0.0.1
+''');
+      Directory('${app.path}/lib').createSync();
+      File('${app.path}/lib/main.dart').writeAsStringSync('''
+Future<void> main() async {
+  await Velora.boot(config: config);
+}
+''');
+
+      final result = await runDoctor(app.path);
+      expect(result.exitCode, 0, reason: result.stderr.toString());
+      final output = result.stdout.toString();
+      expect(output, contains('pubspec.yaml declares a `velora` dependency'));
+      expect(output, contains('lib/main.dart calls Velora.boot()'));
+      expect(output, contains('Dart:'));
+    });
+
+    test(
+      'fails loudly when there is no pubspec.yaml or velora is not a dependency',
+      () async {
+        final temp = Directory.systemTemp.createTempSync(
+          'velora_cli_doctor_no_pubspec_',
+        );
+        addTearDown(() {
+          if (temp.existsSync()) temp.deleteSync(recursive: true);
+        });
+        final noPubspecDir = Directory('${temp.path}/no_pubspec')
+          ..createSync();
+
+        final noPubspecResult = await runDoctor(noPubspecDir.path);
+        expect(noPubspecResult.exitCode, isNot(0));
+        expect(
+          noPubspecResult.stdout.toString() +
+              noPubspecResult.stderr.toString(),
+          contains('No pubspec.yaml'),
+        );
+
+        final notVeloraDir = Directory('${temp.path}/not_velora')
+          ..createSync();
+        File(
+          '${notVeloraDir.path}/pubspec.yaml',
+        ).writeAsStringSync('''name: demo
+dependencies:
+  flutter:
+    sdk: flutter
+''');
+
+        final notVeloraResult = await runDoctor(notVeloraDir.path);
+        expect(notVeloraResult.exitCode, isNot(0));
+        expect(
+          notVeloraResult.stdout.toString() +
+              notVeloraResult.stderr.toString(),
+          contains('Not a Velora project'),
+        );
+      },
+    );
+
+    test(
+      'warns when a declared plugin package is not wired into Velora.boot()',
+      () async {
+        final temp = Directory.systemTemp.createTempSync(
+          'velora_cli_doctor_unwired_',
+        );
+        addTearDown(() {
+          if (temp.existsSync()) temp.deleteSync(recursive: true);
+        });
+
+        final app = Directory('${temp.path}/app')..createSync();
+        File('${app.path}/pubspec.yaml').writeAsStringSync('''name: demo
+dependencies:
+  flutter:
+    sdk: flutter
+  velora: ^0.0.1
+  velora_offline: ^0.0.1
+''');
+        Directory('${app.path}/lib').createSync();
+        File('${app.path}/lib/main.dart').writeAsStringSync('''
+Future<void> main() async {
+  await Velora.boot(config: config);
+}
+''');
+
+        final result = await runDoctor(app.path);
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+        final output = result.stdout.toString();
+        expect(output, contains('velora_offline'));
+        expect(output, contains('VeloraOfflinePlugin()'));
+        expect(output, contains('not wired'));
+      },
+    );
+  });
 }

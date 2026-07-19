@@ -28,16 +28,16 @@ dart run velora_cli install:push --local
 dart run velora_cli install velora_offline
 ```
 
-## Starter app
+## Example app
 
 ```bash
-cd examples/velora_starter
+cd examples/claude_clone
 flutter pub get
 flutter run
 flutter test
 ```
 
-Generated apps use the same CLI commands from their root after adding `velora_cli` to the local development workflow.
+`examples/claude_clone` is a hand-built reference app (not CLI-generated) that exercises Velora at a larger scale. Generated apps (from `velora new`) use the same `flutter pub get` / `flutter run` / `flutter test` commands from their own root.
 
 ## Notification commands
 

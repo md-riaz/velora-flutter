@@ -2,13 +2,12 @@
 
 ## Velora rules
 
-- Follow `velora.md`, `velora.part2.md`, and `next2.md`.
-- If they conflict, `velora.part2.md` wins for architecture; `next2.md` wins for logout safety.
-- Use GetX-first design.
-- Shared/business/session state lives in `GetxService`.
+- Follow `velora.md` and `velora.part2.md` for historical planning context.
+- If they conflict, `velora.part2.md` wins for architecture. For logout safety, the current source of truth is the shipped implementation in `packages/velora/lib/src/auth/logout_coordinator.dart` (participant-based teardown via `VeloraLifecycleRegistry`), not either planning doc.
+- Blessed architecture is **plain constructor dependency injection**: app controllers extend `VeloraController` / `VeloraFormController` / `VeloraPaginatedController` and own their own screen-local Rx state. Services are plain classes (not `GetxService`) wired by constructor injection in each module's factory (`{name}_module.dart`), exactly as `velora new` / `make:module` generate. Framework-internal services (e.g. `LogoutCoordinator`) happen to extend `GetxService` for lifecycle reasons, but app code does not need `GetxService` and should not introduce app-level ones or Bindings-based DI.
 - Controllers contain local UI state and screen actions only.
 - Repositories/data sources handle data access only.
-- Keep MVP focused: no Firebase, Supabase, GraphQL, offline sync, payments, chat, push notifications, or visual builders.
+- Keep MVP focused: no Firebase, Supabase, GraphQL, payments, chat, or visual builders. Offline support and push notifications ARE shipped — offline via the installable `packages/velora_offline` plugin (`velora install velora_offline`), push via `make:notifications` / `install:push --fcm|--local` (see `docs/notifications.md`) — do not treat either as out of scope.
 - Public API should remain facade-like and simple.
 
 ## Framework / App layer boundary
@@ -157,6 +156,6 @@ Run focused checks for touched packages when code changes. Docs-only changes do 
 
 ```sh
 flutter analyze packages/velora
-flutter analyze examples/velora_starter
+flutter analyze examples/claude_clone
 dart analyze packages/velora_cli
 ```
