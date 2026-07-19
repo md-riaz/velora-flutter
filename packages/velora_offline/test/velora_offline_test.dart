@@ -6,7 +6,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:velora/velora.dart';
+import 'package:velora/velora.dart' hide FormData;
 import 'package:velora_offline/velora_offline.dart';
 
 void main() {
@@ -262,6 +262,103 @@ void main() {
     });
   });
 
+  group('OfflineQueueInterceptor', () {
+    test(
+      'excludes auth endpoints from queuing',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        final storage = await VeloraStorageService().init();
+        final api = await _apiService((_) => _jsonResponse(200, {'success': true}));
+        final queue = await OfflineRequestQueue(storage: storage, api: api).load();
+        final interceptor = OfflineQueueInterceptor(
+          queue,
+          excludedPaths: {'/auth/login', '/auth/logout'},
+        );
+
+        for (final path in ['/auth/login', '/auth/logout']) {
+          final err = DioException(
+            type: DioExceptionType.connectionError,
+            requestOptions: RequestOptions(
+              path: path,
+              method: 'POST',
+              data: {'email': 'a', 'password': 'b'},
+            ),
+          );
+          interceptor.onError(err, _NoopErrorHandler());
+        }
+
+        // The enqueue call (if any) is fire-and-forget; give it a chance to
+        // run before asserting it never happened.
+        await pumpEventQueue();
+        expect(queue.pending, isEmpty);
+      },
+    );
+
+    test(
+      'does not queue a request with a non-serializable body',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        final storage = await VeloraStorageService().init();
+        final api = await _apiService((_) => _jsonResponse(200, {'success': true}));
+        final queue = await OfflineRequestQueue(storage: storage, api: api).load();
+        final interceptor = OfflineQueueInterceptor(queue);
+
+        final err = DioException(
+          type: DioExceptionType.connectionError,
+          requestOptions: RequestOptions(
+            path: '/uploads',
+            method: 'POST',
+            data: FormData(),
+          ),
+        );
+        interceptor.onError(err, _NoopErrorHandler());
+
+        await pumpEventQueue();
+        expect(queue.pending, isEmpty);
+      },
+    );
+
+    test(
+      'a replay that fails again during flush is not re-enqueued',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        final storage = await VeloraStorageService().init();
+        final api = await _apiService((options) {
+          throw DioException(
+            requestOptions: options,
+            type: DioExceptionType.connectionError,
+          );
+        });
+
+        final queue = await OfflineRequestQueue(storage: storage, api: api).load();
+        final interceptor = OfflineQueueInterceptor(queue);
+        // Attach the interceptor to the same Dio instance the queue replays
+        // through, so a failed replay runs through onError just like a
+        // real request would.
+        api.addInterceptor(interceptor);
+
+        await queue.enqueue(
+          OfflineRequest(
+            id: '1',
+            method: 'POST',
+            path: '/notes',
+            data: {'title': 'first'},
+            createdAt: DateTime(2026, 1, 1),
+          ),
+        );
+        expect(queue.pending, hasLength(1));
+
+        await queue.flush();
+
+        // The replay failed with a connection error (still offline), so
+        // flush halts and keeps the original item — but the interceptor
+        // must not have queued a second copy of it while isFlushing was true.
+        expect(queue.pending, hasLength(1));
+        expect(queue.pending.single.id, '1');
+      },
+    );
+  });
+
   group('VeloraOfflinePlugin', () {
     test(
       'registers services, adds the interceptor, and flushes on reconnect',
@@ -316,7 +413,68 @@ void main() {
         expect(VeloraOffline.queue.pending, isEmpty);
       },
     );
+
+    test(
+      'replays a persisted queue on startup when already online, '
+      'without any connectivity event',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        final storage = await VeloraStorageService().init();
+        final receivedPaths = <String>[];
+        final api = await _apiService((options) {
+          receivedPaths.add(options.path);
+          return _jsonResponse(200, {'success': true});
+        });
+
+        // Simulate a previous session that queued a write and was closed
+        // before it could flush: persist an item directly via the queue,
+        // then let the plugin's own queue (created in register()) load it
+        // back from the same underlying storage.
+        final seedQueue = await OfflineRequestQueue(storage: storage, api: api).load();
+        await seedQueue.enqueue(
+          OfflineRequest(
+            id: '1',
+            method: 'POST',
+            path: '/notes',
+            data: {'title': 'queued before restart'},
+            createdAt: DateTime(2026, 1, 1),
+          ),
+        );
+
+        final lifecycle = VeloraLifecycleRegistry();
+        Get.put<VeloraStorageService>(storage);
+        Get.put<VeloraApiService>(api);
+        Get.put<VeloraLifecycleRegistry>(lifecycle);
+
+        const config = VeloraConfig(
+          appName: 'Test',
+          apiBaseUrl: 'https://example.test',
+        );
+        final context = VeloraContext(config);
+        // Already online at startup -- no connectivity transition ever fires.
+        final source = FakeConnectivitySource(initial: true);
+        final plugin = VeloraOfflinePlugin(source: source);
+
+        await plugin.register(context);
+        // register() kicks off the startup flush fire-and-forget; let it run.
+        await pumpEventQueue();
+
+        expect(receivedPaths, ['/notes']);
+        expect(VeloraOffline.queue.pending, isEmpty);
+      },
+    );
   });
+}
+
+/// An [ErrorInterceptorHandler] that swallows `next()` instead of completing
+/// its internal completer. Calling `onError` directly (outside a real Dio
+/// request pipeline) with the real handler leaves that completer's future
+/// un-awaited, which surfaces as an unhandled async error in the test zone;
+/// this fake sidesteps that since these tests only care about queue side
+/// effects, not the propagated error.
+class _NoopErrorHandler extends ErrorInterceptorHandler {
+  @override
+  void next(DioException error) {}
 }
 
 class FakeConnectivitySource implements ConnectivitySource {
