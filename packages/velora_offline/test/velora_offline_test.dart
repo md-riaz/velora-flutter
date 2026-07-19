@@ -151,6 +151,115 @@ void main() {
 
       expect(queue.pending, hasLength(1));
     });
+
+    test(
+      'flush discards a 4xx (poison-pill) request and replays the rest',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        final storage = await VeloraStorageService().init();
+        final receivedPaths = <String>[];
+        final api = await _apiService((options) {
+          receivedPaths.add(options.path);
+          if (options.path == '/notes/bad') {
+            return _jsonResponse(422, {'message': 'Validation failed'});
+          }
+          return _jsonResponse(200, {'success': true});
+        });
+
+        final queue = await OfflineRequestQueue(storage: storage, api: api).load();
+        await queue.enqueue(
+          OfflineRequest(
+            id: '1',
+            method: 'POST',
+            path: '/notes/bad',
+            data: {'title': 'first'},
+            createdAt: DateTime(2026, 1, 1),
+          ),
+        );
+        await queue.enqueue(
+          OfflineRequest(
+            id: '2',
+            method: 'PUT',
+            path: '/notes/1',
+            data: {'title': 'second'},
+            createdAt: DateTime(2026, 1, 1),
+          ),
+        );
+
+        await queue.flush();
+
+        expect(receivedPaths, ['/notes/bad', '/notes/1']);
+        expect(queue.pending, isEmpty);
+        final reloaded = await OfflineRequestQueue(storage: storage, api: api).load();
+        expect(reloaded.pending, isEmpty);
+      },
+    );
+
+    test('flush halts and keeps the queue intact on a 5xx server error', () async {
+      SharedPreferences.setMockInitialValues({});
+      final storage = await VeloraStorageService().init();
+      final receivedPaths = <String>[];
+      final api = await _apiService((options) {
+        receivedPaths.add(options.path);
+        return ResponseBody.fromString('Server exploded', 500);
+      });
+
+      final queue = await OfflineRequestQueue(storage: storage, api: api).load();
+      await queue.enqueue(
+        OfflineRequest(
+          id: '1',
+          method: 'POST',
+          path: '/notes',
+          data: {'title': 'first'},
+          createdAt: DateTime(2026, 1, 1),
+        ),
+      );
+      await queue.enqueue(
+        OfflineRequest(
+          id: '2',
+          method: 'POST',
+          path: '/notes/2',
+          data: {'title': 'second'},
+          createdAt: DateTime(2026, 1, 1),
+        ),
+      );
+
+      await queue.flush();
+
+      expect(receivedPaths, ['/notes']);
+      expect(queue.pending, hasLength(2));
+    });
+
+    test('replays and persists a non-Map (List) payload correctly', () async {
+      SharedPreferences.setMockInitialValues({});
+      final storage = await VeloraStorageService().init();
+      final receivedData = <Object?>[];
+      final api = await _apiService((options) {
+        receivedData.add(options.data);
+        return _jsonResponse(200, {'success': true});
+      });
+
+      final queue = await OfflineRequestQueue(storage: storage, api: api).load();
+      await queue.enqueue(
+        OfflineRequest(
+          id: '1',
+          method: 'POST',
+          path: '/notes/bulk',
+          data: ['first', 'second'],
+          createdAt: DateTime(2026, 1, 1),
+        ),
+      );
+
+      // Round-trip through persist/reload before replaying.
+      final reloaded = await OfflineRequestQueue(storage: storage, api: api).load();
+      expect(reloaded.pending, hasLength(1));
+      expect(reloaded.pending.single.data, ['first', 'second']);
+
+      await reloaded.flush();
+
+      expect(receivedData.single, ['first', 'second']);
+      expect(reloaded.pending, isEmpty);
+    });
   });
 
   group('VeloraOfflinePlugin', () {

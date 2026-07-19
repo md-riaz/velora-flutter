@@ -5,7 +5,7 @@ class OfflineRequest {
   final String id;
   final String method;
   final String path;
-  final Map<String, dynamic>? data;
+  final Object? data;
   final DateTime createdAt;
 
   const OfflineRequest({
@@ -25,14 +25,11 @@ class OfflineRequest {
       };
 
   factory OfflineRequest.fromJson(Map<String, dynamic> json) {
-    final rawData = json['data'];
     return OfflineRequest(
       id: json['id']?.toString() ?? '',
       method: json['method']?.toString() ?? 'POST',
       path: json['path']?.toString() ?? '',
-      data: rawData is Map
-          ? Map<String, dynamic>.from(rawData)
-          : null,
+      data: json['data'],
       createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
           DateTime.now(),
     );

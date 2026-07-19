@@ -30,11 +30,17 @@ class OfflineQueueInterceptor extends VeloraApiInterceptor {
 
     if (isConnectionFailure && _writeMethods.contains(method)) {
       final rawData = err.requestOptions.data;
+      final isSerializable = rawData == null ||
+          rawData is Map ||
+          rawData is List ||
+          rawData is String ||
+          rawData is num ||
+          rawData is bool;
       final request = OfflineRequest(
         id: '${DateTime.now().microsecondsSinceEpoch}-${err.requestOptions.path}',
         method: method,
         path: err.requestOptions.path,
-        data: rawData is Map ? Map<String, dynamic>.from(rawData) : null,
+        data: isSerializable ? rawData : null,
         createdAt: DateTime.now(),
       );
       // Fire-and-forget: persisting the queue must not delay error

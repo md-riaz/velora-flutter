@@ -12,6 +12,8 @@ class OfflineRequestQueue {
 
   final RxList<OfflineRequest> pending = <OfflineRequest>[].obs;
 
+  bool _isFlushing = false;
+
   OfflineRequestQueue({required this.storage, required this.api});
 
   /// Restores any previously persisted queue. Returns `this` for fluent
@@ -41,19 +43,40 @@ class OfflineRequestQueue {
   }
 
   /// Replays queued requests in order via the matching `api.<method>` call.
-  /// Stops at the first failure (still offline, or the server is down) so
-  /// ordering is preserved and the remaining items stay queued. Never
+  /// Stops at the first failure that isn't a permanent client error (still
+  /// offline, or the server is down) so ordering is preserved and the
+  /// remaining items stay queued. A 4xx `ApiException` is treated as a
+  /// poison pill: the request can never succeed as-is, so it is discarded
+  /// rather than blocking the rest of the queue forever. Reentrancy-safe —
+  /// a concurrent call (e.g. two rapid reconnect events) is a no-op. Never
   /// throws — a failed replay just leaves the queue as-is.
   Future<void> flush() async {
-    while (pending.isNotEmpty) {
-      final request = pending.first;
-      try {
-        await _replay(request);
-      } catch (_) {
-        return;
+    if (_isFlushing) return;
+    _isFlushing = true;
+    try {
+      while (pending.isNotEmpty) {
+        final request = pending.first;
+        try {
+          await _replay(request);
+        } catch (e) {
+          if (e is ApiException &&
+              e.statusCode != null &&
+              e.statusCode! >= 400 &&
+              e.statusCode! < 500) {
+            // Permanent client error: discard and keep going.
+            pending.removeAt(0);
+            await _persist();
+            continue;
+          }
+          // Still offline, server error, or unknown failure: halt and keep
+          // the queue for the next reconnect.
+          return;
+        }
+        pending.removeAt(0);
+        await _persist();
       }
-      pending.removeAt(0);
-      await _persist();
+    } finally {
+      _isFlushing = false;
     }
   }
 

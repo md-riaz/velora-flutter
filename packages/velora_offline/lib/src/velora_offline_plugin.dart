@@ -40,7 +40,6 @@ class VeloraOfflinePlugin extends VeloraPlugin {
 
     context.onBeforeLogout(() async {
       await queue.clear();
-      connectivity.dispose();
     });
   }
 }
