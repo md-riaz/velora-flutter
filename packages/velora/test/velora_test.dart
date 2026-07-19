@@ -623,6 +623,56 @@ void main() {
     },
   );
 
+  test(
+    'boot rejects a second plugin registered under the same name',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+
+      await expectLater(
+        Velora.boot(
+          config: const VeloraConfig(
+            appName: 'Test',
+            apiBaseUrl: 'https://example.test',
+            notifications: VeloraNotificationConfig(
+              enabled: false,
+              provider: PushProvider.none,
+            ),
+          ),
+          plugins: [_FakePlugin(), _FakePlugin()],
+        ),
+        throwsArgumentError,
+      );
+    },
+  );
+
+  test(
+    'boot supports lazy registration via VeloraContext.lazyPut',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final plugin = _LazyFakePlugin();
+
+      await Velora.boot(
+        config: const VeloraConfig(
+          appName: 'Test',
+          apiBaseUrl: 'https://example.test',
+          notifications: VeloraNotificationConfig(
+            enabled: false,
+            provider: PushProvider.none,
+          ),
+        ),
+        plugins: [plugin],
+      );
+
+      expect(Get.isRegistered<_LazyFakeService>(), isTrue);
+      expect(plugin.built, isFalse);
+
+      final instance = Get.find<_LazyFakeService>();
+
+      expect(plugin.built, isTrue);
+      expect(instance, isA<_LazyFakeService>());
+    },
+  );
+
   test('storage insecure fallback persists token to prefs when opted in', () async {
     SharedPreferences.setMockInitialValues({});
     final storage = await VeloraStorageService(
@@ -698,6 +748,23 @@ class _FakePlugin extends VeloraPlugin {
       loggedOut = true;
     });
     registered = true;
+  }
+}
+
+class _LazyFakeService {}
+
+class _LazyFakePlugin extends VeloraPlugin {
+  bool built = false;
+
+  @override
+  String get name => 'lazy_fake_plugin';
+
+  @override
+  Future<void> register(VeloraContext context) async {
+    context.lazyPut<_LazyFakeService>(() {
+      built = true;
+      return _LazyFakeService();
+    });
   }
 }
 

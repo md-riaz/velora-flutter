@@ -242,8 +242,11 @@ class Velora {
 
     final ctx = VeloraContext(config);
     for (final p in plugins) {
-      _plugins.add(p);
+      if (_plugins.any((existing) => existing.name == p.name)) {
+        throw ArgumentError('Plugin with name "${p.name}" is already registered.');
+      }
       await p.register(ctx);
+      _plugins.add(p);
     }
   }
 }

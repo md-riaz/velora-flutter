@@ -28,6 +28,9 @@ class VeloraContext {
   /// Register a permanent singleton, resolvable elsewhere via Get.find / a facade.
   void put<T>(T dependency) => Get.put<T>(dependency, permanent: true);
 
+  /// Register a lazy singleton, instantiated only when first resolved.
+  void lazyPut<T>(T Function() builder) => Get.lazyPut<T>(builder, fenix: true);
+
   T find<T>() => Get.find<T>();
   bool isRegistered<T>() => Get.isRegistered<T>();
 
