@@ -33,6 +33,11 @@ void main(List<String> arguments) {
     }
   } on _CliExit {
     // Message already printed by `_fail`; `exitCode` is already set.
+  } catch (error) {
+    // Any other failure (e.g. a FileSystemException while scaffolding) should
+    // surface as a clean message and non-zero exit, not a raw stack trace.
+    stderr.writeln('An unexpected error occurred: $error');
+    exitCode = 1;
   }
 }
 
@@ -543,10 +548,18 @@ void _doctor() {
   String flutterVersion;
   try {
     final result = Process.runSync('flutter', <String>['--version']);
-    final firstLine = result.stdout.toString().split('\n').first.trim();
-    flutterVersion = firstLine.isEmpty
-        ? 'flutter --version produced no output.'
-        : firstLine;
+    if (result.exitCode == 0) {
+      final firstLine = result.stdout.toString().split('\n').first.trim();
+      flutterVersion = firstLine.isEmpty
+          ? 'flutter --version produced no output.'
+          : firstLine;
+    } else {
+      // Executable ran but reported failure — the reason is on stderr.
+      final stderrLine = result.stderr.toString().split('\n').first.trim();
+      flutterVersion = stderrLine.isEmpty
+          ? 'failed with exit code ${result.exitCode}.'
+          : 'failed: $stderrLine';
+    }
   } catch (_) {
     flutterVersion = 'not found on PATH.';
   }
