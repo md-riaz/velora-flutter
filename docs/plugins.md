@@ -84,6 +84,10 @@ Velora.plugin<OfflinePlugin>();    // OfflinePlugin? — typed lookup, or null i
 
 This lets shared UI (e.g. a settings screen) conditionally show plugin-specific sections without a hard dependency on the plugin package.
 
+## The first official package
+
+[`velora_offline`](packages/offline.md) is the reference implementation of this contract — connectivity awareness plus an offline write queue, installed as `plugins: [VeloraOfflinePlugin()]`. Read it alongside this page as a worked example of everything above.
+
 ---
 
-**See also:** [API Client →](api-client.md) for `VeloraApiInterceptor`, and [Framework / App Boundary →](framework-app-boundary.md) for how core and app-owned code stay decoupled.
+**See also:** [API Client →](api-client.md) for `VeloraApiInterceptor`, [Framework / App Boundary →](framework-app-boundary.md) for how core and app-owned code stay decoupled, and [velora_offline →](packages/offline.md) for a real plugin built on this contract.

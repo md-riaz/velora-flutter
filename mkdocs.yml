@@ -74,6 +74,8 @@ nav:
     - CLI Commands: commands.md
     - Framework / App Boundary: framework-app-boundary.md
     - Plugins: plugins.md
+  - Official Packages:
+    - velora_offline: packages/offline.md
   - Project:
     - Contributing: contributing.md
     - Roadmap: roadmap.md

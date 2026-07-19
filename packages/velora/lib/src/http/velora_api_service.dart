@@ -44,16 +44,14 @@ class VeloraApiService extends GetxService {
   /// Add a [VeloraApiInterceptor] at runtime.
   ///
   /// Interceptors are called in the order they were added, after the
-  /// built-in auth token injector.
+  /// built-in auth token injector. [VeloraApiInterceptor] extends Dio's
+  /// [Interceptor] directly, so the instance itself is added to
+  /// `dio.interceptors` — its identity and concrete type stay inspectable
+  /// (e.g. `dio.interceptors.whereType<MyInterceptor>()`) instead of being
+  /// hidden behind an anonymous `InterceptorsWrapper`.
   void addInterceptor(VeloraApiInterceptor interceptor) {
     interceptor.onAttach(dio);
-    dio.interceptors.add(
-      InterceptorsWrapper(
-        onRequest: interceptor.onRequest,
-        onResponse: interceptor.onResponse,
-        onError: interceptor.onError,
-      ),
-    );
+    dio.interceptors.add(interceptor);
   }
 
   void cancelUserScope([String reason = 'User session ended.']) {

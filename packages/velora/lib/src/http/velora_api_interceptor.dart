@@ -16,7 +16,7 @@ import 'package:logger/logger.dart';
 /// ```dart
 /// Velora.api.addInterceptor(MyCustomInterceptor());
 /// ```
-abstract class VeloraApiInterceptor {
+abstract class VeloraApiInterceptor extends Interceptor {
   const VeloraApiInterceptor();
 
   /// Called once when the interceptor is attached to a [Dio] instance.
@@ -24,12 +24,15 @@ abstract class VeloraApiInterceptor {
   // ignore: use_setters_to_change_properties
   void onAttach(Dio dio) {}
 
+  @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) =>
       handler.next(options);
 
+  @override
   void onResponse(Response<dynamic> response, ResponseInterceptorHandler handler) =>
       handler.next(response);
 
+  @override
   void onError(DioException err, ErrorInterceptorHandler handler) =>
       handler.next(err);
 }
