@@ -23,7 +23,7 @@ Follow these guides in order. Each one builds on the last — from zero to a ful
 
     ---
 
-    Add Velora to your `pubspec.yaml`, call `Velora.boot()`, and enable mock mode so you can build without a running backend.
+    Add Velora to your `pubspec.yaml`, call `Velora.boot()`, and swap in a mock data source so you can build without a running backend.
 
     [→ Get Started](getting-started.md)
 

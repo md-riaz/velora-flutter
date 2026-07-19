@@ -9,23 +9,35 @@ void main(List<String> arguments) {
     return;
   }
 
-  switch (arguments.first) {
-    case 'new':
-      _new(arguments.skip(1).toList());
-    case 'make:module':
-      _makeModule(arguments.skip(1).toList());
-    case 'make:auth':
-      _makeAuth(arguments.skip(1).toList());
-    case 'make:notifications':
-      _makeNotifications(arguments.skip(1).toList());
-    case 'install:push':
-      _installPush(arguments.skip(1).toList());
-    case 'install':
-      _install(arguments.skip(1).toList());
-    case 'doctor':
-      _doctor();
-    default:
-      _fail('Unknown command: ${arguments.first}');
+  // `_fail` sets `exitCode` and throws `_CliExit` to abort the current command.
+  // Catch it here so the process exits with that code instead of crashing with
+  // an uncaught-exception stack trace.
+  try {
+    switch (arguments.first) {
+      case 'new':
+        _new(arguments.skip(1).toList());
+      case 'make:module':
+        _makeModule(arguments.skip(1).toList());
+      case 'make:auth':
+        _makeAuth(arguments.skip(1).toList());
+      case 'make:notifications':
+        _makeNotifications(arguments.skip(1).toList());
+      case 'install:push':
+        _installPush(arguments.skip(1).toList());
+      case 'install':
+        _install(arguments.skip(1).toList());
+      case 'doctor':
+        _doctor();
+      default:
+        _fail('Unknown command: ${arguments.first}');
+    }
+  } on _CliExit {
+    // Message already printed by `_fail`; `exitCode` is already set.
+  } catch (error) {
+    // Any other failure (e.g. a FileSystemException while scaffolding) should
+    // surface as a clean message and non-zero exit, not a raw stack trace.
+    stderr.writeln('An unexpected error occurred: $error');
+    exitCode = 1;
   }
 }
 
@@ -457,9 +469,82 @@ void _install(List<String> args) {
 
 void _doctor() {
   stdout.writeln('Velora doctor');
-  stdout.writeln('Dart: ${Platform.version.split('\n').first}');
   stdout.writeln('Project: ${Directory.current.path}');
-  stdout.writeln('Status: OK');
+
+  // Check 1 (hard fail): must be run inside a Velora project.
+  final pubspecFile = File(p.join(Directory.current.path, 'pubspec.yaml'));
+  if (!pubspecFile.existsSync()) {
+    _fail('✗ No pubspec.yaml — run `velora doctor` from your app root.');
+  }
+  final pubspecContent = pubspecFile.readAsStringSync();
+  if (!pubspecDeclaresDependency(pubspecContent, 'velora')) {
+    _fail('✗ Not a Velora project: `velora` is not in dependencies.');
+  }
+  stdout.writeln('✓ pubspec.yaml declares a `velora` dependency.');
+
+  var hasWarning = false;
+  void warn(String message) {
+    hasWarning = true;
+    stdout.writeln('⚠ $message');
+  }
+
+  // Check 2: lib/main.dart exists and calls Velora.boot().
+  final mainFile = File(p.join(Directory.current.path, 'lib', 'main.dart'));
+  var mainContent = '';
+  if (!mainFile.existsSync()) {
+    warn('lib/main.dart not found.');
+  } else {
+    mainContent = mainFile.readAsStringSync();
+    if (!mainCallsVeloraBoot(mainContent)) {
+      warn('lib/main.dart does not call Velora.boot()');
+    } else {
+      stdout.writeln('✓ lib/main.dart calls Velora.boot().');
+    }
+  }
+
+  // Check 3: every installable package that IS a dependency should also be
+  // wired into Velora.boot(). Read-only — never modifies main.dart.
+  for (final package in veloraPackageCatalog.values) {
+    if (!pubspecDeclaresDependency(pubspecContent, package.name)) continue;
+    if (bootWiresPlugin(mainContent, package.pluginExpr)) {
+      stdout.writeln('✓ ${package.name} is wired into Velora.boot().');
+    } else {
+      warn(
+        '${package.name} is declared in pubspec.yaml but ${package.pluginExpr} '
+        'is not wired into Velora.boot(). Wire `plugins: [${package.pluginExpr}]` '
+        'into Velora.boot(...) or re-run `velora install ${package.name}`.',
+      );
+    }
+  }
+
+  // Check 4: toolchain versions. Never let a missing executable crash
+  // doctor — mirrors the guarded Process.runSync pattern in `_install`.
+  stdout.writeln('Dart: ${Platform.version.split('\n').first}');
+  String flutterVersion;
+  try {
+    final result = Process.runSync('flutter', <String>['--version']);
+    if (result.exitCode == 0) {
+      final firstLine = result.stdout.toString().split('\n').first.trim();
+      flutterVersion = firstLine.isEmpty
+          ? 'flutter --version produced no output.'
+          : firstLine;
+    } else {
+      // Executable ran but reported failure — the reason is on stderr.
+      final stderrLine = result.stderr.toString().split('\n').first.trim();
+      flutterVersion = stderrLine.isEmpty
+          ? 'failed with exit code ${result.exitCode}.'
+          : 'failed: $stderrLine';
+    }
+  } catch (_) {
+    flutterVersion = 'not found on PATH.';
+  }
+  stdout.writeln('Flutter: $flutterVersion');
+
+  if (hasWarning) {
+    stdout.writeln('Velora doctor finished with warnings — see ⚠ lines above.');
+  } else {
+    stdout.writeln('Velora doctor: all checks passed.');
+  }
 }
 
 void _writeAi(String root, String title) {
@@ -1125,10 +1210,9 @@ String _repository(String name, String className) =>
     '''import 'package:velora/velora.dart';
 
 import '../models/${name}_model.dart';
-import '${name}_remote_data_source.dart';
 
 class ${className}Repository implements VeloraRepository<${className}Model, int> {
-  final ${className}RemoteDataSource remoteDataSource;
+  final VeloraRemoteDataSource<${className}Model, int> remoteDataSource;
 
   const ${className}Repository(this.remoteDataSource);
 

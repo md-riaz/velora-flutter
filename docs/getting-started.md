@@ -44,25 +44,74 @@ Future<void> main() async {
 
 `Velora.boot()` initializes storage, API client, auth, navigation, and permissions in the correct dependency order. Always `await` it before `runApp`.
 
-## Enable mock mode
+## Build UI without a backend
 
-You don't need a running Laravel backend to build UI. Set `useMock: true` and your feature data sources return seeded test data instead of hitting the network:
+`VeloraConfig` has no `useMock` switch — Velora doesn't have a framework-level mock
+mode. Instead, write a mock data source and choose it yourself in your module's
+factory. This is an app-level convention, not something the framework does for you.
+
+Given a generated `users` module (see [7 — Scaffold a Module](scaffolding.md)),
+add a mock implementation of the same data-source interface using
+[`VeloraMockApi`](https://github.com/md-riaz/velora-flutter/blob/main/packages/velora/lib/src/http/mock_api_service.dart)
+to fake network latency and responses:
 
 ```dart
-await Velora.boot(
-  config: const VeloraConfig(
-    appName: 'My App',
-    apiBaseUrl: 'https://api.example.com/api',
-    useMock: true,
-  ),
-);
+import 'package:velora/velora.dart';
+
+class MockUsersDataSource implements VeloraRemoteDataSource<UsersModel, int> {
+  @override
+  Future<List<UsersModel>> index() {
+    return VeloraMockApi.ok(
+      [
+        {'id': 1, 'name': 'Ada Lovelace'},
+        {'id': 2, 'name': 'Grace Hopper'},
+      ],
+      parser: (v) => (v as List)
+          .map((e) => UsersModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+
+  @override
+  Future<UsersModel> show(int id) =>
+      VeloraMockApi.fail(message: 'Not implemented in mock mode');
+
+  @override
+  Future<UsersModel> store(Map<String, dynamic> data) =>
+      VeloraMockApi.fail(message: 'Not implemented in mock mode');
+
+  @override
+  Future<UsersModel> update(int id, Map<String, dynamic> data) =>
+      VeloraMockApi.fail(message: 'Not implemented in mock mode');
+
+  @override
+  Future<void> destroy(int id) async {}
+}
 ```
 
-With mock mode on:
+Then pick which data source your module factory wires up behind a compile-time
+flag, the same way `velora make:module` wires the real one by constructor
+injection:
 
-- `Velora.auth.login()` accepts any credentials and seeds a fake user with configurable roles and permissions.
-- Your `MockRemoteDataSource` implementations return fixture data.
-- `VeloraMockApi.ok(data, delayMs: 120)` and `VeloraMockApi.error(message)` simulate responses with realistic latency.
+```dart
+const bool useMock = bool.fromEnvironment('USE_MOCK');
+
+class UsersModule {
+  const UsersModule._();
+
+  static UsersController controller() {
+    final dataSource = useMock ? MockUsersDataSource() : UsersRemoteDataSource();
+    final repository = UsersRepository(dataSource);
+    final service = UsersService(repository);
+    return UsersController(service);
+  }
+}
+```
+
+Run with `flutter run --dart-define=USE_MOCK=true` to build against fixture data
+with no backend running — no config field to flip, just a data source your app
+chooses. `VeloraMockApi.ok(data, delayMs: 120)` and `VeloraMockApi.fail(message: '...')`
+simulate success and error responses with realistic latency.
 
 ## Available facades
 

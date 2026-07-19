@@ -35,6 +35,63 @@ const veloraPackageCatalog = <String, VeloraPackageInstall>{
   ),
 };
 
+/// The location of the top-level `dependencies:` block within a
+/// `pubspec.yaml` [content] string, as found by [pubspecDependenciesBlock]:
+/// [start] is the index (into [content]) of the first character of the
+/// block body — right after the `dependencies:` line — and [body] is that
+/// block's own text (every line belonging to it, up to but not including the
+/// next top-level key, or the end of the file).
+class PubspecDependenciesBlock {
+  final int start;
+  final String body;
+  const PubspecDependenciesBlock(this.start, this.body);
+}
+
+/// Locates the top-level `dependencies:` block in a `pubspec.yaml` [content]
+/// string. Tolerates a trailing inline `#` comment on the `dependencies:`
+/// line itself (e.g. `dependencies: # runtime deps`) — valid YAML that a
+/// bare `^dependencies:\s*$` match would otherwise miss. Returns `null` if no
+/// such block exists.
+///
+/// Single source of truth for what counts as "the `dependencies:` block",
+/// shared by [addDependencyToPubspec] (which inserts into it) and
+/// [pubspecDeclaresDependency] (which only reads it), so `velora install`
+/// and `velora doctor` can never drift apart on the definition. Pure.
+PubspecDependenciesBlock? pubspecDependenciesBlock(String content) {
+  final depBlockPattern = RegExp(
+    r'^dependencies:[ \t]*(#.*)?$',
+    multiLine: true,
+  );
+  final match = depBlockPattern.firstMatch(content);
+  if (match == null) return null;
+
+  final blockStart = match.end;
+  final topLevelKeyPattern = RegExp(r'^[^\s#].*$', multiLine: true);
+  final nextTopLevelKeys = topLevelKeyPattern.allMatches(content, blockStart);
+  final blockEnd = nextTopLevelKeys.isEmpty
+      ? content.length
+      : nextTopLevelKeys.first.start;
+  return PubspecDependenciesBlock(
+    blockStart,
+    content.substring(blockStart, blockEnd),
+  );
+}
+
+/// Returns whether [name] is declared *under the top-level `dependencies:`
+/// block* of a `pubspec.yaml` [content] string (a `dev_dependencies:` or
+/// `dependency_overrides:` entry with the same name does not count). Used by
+/// `velora doctor` to decide whether a package is installed. Pure.
+bool pubspecDeclaresDependency(String content, String name) {
+  final block = pubspecDependenciesBlock(content);
+  if (block == null) return false;
+
+  final depPattern = RegExp(
+    '^\\s+${RegExp.escape(name)}\\s*:',
+    multiLine: true,
+  );
+  return depPattern.hasMatch(block.body);
+}
+
 /// Inserts `name: constraint` as the first entry under a top-level
 /// `dependencies:` block in a `pubspec.yaml` [content] string. If [name] is
 /// already declared as a dependency *within the `dependencies:` block*
@@ -43,20 +100,11 @@ const veloraPackageCatalog = <String, VeloraPackageInstall>{
 /// and will still get a fresh entry added under `dependencies:`. If there is
 /// no `dependencies:` block, one is appended. Pure and idempotent.
 String addDependencyToPubspec(String content, String name, String constraint) {
-  final depBlockPattern = RegExp(r'^dependencies:\s*$', multiLine: true);
-  final match = depBlockPattern.firstMatch(content);
-  if (match == null) {
+  final block = pubspecDependenciesBlock(content);
+  if (block == null) {
     final separator = content.endsWith('\n') ? '' : '\n';
     return '$content$separator\ndependencies:\n  $name: $constraint\n';
   }
-
-  final blockStart = match.end;
-  final topLevelKeyPattern = RegExp(r'^[^\s#].*$', multiLine: true);
-  final nextTopLevelKeys = topLevelKeyPattern.allMatches(content, blockStart);
-  final blockEnd = nextTopLevelKeys.isEmpty
-      ? content.length
-      : nextTopLevelKeys.first.start;
-  final blockBody = content.substring(blockStart, blockEnd);
 
   // YAML permits any consistent (non-zero) indentation for block-mapping
   // children, not just 2 spaces, so match on arbitrary leading whitespace
@@ -65,13 +113,92 @@ String addDependencyToPubspec(String content, String name, String constraint) {
     '^\\s+${RegExp.escape(name)}\\s*:',
     multiLine: true,
   );
-  if (existingDepPattern.hasMatch(blockBody)) return content;
+  if (existingDepPattern.hasMatch(block.body)) return content;
 
   return content.replaceRange(
-    blockStart,
-    blockStart,
+    block.start,
+    block.start,
     '\n  $name: $constraint',
   );
+}
+
+/// The bounds of a `Velora.boot(...)` call's argument list, as located
+/// inside a masked (comment/string-blanked) copy of some source text:
+/// [argsStart] is the index of the first character after the opening `(`,
+/// and [argsEnd] is the index of the matching closing `)`. Both offsets are
+/// valid into the *unmasked* source too, since [_maskNonCode] preserves
+/// length and position.
+class _BootCallBounds {
+  final int argsStart;
+  final int argsEnd;
+  const _BootCallBounds(this.argsStart, this.argsEnd);
+}
+
+/// Locates the first executable `Velora.boot(` call in [mask] — a string
+/// already run through [_maskNonCode], so a mention inside a comment or
+/// string literal can never match here. Tolerates optional whitespace
+/// between `boot` and the opening paren (e.g. `Velora.boot (`). Returns
+/// `null` if no such call exists in [mask].
+///
+/// Shared by [wirePluginIntoBoot], [mainCallsVeloraBoot], and
+/// [bootWiresPlugin] so all three agree on what counts as "the real boot
+/// call".
+_BootCallBounds? _findVeloraBootCall(String mask) {
+  final bootPattern = RegExp(r'Velora\.boot\s*\(');
+  final bootMatch = bootPattern.firstMatch(mask);
+  if (bootMatch == null) return null;
+
+  // Walk forward from the opening paren to find its matching close, so
+  // callers only look for arguments that belong to this call (and not to
+  // some unrelated list elsewhere in the file). Walk the mask so parens
+  // inside strings/comments can't miscount the depth.
+  var depth = 1;
+  var i = bootMatch.end;
+  while (i < mask.length && depth > 0) {
+    final char = mask[i];
+    if (char == '(') depth++;
+    if (char == ')') depth--;
+    i++;
+  }
+  final callEnd = i; // index just past the matching ')'
+  return _BootCallBounds(bootMatch.end, callEnd - 1);
+}
+
+/// Returns whether [mainContent] contains a real, executable
+/// `Velora.boot(...)` call — as opposed to `Velora.boot(` merely being
+/// mentioned inside a `//`/`/* */` comment or a string literal (see
+/// [_maskNonCode]). Tolerates optional whitespace before the opening paren
+/// (`Velora.boot (`). Pure.
+bool mainCallsVeloraBoot(String mainContent) {
+  return _findVeloraBootCall(_maskNonCode(mainContent)) != null;
+}
+
+/// Returns whether [pluginExpr] appears inside the `plugins: [...]` list
+/// argument of the real, executable `Velora.boot(...)` call in
+/// [mainContent] — not merely somewhere else in the file (a comment, a
+/// string literal, an unrelated list, or even a `plugins:` argument that
+/// isn't a plain inline list literal). Reuses the same masking and
+/// call-locating logic as [wirePluginIntoBoot] so `velora doctor` and
+/// `velora install` agree on what "wired into `Velora.boot()`" means. Pure.
+bool bootWiresPlugin(String mainContent, String pluginExpr) {
+  final mask = _maskNonCode(mainContent);
+  final call = _findVeloraBootCall(mask);
+  if (call == null) return false;
+
+  final maskedCallBody = mask.substring(call.argsStart, call.argsEnd);
+  final pluginsListPattern = RegExp(r'plugins\s*:\s*\[([^\]]*)\]');
+  final pluginsMatch = pluginsListPattern.firstMatch(maskedCallBody);
+  if (pluginsMatch == null) return false;
+
+  final callBody = mainContent.substring(call.argsStart, call.argsEnd);
+  final wholeMatchText = maskedCallBody.substring(
+    pluginsMatch.start,
+    pluginsMatch.end,
+  );
+  final listStart = pluginsMatch.start + wholeMatchText.indexOf('[') + 1;
+  final listEnd = pluginsMatch.end - 1;
+  final listContent = callBody.substring(listStart, listEnd);
+  return listContent.contains(pluginExpr);
 }
 
 /// Result of attempting to wire a plugin into `Velora.boot(...)`.
@@ -216,27 +343,13 @@ PluginWireResult wirePluginIntoBoot(
   // masked text is all spaces there.
   final mask = _maskNonCode(content);
 
-  final bootPattern = RegExp(r'Velora\.boot\(');
-  final bootMatch = bootPattern.firstMatch(mask);
-  if (bootMatch == null) {
+  final call = _findVeloraBootCall(mask);
+  if (call == null) {
     return PluginWireResult(content, false);
   }
 
-  // Walk forward from the opening paren to find its matching close, so we
-  // only look for a `plugins:` argument that belongs to this call (and not
-  // to some unrelated list elsewhere in the file). Walk the mask so parens
-  // inside strings/comments can't miscount the depth.
-  var depth = 1;
-  var i = bootMatch.end;
-  while (i < mask.length && depth > 0) {
-    final char = mask[i];
-    if (char == '(') depth++;
-    if (char == ')') depth--;
-    i++;
-  }
-  final callEnd = i; // index just past the matching ')'
-  final maskedCallBody = mask.substring(bootMatch.end, callEnd - 1);
-  final callBody = content.substring(bootMatch.end, callEnd - 1);
+  final maskedCallBody = mask.substring(call.argsStart, call.argsEnd);
+  final callBody = content.substring(call.argsStart, call.argsEnd);
 
   // Does a `plugins:` named argument exist at all (searched in code only)?
   final pluginsArgPattern = RegExp(r'(?:^|[({,\s])plugins\s*:');
@@ -275,7 +388,7 @@ PluginWireResult wirePluginIntoBoot(
       pluginsMatch.end,
       'plugins: [$newListContent]',
     );
-    content = content.replaceRange(bootMatch.end, callEnd - 1, newCallBody);
+    content = content.replaceRange(call.argsStart, call.argsEnd, newCallBody);
     return PluginWireResult(content, true);
   }
 
@@ -283,7 +396,7 @@ PluginWireResult wirePluginIntoBoot(
   final separator = trimmedBody.isEmpty
       ? ''
       : (trimmedBody.endsWith(',') ? ' ' : ', ');
-  final insertAt = callEnd - 1;
+  final insertAt = call.argsEnd;
   content = content.replaceRange(
     insertAt,
     insertAt,

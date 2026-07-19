@@ -41,7 +41,8 @@ Use these package names:
 
 velora
 velora_cli
-velora_starter
+
+The example app is not a package — it ships as examples/claude_clone.
 
 Optional future packages:
 
@@ -254,7 +255,7 @@ velora/
           utils/
 
   examples/
-    velora_starter/
+    claude_clone/
       pubspec.yaml
       lib/
         main.dart
@@ -1299,7 +1300,7 @@ Create packages/velora.
 
 Create packages/velora_cli.
 
-Create examples/velora_starter.
+Create examples/claude_clone (shipped as the reference example app).
 
 Phase 2 — Runtime Core
 
