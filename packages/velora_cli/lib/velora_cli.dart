@@ -37,16 +37,12 @@ const veloraPackageCatalog = <String, VeloraPackageInstall>{
 
 /// Inserts `name: constraint` as the first entry under a top-level
 /// `dependencies:` block in a `pubspec.yaml` [content] string. If [name] is
-/// already declared as a dependency (any constraint), returns [content]
-/// unchanged. If there is no `dependencies:` block, one is appended. Pure
-/// and idempotent.
+/// already declared as a dependency *within the `dependencies:` block*
+/// (any constraint), returns [content] unchanged — an entry with the same
+/// name under `dev_dependencies:` or `dependency_overrides:` does not count
+/// and will still get a fresh entry added under `dependencies:`. If there is
+/// no `dependencies:` block, one is appended. Pure and idempotent.
 String addDependencyToPubspec(String content, String name, String constraint) {
-  final existingDepPattern = RegExp(
-    '^  $name\\s*:',
-    multiLine: true,
-  );
-  if (existingDepPattern.hasMatch(content)) return content;
-
   final depBlockPattern = RegExp(r'^dependencies:\s*$', multiLine: true);
   final match = depBlockPattern.firstMatch(content);
   if (match == null) {
@@ -54,10 +50,23 @@ String addDependencyToPubspec(String content, String name, String constraint) {
     return '$content$separator\ndependencies:\n  $name: $constraint\n';
   }
 
-  final insertAt = match.end;
+  final blockStart = match.end;
+  final topLevelKeyPattern = RegExp(r'^[^\s#].*$', multiLine: true);
+  final nextTopLevelKeys = topLevelKeyPattern.allMatches(content, blockStart);
+  final blockEnd = nextTopLevelKeys.isEmpty
+      ? content.length
+      : nextTopLevelKeys.first.start;
+  final blockBody = content.substring(blockStart, blockEnd);
+
+  final existingDepPattern = RegExp(
+    '^  $name\\s*:',
+    multiLine: true,
+  );
+  if (existingDepPattern.hasMatch(blockBody)) return content;
+
   return content.replaceRange(
-    insertAt,
-    insertAt,
+    blockStart,
+    blockStart,
     '\n  $name: $constraint',
   );
 }
@@ -85,8 +94,21 @@ PluginWireResult wirePluginIntoBoot(
   }
 
   var content = mainContent;
-  if (!content.contains(importLine)) {
-    final importPattern = RegExp(r"^import\s+'[^']*';.*$", multiLine: true);
+  final importUriMatch = RegExp(
+    r'package:[a-zA-Z0-9_]+/[a-zA-Z0-9_.]+\.dart',
+  ).firstMatch(importLine);
+  final importUri = importUriMatch?.group(0);
+  final importAlreadyPresent =
+      content.contains(importLine) ||
+      (importUri != null &&
+          RegExp(
+            "import\\s+['\"]${RegExp.escape(importUri)}['\"]",
+          ).hasMatch(content));
+  if (!importAlreadyPresent) {
+    final importPattern = RegExp(
+      r"""^import\s+['"][^'"]*['"];.*$""",
+      multiLine: true,
+    );
     final imports = importPattern.allMatches(content).toList();
     if (imports.isEmpty) {
       content = '$importLine\n$content';
@@ -137,11 +159,15 @@ PluginWireResult wirePluginIntoBoot(
     return PluginWireResult(content, true);
   }
 
-  final insertAt = bootMatch.end;
+  final trimmedBody = callBody.trim();
+  final separator = trimmedBody.isEmpty
+      ? ''
+      : (trimmedBody.endsWith(',') ? ' ' : ', ');
+  final insertAt = callEnd - 1;
   content = content.replaceRange(
     insertAt,
     insertAt,
-    '\n    plugins: [$pluginExpr],\n   ',
+    '${separator}plugins: [$pluginExpr]',
   );
   return PluginWireResult(content, true);
 }

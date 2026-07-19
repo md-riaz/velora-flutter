@@ -404,21 +404,34 @@ void _install(List<String> args) {
   }
 
   if (!noPubGet) {
-    final flutterResult = Process.runSync('flutter', <String>[
-      'pub',
-      'get',
-    ], workingDirectory: Directory.current.path);
-    if (flutterResult.exitCode != 0) {
-      final dartResult = Process.runSync('dart', <String>[
-        'pub',
-        'get',
-      ], workingDirectory: Directory.current.path);
-      if (dartResult.exitCode != 0) {
-        stdout.writeln(
-          'Warning: could not run `flutter pub get` or `dart pub get` '
-          'automatically. Run one of them manually to fetch ${package.name}.',
+    var success = false;
+    try {
+      final flutterResult = Process.runSync(
+        'flutter',
+        <String>['pub', 'get'],
+        workingDirectory: Directory.current.path,
+      );
+      success = flutterResult.exitCode == 0;
+    } catch (_) {
+      // flutter not on PATH — fall through to dart.
+    }
+    if (!success) {
+      try {
+        final dartResult = Process.runSync(
+          'dart',
+          <String>['pub', 'get'],
+          workingDirectory: Directory.current.path,
         );
+        success = dartResult.exitCode == 0;
+      } catch (_) {
+        // dart not on PATH either.
       }
+    }
+    if (!success) {
+      stdout.writeln(
+        'Warning: could not run `flutter pub get` or `dart pub get` '
+        'automatically. Run one of them manually to fetch ${package.name}.',
+      );
     }
   }
 

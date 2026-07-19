@@ -114,6 +114,36 @@ dependencies:
       );
       expect(updated, contains('dependencies:\n  velora_offline: ^0.0.1'));
     });
+
+    test(
+      'still adds to dependencies: when the name only exists under '
+      'dev_dependencies:',
+      () {
+        const pubspec = '''name: demo
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  velora_offline: ^0.0.1
+  flutter_test:
+    sdk: flutter
+''';
+        final updated = addDependencyToPubspec(
+          pubspec,
+          'velora_offline',
+          '^0.0.1',
+        );
+        // Added to dependencies: (not skipped just because it's present
+        // under dev_dependencies:), so it now appears twice.
+        expect('velora_offline:'.allMatches(updated).length, 2);
+        final depsIndex = updated.indexOf('dependencies:');
+        final devDepsIndex = updated.indexOf('dev_dependencies:');
+        final firstVeloraIndex = updated.indexOf('velora_offline:');
+        expect(firstVeloraIndex, greaterThan(depsIndex));
+        expect(firstVeloraIndex, lessThan(devDepsIndex));
+      },
+    );
   });
 
   group('wirePluginIntoBoot', () {
@@ -135,9 +165,59 @@ Future<void> main() async {
       );
       expect(result.wired, isTrue);
       expect(result.content, contains(importLine));
-      expect(result.content, contains('plugins: [VeloraOfflinePlugin()],'));
+      expect(
+        result.content,
+        contains('Velora.boot(config: config, plugins: [VeloraOfflinePlugin()])'),
+      );
       expect(result.content, contains('config: config'));
+      expect(result.content, isNot(contains('  plugins:')));
     });
+
+    test(
+      'appends plugins arg with no leading separator for an empty boot() call',
+      () {
+        const main = '''import 'package:velora/velora.dart';
+
+Future<void> main() async {
+  await Velora.boot();
+}
+''';
+        final result = wirePluginIntoBoot(
+          main,
+          importLine: importLine,
+          pluginExpr: pluginExpr,
+        );
+        expect(result.wired, isTrue);
+        expect(
+          result.content,
+          contains('Velora.boot(plugins: [VeloraOfflinePlugin()])'),
+        );
+      },
+    );
+
+    test(
+      'does not duplicate the import when it already exists with double '
+      'quotes',
+      () {
+        const main = '''import "package:velora/velora.dart";
+import "package:velora_offline/velora_offline.dart";
+
+Future<void> main() async {
+  await Velora.boot(config: config);
+}
+''';
+        final result = wirePluginIntoBoot(
+          main,
+          importLine: importLine,
+          pluginExpr: pluginExpr,
+        );
+        expect(result.wired, isTrue);
+        expect(
+          'package:velora_offline/velora_offline.dart'.allMatches(result.content).length,
+          1,
+        );
+      },
+    );
 
     test('appends into an existing plugins list', () {
       const main = '''import 'package:velora/velora.dart';
