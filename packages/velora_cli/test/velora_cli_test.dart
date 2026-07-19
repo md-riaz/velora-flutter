@@ -57,4 +57,201 @@ void main() {
     expect(File('${app.path}/docs/reminders/web.md').existsSync(), isTrue);
     expect(File('${app.path}/docs/reminders/laravel.md').existsSync(), isTrue);
   });
+
+  group('addDependencyToPubspec', () {
+    test('inserts the dependency as the first entry under dependencies:', () {
+      const pubspec = '''name: demo
+dependencies:
+  flutter:
+    sdk: flutter
+''';
+      final updated = addDependencyToPubspec(
+        pubspec,
+        'velora_offline',
+        '^0.0.1',
+      );
+      expect(updated, contains('dependencies:\n  velora_offline: ^0.0.1\n'));
+      final depsIndex = updated.indexOf('dependencies:');
+      final veloraIndex = updated.indexOf('velora_offline:');
+      final flutterIndex = updated.indexOf('flutter:');
+      expect(veloraIndex, greaterThan(depsIndex));
+      expect(veloraIndex, lessThan(flutterIndex));
+    });
+
+    test('is idempotent when run twice', () {
+      const pubspec = '''name: demo
+dependencies:
+  flutter:
+    sdk: flutter
+''';
+      final once = addDependencyToPubspec(pubspec, 'velora_offline', '^0.0.1');
+      final twice = addDependencyToPubspec(once, 'velora_offline', '^0.0.1');
+      expect(twice, once);
+      expect('velora_offline:'.allMatches(twice).length, 1);
+    });
+
+    test('leaves an existing dependency unchanged', () {
+      const pubspec = '''name: demo
+dependencies:
+  velora_offline: ^9.9.9
+  flutter:
+    sdk: flutter
+''';
+      final updated = addDependencyToPubspec(
+        pubspec,
+        'velora_offline',
+        '^0.0.1',
+      );
+      expect(updated, pubspec);
+    });
+
+    test('appends a dependencies block when none exists', () {
+      const pubspec = 'name: demo\n';
+      final updated = addDependencyToPubspec(
+        pubspec,
+        'velora_offline',
+        '^0.0.1',
+      );
+      expect(updated, contains('dependencies:\n  velora_offline: ^0.0.1'));
+    });
+  });
+
+  group('wirePluginIntoBoot', () {
+    const importLine = "import 'package:velora_offline/velora_offline.dart';";
+    const pluginExpr = 'VeloraOfflinePlugin()';
+
+    test('adds import and a plugins arg when boot() has none', () {
+      const main = '''import 'package:flutter/material.dart';
+import 'package:velora/velora.dart';
+
+Future<void> main() async {
+  await Velora.boot(config: config);
+}
+''';
+      final result = wirePluginIntoBoot(
+        main,
+        importLine: importLine,
+        pluginExpr: pluginExpr,
+      );
+      expect(result.wired, isTrue);
+      expect(result.content, contains(importLine));
+      expect(result.content, contains('plugins: [VeloraOfflinePlugin()],'));
+      expect(result.content, contains('config: config'));
+    });
+
+    test('appends into an existing plugins list', () {
+      const main = '''import 'package:velora/velora.dart';
+
+Future<void> main() async {
+  await Velora.boot(
+    config: config,
+    plugins: [VeloraFcm()],
+  );
+}
+''';
+      final result = wirePluginIntoBoot(
+        main,
+        importLine: importLine,
+        pluginExpr: pluginExpr,
+      );
+      expect(result.wired, isTrue);
+      expect(
+        result.content,
+        contains('plugins: [VeloraOfflinePlugin(), VeloraFcm()]'),
+      );
+    });
+
+    test('is idempotent when run twice', () {
+      const main = '''import 'package:velora/velora.dart';
+
+Future<void> main() async {
+  await Velora.boot(config: config);
+}
+''';
+      final once = wirePluginIntoBoot(
+        main,
+        importLine: importLine,
+        pluginExpr: pluginExpr,
+      );
+      final twice = wirePluginIntoBoot(
+        once.content,
+        importLine: importLine,
+        pluginExpr: pluginExpr,
+      );
+      expect(twice.content, once.content);
+      expect(pluginExpr.allMatches(twice.content).length, 1);
+      expect(importLine.allMatches(twice.content).length, 1);
+    });
+
+    test('returns wired: false when there is no Velora.boot(', () {
+      const main = '''void main() {
+  print('no velora here');
+}
+''';
+      final result = wirePluginIntoBoot(
+        main,
+        importLine: importLine,
+        pluginExpr: pluginExpr,
+      );
+      expect(result.wired, isFalse);
+    });
+  });
+
+  test('catalog contains velora_offline', () {
+    expect(veloraPackageCatalog.containsKey('velora_offline'), isTrue);
+    final package = veloraPackageCatalog['velora_offline']!;
+    expect(package.name, 'velora_offline');
+    expect(package.pluginExpr, 'VeloraOfflinePlugin()');
+  });
+
+  test('install command wires a package into a generated app', () async {
+    final temp = Directory.systemTemp.createTempSync('velora_cli_install_');
+    addTearDown(() {
+      if (temp.existsSync()) temp.deleteSync(recursive: true);
+    });
+
+    final packageRoot = Directory.current.path;
+    Future<ProcessResult> runCli(List<String> args) {
+      return Process.run(Platform.resolvedExecutable, <String>[
+        '$packageRoot/bin/velora_cli.dart',
+        ...args,
+      ], workingDirectory: Directory.current.path);
+    }
+
+    final app = Directory('${temp.path}/app')..createSync();
+    File('${app.path}/pubspec.yaml').writeAsStringSync('''name: demo
+dependencies:
+  flutter:
+    sdk: flutter
+''');
+    Directory('${app.path}/lib').createSync();
+    File('${app.path}/lib/main.dart').writeAsStringSync('''
+Future<void> main() async {
+  await Velora.boot(config: config);
+}
+''');
+
+    final original = Directory.current;
+    try {
+      Directory.current = app;
+      final install = await runCli(<String>[
+        'install',
+        'velora_offline',
+        '--no-pub-get',
+      ]);
+      expect(install.exitCode, 0, reason: install.stderr.toString());
+    } finally {
+      Directory.current = original;
+    }
+
+    final pubspecContent = File('${app.path}/pubspec.yaml').readAsStringSync();
+    expect(pubspecContent, contains('velora_offline:'));
+
+    final mainContent = File('${app.path}/lib/main.dart').readAsStringSync();
+    expect(mainContent, contains('VeloraOfflinePlugin()'));
+    expect(
+      mainContent,
+      contains("import 'package:velora_offline/velora_offline.dart';"),
+    );
+  });
 }

@@ -66,6 +66,14 @@ dart run velora_cli doctor
 
 Reports configuration issues, missing platform files, and misconfigured dependencies before they cause runtime errors.
 
+## Install a plugin package
+
+```sh
+dart run velora_cli install velora_offline
+```
+
+Adds the package to `pubspec.yaml`, wires its plugin into `Velora.boot(plugins: [...])` in `lib/main.dart`, and runs `pub get` — the Laravel-style "install and it's wired for you" step. Pass `--no-wire` to skip editing `main.dart` or `--no-pub-get` to skip fetching dependencies.
+
 ## All CLI commands
 
 | Command | What it does |
@@ -76,6 +84,7 @@ Reports configuration issues, missing platform files, and misconfigured dependen
 | `velora_cli make:notifications` | Generate notification center module |
 | `velora_cli install:push --fcm` | Add FCM push setup files |
 | `velora_cli install:push --local` | Add local notifications setup files |
+| `velora_cli install <package>` | Install a Velora plugin package: add the dependency, wire it into `Velora.boot()`, and run `pub get` |
 | `velora_cli doctor` | Diagnose configuration problems |
 
 See [CLI Commands →](commands.md) for the full reference including package-level `flutter analyze` and `flutter test` commands.
