@@ -25,9 +25,24 @@ import '../ui/velora_loader.dart';
 import '../ui/velora_toast.dart';
 import '../validation/velora_validator.dart';
 import 'velora_lifecycle.dart';
+import 'velora_plugin.dart';
 
 class Velora {
   static late VeloraConfig config;
+
+  static final List<VeloraPlugin> _plugins = [];
+
+  /// Plugins registered during the last [boot] call, in registration order.
+  static List<VeloraPlugin> get plugins => List.unmodifiable(_plugins);
+
+  /// Look up a registered plugin by its concrete type, e.g.
+  /// `Velora.plugin<OfflinePlugin>()`. Returns null if not registered.
+  static T? plugin<T extends VeloraPlugin>() {
+    for (final p in _plugins) {
+      if (p is T) return p;
+    }
+    return null;
+  }
 
   static VeloraApiService get api => Get.find<VeloraApiService>();
   static AuthService get auth => Get.find<AuthService>();
@@ -96,7 +111,13 @@ class Velora {
     /// navigation instead of the notification service. When omitted, the
     /// service falls back to the routes in [VeloraNotificationConfig].
     NotificationTapHandler? onNotificationTap,
+
+    /// Official/third-party extensions to self-wire after core services are
+    /// registered. Each plugin can add its own services, HTTP interceptors,
+    /// and logout lifecycle hooks via the [VeloraContext] it receives.
+    List<VeloraPlugin> plugins = const [],
   }) async {
+    _plugins.clear();
     Velora.config = config;
 
     // Also register VeloraConfig in GetX so guards can find it.
@@ -218,6 +239,15 @@ class Velora {
     Get.put<VeloraDialog>(VeloraDialog(), permanent: true);
     Get.put<VeloraLoader>(VeloraLoader(), permanent: true);
     Get.put<VeloraMediaService>(VeloraMediaService(), permanent: true);
+
+    final ctx = VeloraContext(config);
+    for (final p in plugins) {
+      if (_plugins.any((existing) => existing.name == p.name)) {
+        throw ArgumentError('Plugin with name "${p.name}" is already registered.');
+      }
+      await p.register(ctx);
+      _plugins.add(p);
+    }
   }
 }
 

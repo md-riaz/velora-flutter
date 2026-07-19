@@ -595,6 +595,84 @@ void main() {
     expect(storage.get<String>('velora.auth.token'), isNull);
   });
 
+  test(
+    'boot registers plugins and exposes them for introspection',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final plugin = _FakePlugin();
+      await Velora.boot(
+        config: const VeloraConfig(
+          appName: 'Test',
+          apiBaseUrl: 'https://example.test',
+          notifications: VeloraNotificationConfig(
+            enabled: false,
+            provider: PushProvider.none,
+          ),
+        ),
+        plugins: [plugin],
+      );
+
+      expect(Velora.plugin<_FakePlugin>(), same(plugin));
+      expect(Velora.plugins, [plugin]);
+      expect(Get.isRegistered<_FakeService>(), isTrue);
+      expect(plugin.registered, isTrue);
+
+      await Velora.logout();
+
+      expect(plugin.loggedOut, isTrue);
+    },
+  );
+
+  test(
+    'boot rejects a second plugin registered under the same name',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+
+      await expectLater(
+        Velora.boot(
+          config: const VeloraConfig(
+            appName: 'Test',
+            apiBaseUrl: 'https://example.test',
+            notifications: VeloraNotificationConfig(
+              enabled: false,
+              provider: PushProvider.none,
+            ),
+          ),
+          plugins: [_FakePlugin(), _FakePlugin()],
+        ),
+        throwsArgumentError,
+      );
+    },
+  );
+
+  test(
+    'boot supports lazy registration via VeloraContext.lazyPut',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final plugin = _LazyFakePlugin();
+
+      await Velora.boot(
+        config: const VeloraConfig(
+          appName: 'Test',
+          apiBaseUrl: 'https://example.test',
+          notifications: VeloraNotificationConfig(
+            enabled: false,
+            provider: PushProvider.none,
+          ),
+        ),
+        plugins: [plugin],
+      );
+
+      expect(Get.isRegistered<_LazyFakeService>(), isTrue);
+      expect(plugin.built, isFalse);
+
+      final instance = Get.find<_LazyFakeService>();
+
+      expect(plugin.built, isTrue);
+      expect(instance, isA<_LazyFakeService>());
+    },
+  );
+
   test('storage insecure fallback persists token to prefs when opted in', () async {
     SharedPreferences.setMockInitialValues({});
     final storage = await VeloraStorageService(
@@ -652,6 +730,42 @@ class _ThrowingSecureStorage extends FlutterSecureStorage {
     WindowsOptions? wOptions,
   }) async =>
       _boom();
+}
+
+class _FakeService {}
+
+class _FakePlugin extends VeloraPlugin {
+  bool registered = false;
+  bool loggedOut = false;
+
+  @override
+  String get name => 'fake_plugin';
+
+  @override
+  Future<void> register(VeloraContext context) async {
+    context.put<_FakeService>(_FakeService());
+    context.onBeforeLogout(() async {
+      loggedOut = true;
+    });
+    registered = true;
+  }
+}
+
+class _LazyFakeService {}
+
+class _LazyFakePlugin extends VeloraPlugin {
+  bool built = false;
+
+  @override
+  String get name => 'lazy_fake_plugin';
+
+  @override
+  Future<void> register(VeloraContext context) async {
+    context.lazyPut<_LazyFakeService>(() {
+      built = true;
+      return _LazyFakeService();
+    });
+  }
 }
 
 Future<AuthService> _authService() async {
