@@ -1,6 +1,5 @@
 import 'package:get/get.dart';
 
-import '../core/velora_facade.dart';
 import '../core/velora_lifecycle.dart';
 
 class VeloraFeature {
@@ -37,6 +36,9 @@ class FeatureService extends GetxService with VeloraLogoutAwareDefaults {
   final Map<String, VeloraFeature> _registered = {};
   final RxSet<String> _enabled = <String>{}.obs;
   final List<Future<void> Function()> _userScopeDisposers = [];
+  final bool Function(String permission) permissionCheck;
+
+  FeatureService({required this.permissionCheck});
 
   void register(VeloraFeature feature) {
     _registered[feature.id] = feature;
@@ -66,7 +68,7 @@ class FeatureService extends GetxService with VeloraLogoutAwareDefaults {
     final feature = _registered[featureId];
     if (feature == null || !enabled(featureId)) return false;
     final permission = feature.permission;
-    return permission == null || Velora.permission.can(permission);
+    return permission == null || permissionCheck(permission);
   }
 
   List<VeloraMenuItem> get menuItems {
@@ -74,9 +76,7 @@ class FeatureService extends GetxService with VeloraLogoutAwareDefaults {
         .where((feature) => canAccess(feature.id))
         .expand((feature) => feature.menuItems)
         .where(
-          (item) =>
-              item.permission == null ||
-              Velora.permission.can(item.permission!),
+          (item) => item.permission == null || permissionCheck(item.permission!),
         )
         .toList(growable: false);
   }
@@ -97,7 +97,7 @@ class FeatureService extends GetxService with VeloraLogoutAwareDefaults {
   }
 
   @override
-  Future<void> onLogoutDispose() async {}
+  Future<void> onLogoutDispose() => flushUserScope();
 
   Future<void> _dispose(Iterable<Future<void> Function()> disposers) async {
     for (final disposer in disposers) {

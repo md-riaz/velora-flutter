@@ -160,7 +160,9 @@ void main() {
       );
       Get.put<PermissionService>(PermissionService(auth: auth));
 
-      final service = FeatureService();
+      final service = FeatureService(
+        permissionCheck: Get.find<PermissionService>().can,
+      );
       service.registerAll([
         const VeloraFeature(
           id: 'reports',
@@ -230,6 +232,34 @@ void main() {
     },
   );
 
+  test(
+    'feature service accepts an injected permission resolver without a registered PermissionService',
+    () {
+      final service = FeatureService(
+        permissionCheck: (permission) => permission == 'reports.view',
+      );
+      service.register(
+        const VeloraFeature(
+          id: 'reports',
+          name: 'Reports',
+          permission: 'reports.view',
+        ),
+      );
+      service.register(
+        const VeloraFeature(
+          id: 'billing',
+          name: 'Billing',
+          permission: 'billing.view',
+        ),
+      );
+      service.enable('reports');
+      service.enable('billing');
+
+      expect(service.canAccess('reports'), isTrue);
+      expect(service.canAccess('billing'), isFalse);
+    },
+  );
+
   test('theme service tracks mode changes', () {
     final service = ThemeService();
 
@@ -296,22 +326,21 @@ void main() {
         token: 'push-token',
       );
       final localAdapter = InMemoryLocalNotificationAdapter();
+      final auth = await _authService();
+      final permission = PermissionService(auth: auth);
+      final feature = FeatureService(permissionCheck: permission.can);
+      const notificationConfig = VeloraNotificationConfig(
+        provider: PushProvider.none,
+      );
       final service = NotificationService(
         repository: repository,
         pushAdapter: pushAdapter,
         localAdapter: localAdapter,
-      );
-
-      Get.put<AuthService>(await _authService());
-      Get.put<PermissionService>(
-        PermissionService(auth: Get.find<AuthService>()),
-      );
-      Get.put<FeatureService>(FeatureService());
-      Get.put<VeloraNav>(VeloraNav());
-      Velora.config = const VeloraConfig(
-        appName: 'Test',
-        apiBaseUrl: 'https://example.test',
-        notifications: VeloraNotificationConfig(provider: PushProvider.none),
+        auth: auth,
+        feature: feature,
+        permission: permission,
+        nav: VeloraNav(),
+        config: notificationConfig,
       );
 
       await service.initForUser();
@@ -372,36 +401,80 @@ void main() {
       });
       final storage = await _storage();
       final repository = InMemoryNotificationRepository();
-      final notify = NotificationService(
+      // Declared before `auth` so the login hook below can close over it —
+      // it is only invoked once login() runs, by which point `notify` has
+      // already been assigned below, making this deterministic.
+      late final NotificationService notify;
+      final auth = await AuthService(
+        api: api,
+        storage: storage,
+        config: const VeloraAuthConfig(),
+        onLoginSuccess: (user) async {
+          await notify.initForUser();
+        },
+      ).init();
+      final permission = PermissionService(auth: auth);
+      final feature = FeatureService(permissionCheck: permission.can);
+      const notificationConfig = VeloraNotificationConfig(
+        provider: PushProvider.none,
+        requestPermissionAfterLogin: true,
+      );
+      final nav = VeloraNav();
+      notify = NotificationService(
         repository: repository,
         pushAdapter: NoopPushAdapter(
           permissionGranted: true,
           token: 'push-token',
         ),
         localAdapter: InMemoryLocalNotificationAdapter(),
+        auth: auth,
+        feature: feature,
+        permission: permission,
+        nav: nav,
+        config: notificationConfig,
       );
-      final auth = await AuthService(
-        api: api,
-        storage: storage,
-        config: const VeloraAuthConfig(),
-        notificationConfig: const VeloraNotificationConfig(
-          provider: PushProvider.none,
+      final lifecycle = VeloraLifecycleRegistry();
+      final coordinator = LogoutCoordinator(
+        lifecycle: lifecycle,
+        auth: auth,
+        nav: nav,
+        logoutRedirectRoute: '/login',
+      );
+      auth.attachLogoutCoordinator(coordinator);
+
+      Get.put<AuthService>(auth);
+      Get.put<NotificationService>(notify);
+      Get.put<VeloraApiService>(api);
+      Get.put<VeloraLifecycleRegistry>(lifecycle);
+      Get.put<LogoutCoordinator>(coordinator);
+
+      // Mirrors boot(): dispose notifications for the logged-out user via
+      // the Phase-1 logout-hook lifecycle, not AuthService itself.
+      lifecycle.register(
+        VeloraLogoutHook(
+          onBeforeLogout: () async {
+            if (!Get.isRegistered<NotificationService>()) return;
+            await Get.find<NotificationService>().disposeForUser();
+          },
         ),
-      ).init();
-      auth.attachNotifications(notify);
+      );
+
       Velora.config = const VeloraConfig(
         appName: 'Test',
         apiBaseUrl: 'https://example.test',
-        notifications: VeloraNotificationConfig(provider: PushProvider.none),
+        notifications: notificationConfig,
       );
 
-      await auth.login({'email': 'admin@example.test', 'password': 'secret'});
+      await Velora.login({
+        'email': 'admin@example.test',
+        'password': 'secret',
+      });
 
       expect(auth.check, isTrue);
       expect(notify.initialized.value, isTrue);
       expect(repository.registeredTokens.single['token'], 'push-token');
 
-      await auth.logout();
+      await Velora.logout();
 
       expect(auth.check, isFalse);
       expect(notify.initialized.value, isFalse);
@@ -425,13 +498,17 @@ void main() {
         'email': 'admin@example.test',
       });
       final lifecycle = VeloraLifecycleRegistry();
-      final coordinator = LogoutCoordinator(lifecycle: lifecycle);
       final auth = await AuthService(
         api: api,
         storage: storage,
         config: const VeloraAuthConfig(),
-        notificationConfig: const VeloraNotificationConfig(enabled: false),
       ).init();
+      final coordinator = LogoutCoordinator(
+        lifecycle: lifecycle,
+        auth: auth,
+        nav: VeloraNav(),
+        logoutRedirectRoute: '/login',
+      );
       auth.attachLogoutCoordinator(coordinator);
 
       Get.put<AuthService>(auth);

@@ -17,6 +17,36 @@ mixin VeloraLogoutAwareDefaults implements VeloraLogoutAware {
   Future<void> onLogoutDispose() async {}
 }
 
+/// A [VeloraLogoutAware] participant built from optional closures, so
+/// call-site logic can hook into the logout lifecycle without needing a
+/// dedicated service class.
+class VeloraLogoutHook implements VeloraLogoutAware {
+  final Future<void> Function()? onBeforeLogout;
+  final Future<void> Function()? onAfterLogoutNavigation;
+  final Future<void> Function()? onLogoutDisposeHook;
+
+  const VeloraLogoutHook({
+    this.onBeforeLogout,
+    this.onAfterLogoutNavigation,
+    this.onLogoutDisposeHook,
+  });
+
+  @override
+  Future<void> beforeLogout() async {
+    await onBeforeLogout?.call();
+  }
+
+  @override
+  Future<void> afterLogoutNavigation() async {
+    await onAfterLogoutNavigation?.call();
+  }
+
+  @override
+  Future<void> onLogoutDispose() async {
+    await onLogoutDisposeHook?.call();
+  }
+}
+
 class VeloraLifecycleRegistry extends GetxService {
   final List<VeloraLogoutAware> _logoutAware = [];
 

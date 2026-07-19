@@ -3,9 +3,13 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
-import '../core/velora_facade.dart';
+import '../auth/auth_service.dart';
+import '../features/feature_service.dart';
+import '../permissions/permission_service.dart';
+import '../routing/velora_nav.dart';
 import 'adapters/local_notification_adapter.dart';
 import 'adapters/push_adapter.dart';
+import 'notification_config.dart';
 import 'notification_event.dart';
 import 'notification_payload.dart';
 import 'notification_repository.dart';
@@ -21,6 +25,11 @@ class NotificationService {
   final NotificationRepository repository;
   final PushAdapter pushAdapter;
   final LocalNotificationAdapter localAdapter;
+  final AuthService auth;
+  final FeatureService feature;
+  final PermissionService permission;
+  final VeloraNav nav;
+  final VeloraNotificationConfig config;
 
   /// Optional presentation-layer navigation handler. When provided, the service
   /// delegates all tap routing to it instead of navigating itself — keeping
@@ -32,6 +41,11 @@ class NotificationService {
     required this.repository,
     required this.pushAdapter,
     required this.localAdapter,
+    required this.auth,
+    required this.feature,
+    required this.permission,
+    required this.nav,
+    required this.config,
     this.onNotificationTap,
   });
 
@@ -46,7 +60,7 @@ class NotificationService {
   StreamSubscription<PushMessage>? _openedSubscription;
 
   Future<void> initForUser() async {
-    if (!Velora.config.notifications.enabled || initialized.value) return;
+    if (!config.enabled || initialized.value) return;
 
     await localAdapter.init();
     await pushAdapter.init();
@@ -64,7 +78,7 @@ class NotificationService {
   }
 
   Future<bool> requestPermission() async {
-    if (!Velora.config.notifications.enabled) {
+    if (!config.enabled) {
       permissionGranted.value = false;
       return false;
     }
@@ -74,31 +88,43 @@ class NotificationService {
   }
 
   Future<void> registerDeviceToken() async {
-    if (!Velora.config.notifications.enabled) return;
+    if (!config.enabled) return;
 
     final token = await pushAdapter.getToken();
     if (token == null || token.isEmpty) return;
 
     pushToken.value = token;
-    await repository.registerDeviceToken(
-      token: token,
-      provider: pushAdapter.provider,
-      platform: VeloraPlatform.current,
-    );
+    try {
+      await repository.registerDeviceToken(
+        token: token,
+        provider: pushAdapter.provider,
+        platform: VeloraPlatform.current,
+      );
+    } catch (_) {
+      // best-effort; local state still updates
+    }
   }
 
   Future<void> fetch() async {
-    if (!Velora.config.notifications.enabled) return;
+    if (!config.enabled) return;
 
-    final result = await repository.index();
-    notifications.assignAll(result);
+    try {
+      final result = await repository.index();
+      notifications.assignAll(result);
+    } catch (_) {
+      // best-effort; local state still updates
+    }
     _recalculateUnread();
   }
 
   Future<void> markAsRead(String id) async {
-    if (!Velora.config.notifications.enabled) return;
+    if (!config.enabled) return;
 
-    await repository.markAsRead(id);
+    try {
+      await repository.markAsRead(id);
+    } catch (_) {
+      // best-effort; local state still updates
+    }
 
     final index = notifications.indexWhere((item) => item.id == id);
     if (index != -1) {
@@ -111,9 +137,13 @@ class NotificationService {
   }
 
   Future<void> markAllAsRead() async {
-    if (!Velora.config.notifications.enabled) return;
+    if (!config.enabled) return;
 
-    await repository.markAllAsRead();
+    try {
+      await repository.markAllAsRead();
+    } catch (_) {
+      // best-effort; local state still updates
+    }
     final now = DateTime.now();
     notifications.assignAll(
       notifications
@@ -128,7 +158,7 @@ class NotificationService {
     required String body,
     Map<String, dynamic> payload = const {},
   }) async {
-    if (!Velora.config.notifications.enabled) return;
+    if (!config.enabled) return;
 
     await localAdapter.show(title: title, body: body, payload: payload);
     lastEvent.value = NotificationEvent(
@@ -144,7 +174,7 @@ class NotificationService {
     required DateTime dateTime,
     Map<String, dynamic> payload = const {},
   }) async {
-    if (!Velora.config.notifications.enabled) return;
+    if (!config.enabled) return;
 
     await localAdapter.schedule(
       id: id,
@@ -168,19 +198,19 @@ class NotificationService {
   }
 
   bool canHandleNotification(VeloraNotification notification) {
-    if (!Velora.auth.check) return false;
+    if (!auth.check) return false;
 
-    final feature = notification.feature;
-    if (feature != null &&
-        feature.isNotEmpty &&
-        !Velora.feature.enabled(feature)) {
+    final requiredFeature = notification.feature;
+    if (requiredFeature != null &&
+        requiredFeature.isNotEmpty &&
+        !feature.enabled(requiredFeature)) {
       return false;
     }
 
-    final permission = notification.permission;
-    if (permission != null &&
-        permission.isNotEmpty &&
-        !Velora.permission.can(permission)) {
+    final requiredPermission = notification.permission;
+    if (requiredPermission != null &&
+        requiredPermission.isNotEmpty &&
+        !permission.can(requiredPermission)) {
       return false;
     }
 
@@ -196,7 +226,7 @@ class NotificationService {
     // Delegate navigation to the app when a handler is wired.
     final handler = onNotificationTap;
     if (handler != null) {
-      if (Velora.auth.check && canHandleNotification(notification)) {
+      if (auth.check && canHandleNotification(notification)) {
         await markAsRead(notification.id);
       }
       await handler(notification);
@@ -204,14 +234,14 @@ class NotificationService {
     }
 
     // Built-in fallback routing, using configurable routes (not hardcoded).
-    final routes = Velora.config.notifications;
-    if (!Velora.auth.check) {
-      Velora.nav.to(routes.unauthenticatedRoute);
+    final routes = config;
+    if (!auth.check) {
+      nav.to(routes.unauthenticatedRoute);
       return;
     }
 
     if (!canHandleNotification(notification)) {
-      Velora.nav.to(routes.forbiddenRoute);
+      nav.to(routes.forbiddenRoute);
       return;
     }
 
@@ -219,29 +249,32 @@ class NotificationService {
 
     final route = notification.route;
     if (route != null && route.isNotEmpty) {
-      Velora.nav.to(route);
+      nav.to(route);
     }
   }
 
   Future<void> disposeForUser() async {
-    final token = pushToken.value;
-    if (token != null && token.isNotEmpty) {
-      await repository.unregisterDeviceToken(token: token);
+    try {
+      final token = pushToken.value;
+      if (token != null && token.isNotEmpty) {
+        await repository.unregisterDeviceToken(token: token);
+      }
+
+      await pushAdapter.deleteToken();
+      await pushAdapter.dispose();
+    } finally {
+      await _foregroundSubscription?.cancel();
+      await _openedSubscription?.cancel();
+      _foregroundSubscription = null;
+      _openedSubscription = null;
+
+      notifications.clear();
+      unreadCount.value = 0;
+      permissionGranted.value = false;
+      initialized.value = false;
+      pushToken.value = null;
+      lastEvent.value = null;
     }
-
-    await pushAdapter.deleteToken();
-    await _foregroundSubscription?.cancel();
-    await _openedSubscription?.cancel();
-    _foregroundSubscription = null;
-    _openedSubscription = null;
-    await pushAdapter.dispose();
-
-    notifications.clear();
-    unreadCount.value = 0;
-    permissionGranted.value = false;
-    initialized.value = false;
-    pushToken.value = null;
-    lastEvent.value = null;
   }
 
   void _listenToForegroundMessages() {
@@ -256,7 +289,7 @@ class NotificationService {
 
       if (!canHandleNotification(notification)) return;
 
-      if (Velora.config.notifications.showForegroundRemoteAsLocal) {
+      if (config.showForegroundRemoteAsLocal) {
         await showLocal(
           title: notification.title,
           body: notification.body,
@@ -264,7 +297,7 @@ class NotificationService {
         );
       }
 
-      if (Velora.config.notifications.syncInAppNotificationsAfterPush) {
+      if (config.syncInAppNotificationsAfterPush) {
         await fetch();
       }
     });

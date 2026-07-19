@@ -117,17 +117,53 @@ class Velora {
     final lifecycle = VeloraLifecycleRegistry();
     Get.put<VeloraLifecycleRegistry>(lifecycle, permanent: true);
 
-    final logoutCoordinator = LogoutCoordinator(lifecycle: lifecycle);
-    Get.put<LogoutCoordinator>(logoutCoordinator, permanent: true);
-
     final auth = await AuthService(
       api: api,
       storage: storage,
       config: config.auth,
-      notificationConfig: config.notifications,
+      onLoginSuccess: (user) async {
+        // Resolve dependents lazily via Get.find so this hook is unaffected
+        // by construction order in boot() (feature/notify are registered
+        // after auth below).
+        if (Get.isRegistered<FeatureService>()) {
+          Get.find<FeatureService>().syncFromUserFeatures(user.features);
+        }
+
+        final n = config.notifications;
+        if (n.enabled &&
+            n.requestPermissionAfterLogin &&
+            Get.isRegistered<NotificationService>()) {
+          try {
+            await Get.find<NotificationService>().initForUser();
+          } catch (_) {
+            // Notification init failure must not block/fail the primary login flow.
+          }
+        }
+      },
     ).init();
     Get.put<AuthService>(auth, permanent: true);
+
+    final nav = VeloraNav();
+    Get.put<VeloraNav>(nav, permanent: true);
+
+    final logoutCoordinator = LogoutCoordinator(
+      lifecycle: lifecycle,
+      auth: auth,
+      nav: nav,
+      logoutRedirectRoute: config.auth.logoutRedirectRoute,
+    );
+    Get.put<LogoutCoordinator>(logoutCoordinator, permanent: true);
     auth.attachLogoutCoordinator(logoutCoordinator);
+
+    final permission = PermissionService(
+      auth: auth,
+      permissionResolver: config.auth.permissionResolver,
+    );
+    Get.put<PermissionService>(permission, permanent: true);
+
+    final feature = FeatureService(permissionCheck: permission.can);
+    Get.put<FeatureService>(feature, permanent: true);
+    lifecycle.register(feature);
 
     final notificationRemote = NotificationRemoteDataSource(
       api: api,
@@ -145,32 +181,58 @@ class Velora {
       pushAdapter: resolvedPushAdapter,
       localAdapter: InMemoryLocalNotificationAdapter(),
       onNotificationTap: onNotificationTap,
+      auth: auth,
+      feature: feature,
+      permission: permission,
+      nav: nav,
+      config: config.notifications,
     );
     Get.put<VeloraNotify>(notify, permanent: true);
     Get.put<NotificationService>(notify, permanent: true);
-    auth.attachNotifications(notify);
+    if (auth.check && auth.user != null) {
+      feature.syncFromUserFeatures(auth.user!.features);
+    }
     if (auth.check &&
         config.notifications.enabled &&
         config.notifications.requestPermissionAfterLogin) {
-      await notify.initForUser();
+      try {
+        await notify.initForUser();
+      } catch (_) {
+        // A boot-time notification failure must not leave the locator
+        // partially initialized.
+      }
     }
 
-    Get.put<PermissionService>(
-      PermissionService(
-        auth: auth,
-        permissionResolver: config.auth.permissionResolver,
+    lifecycle.register(
+      VeloraLogoutHook(
+        onBeforeLogout: () async {
+          await _disposeNotificationsForLogout();
+          await _cancelUserScopedRequestsForLogout();
+        },
       ),
-      permanent: true,
     );
-    final feature = FeatureService();
-    Get.put<FeatureService>(feature, permanent: true);
-    lifecycle.register(feature);
+
     final themeService = await ThemeService(storage: storage).init();
     Get.put<ThemeService>(themeService, permanent: true);
-    Get.put<VeloraNav>(VeloraNav(), permanent: true);
     Get.put<VeloraToast>(VeloraToast(), permanent: true);
     Get.put<VeloraDialog>(VeloraDialog(), permanent: true);
     Get.put<VeloraLoader>(VeloraLoader(), permanent: true);
     Get.put<VeloraMediaService>(VeloraMediaService(), permanent: true);
+  }
+}
+
+Future<void> _disposeNotificationsForLogout() async {
+  if (!Get.isRegistered<NotificationService>()) return;
+
+  try {
+    await Get.find<NotificationService>().disposeForUser();
+  } catch (_) {
+    // Notification runtime may be absent or partly initialized.
+  }
+}
+
+Future<void> _cancelUserScopedRequestsForLogout() async {
+  if (Get.isRegistered<VeloraApiService>()) {
+    Get.find<VeloraApiService>().cancelUserScope();
   }
 }
