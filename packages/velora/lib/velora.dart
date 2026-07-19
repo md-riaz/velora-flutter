@@ -8,6 +8,7 @@ export 'src/config/velora_config.dart';
 export 'src/core/velora_app.dart';
 export 'src/core/velora_facade.dart';
 export 'src/core/velora_lifecycle.dart';
+export 'src/core/velora_plugin.dart';
 export 'src/data/paginated_controller.dart';
 export 'src/data/repository.dart';
 export 'src/features/feature_service.dart';

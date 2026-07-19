@@ -595,6 +595,34 @@ void main() {
     expect(storage.get<String>('velora.auth.token'), isNull);
   });
 
+  test(
+    'boot registers plugins and exposes them for introspection',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final plugin = _FakePlugin();
+      await Velora.boot(
+        config: const VeloraConfig(
+          appName: 'Test',
+          apiBaseUrl: 'https://example.test',
+          notifications: VeloraNotificationConfig(
+            enabled: false,
+            provider: PushProvider.none,
+          ),
+        ),
+        plugins: [plugin],
+      );
+
+      expect(Velora.plugin<_FakePlugin>(), same(plugin));
+      expect(Velora.plugins, [plugin]);
+      expect(Get.isRegistered<_FakeService>(), isTrue);
+      expect(plugin.registered, isTrue);
+
+      await Velora.logout();
+
+      expect(plugin.loggedOut, isTrue);
+    },
+  );
+
   test('storage insecure fallback persists token to prefs when opted in', () async {
     SharedPreferences.setMockInitialValues({});
     final storage = await VeloraStorageService(
@@ -652,6 +680,25 @@ class _ThrowingSecureStorage extends FlutterSecureStorage {
     WindowsOptions? wOptions,
   }) async =>
       _boom();
+}
+
+class _FakeService {}
+
+class _FakePlugin extends VeloraPlugin {
+  bool registered = false;
+  bool loggedOut = false;
+
+  @override
+  String get name => 'fake_plugin';
+
+  @override
+  Future<void> register(VeloraContext context) async {
+    context.put<_FakeService>(_FakeService());
+    context.onBeforeLogout(() async {
+      loggedOut = true;
+    });
+    registered = true;
+  }
 }
 
 Future<AuthService> _authService() async {

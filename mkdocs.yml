@@ -73,6 +73,7 @@ nav:
   - Reference:
     - CLI Commands: commands.md
     - Framework / App Boundary: framework-app-boundary.md
+    - Plugins: plugins.md
   - Project:
     - Contributing: contributing.md
     - Roadmap: roadmap.md
