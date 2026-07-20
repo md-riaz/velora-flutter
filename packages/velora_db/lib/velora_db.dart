@@ -1,6 +1,7 @@
 export 'src/migration/migration_runner.dart';
 export 'src/migration/velora_migration.dart';
 export 'src/query/query_builder.dart';
+export 'src/query/velora_cached_repository.dart';
 export 'src/query/velora_db_repository.dart';
 export 'src/query/velora_table.dart';
 export 'src/velora_database.dart';

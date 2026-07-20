@@ -12,6 +12,7 @@
 - **`QueryBuilder`** — an immutable, fluent, allowlisted query builder (`where`, `whereOp`, `orderBy`, `limit`, `offset`) that always binds values as parameters, never interpolates them.
 - **`VeloraTable<T, ID>`** — maps rows of a single table to/from a model type, with `all`/`find`/`where`/`insert`/`create`/`update`/`delete`/`count`.
 - **`VeloraDbRepository<T, ID>`** — adapts a `VeloraTable` to Velora's `VeloraRepository` contract, so a local table is a drop-in repository alongside remote-backed ones.
+- **`VeloraCachedRepository<T, ID>`** — a network-first, read-through cache: wraps a remote data source with a `VeloraTable` cache so reads still work offline. See [Offline reads](#offline-reads-read-through-cache) below.
 
 It works identically on native (via `sqflite`) and Web (via `sqflite_common_ffi_web`, persisting to IndexedDB) — see [Cross-platform](#cross-platform) below.
 
@@ -121,6 +122,50 @@ final todoRepository = VeloraDbRepository<Todo, int>(todos);
 final all = await todoRepository.index();
 final created = await todoRepository.store(const Todo(title: 'Walk dog').toMap());
 ```
+
+## Offline reads (read-through cache)
+
+`velora_offline` handles offline **writes** — it queues failed POST/PUT/PATCH/DELETE requests and replays them once you're back online. It does not cache reads. `VeloraCachedRepository` is the read counterpart: a **network-first** `VeloraRepository` that tries your remote data source first and falls back to a local `VeloraTable` cache when (and only when) the request looks like it never reached the server.
+
+The two packages compose but don't depend on each other — `VeloraCachedRepository` never imports `velora_offline`; it decides "offline" purely via a pluggable error predicate.
+
+```dart
+import 'package:velora/velora.dart';
+import 'package:velora_db/velora_db.dart';
+
+final todoCache = VeloraDb.table<Todo, int>(
+  table: 'todos',
+  fromMap: Todo.fromMap,
+  toMap: (todo) => todo.toMap(),
+);
+
+final todoRepository = VeloraCachedRepository<Todo, int>(
+  remote: myTodoRemoteDataSource, // a VeloraRemoteDataSource<Todo, int>
+  cache: todoCache,
+);
+
+final all = await todoRepository.index(); // remote when online, cache when offline
+final one = await todoRepository.show(1);
+```
+
+Behavior, method by method:
+
+- **`index()` / `show(id)`** — try the remote source first. On success, the result is used to refresh the cache (upserted row by row) and returned as-is. If the remote call throws an error that looks like "never reached the server" (see below), the cache is served instead — `index()` returns `cache.all()`, `show(id)` returns `cache.find(id)` if that row was ever cached, or rethrows the original error if it wasn't. Any *other* error — e.g. a 404 or 500 that the server actually returned — is rethrown untouched; it is not treated as offline, so a real API error never gets silently swallowed into a stale cache read.
+- **`store(data)` / `update(id, data)` / `destroy(id)`** — always delegate straight to the remote source (the source of truth for writes), then update the cache best-effort. A cache write failure here never masks or replaces the already-successful remote result. This class does **not** queue offline writes itself — that's what `velora_offline` is for; put its remote data source underneath (or in front of) a `VeloraCachedRepository` if you want both offline writes and offline reads.
+
+"Looks like never reached the server" is decided by `isOfflineError`, which defaults to `defaultIsOfflineError`: `true` for a `DioException` with type `connectionError`, `connectionTimeout`, `receiveTimeout`, or `sendTimeout`, or for a `SocketException`/`TimeoutException`; `false` for everything else (including `DioException(type: badResponse)`, i.e. a response the server actually sent). Override it if your remote data source surfaces offline conditions differently:
+
+```dart
+VeloraCachedRepository<Todo, int>(
+  remote: myTodoRemoteDataSource,
+  cache: todoCache,
+  isOfflineError: (error) => error is MyCustomOfflineSignal || defaultIsOfflineError(error),
+);
+```
+
+`toCacheMap` defaults to the cache table's own `toMap`; pass it explicitly only if the shape you want cached differs from the table's normal serialization.
+
+**MVP caveat:** cache refresh is an upsert per row from the latest response, not a full replace — rows that were cached previously but are absent from the latest `index()` response (e.g. something deleted server-side) are not automatically evicted from the cache. Plan around this (e.g. periodic full resyncs, or a TTL/version column) if staleness matters for your data.
 
 ## Clearing user data on logout
 
