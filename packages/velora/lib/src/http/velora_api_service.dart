@@ -207,6 +207,7 @@ class VeloraApiService extends GetxService {
     final response = error.response;
     final data = response?.data;
     final r = config.response;
+    final isConnectionError = _connectionErrorTypes.contains(error.type);
     if (data is Map<String, dynamic>) {
       return ApiException(
         message: data[r.messageKey]?.toString() ??
@@ -218,11 +219,24 @@ class VeloraApiService extends GetxService {
           messageKey: r.messageKey,
           errorsKey: r.errorsKey,
         ).errors,
+        isConnectionError: isConnectionError,
       );
     }
     return ApiException(
       message: error.message ?? 'Request failed',
       statusCode: response?.statusCode,
+      isConnectionError: isConnectionError,
     );
   }
 }
+
+/// [DioExceptionType]s that mean "the request never reached the server" --
+/// mirrored by [ApiException.isConnectionError] so callers can recognize a
+/// connection-level failure even after it's been normalized away from the
+/// original [DioException].
+const _connectionErrorTypes = {
+  DioExceptionType.connectionError,
+  DioExceptionType.connectionTimeout,
+  DioExceptionType.receiveTimeout,
+  DioExceptionType.sendTimeout,
+};

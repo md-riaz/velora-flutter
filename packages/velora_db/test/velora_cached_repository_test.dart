@@ -58,6 +58,31 @@ void main() {
     );
 
     test(
+      'index() online with many items populates the cache with every row '
+      'via a single batched write',
+      () async {
+        remote.items = List.generate(
+          5,
+          (i) => TodoModel(id: i + 1, title: 'item-${i + 1}'),
+        );
+
+        final result = await repository.index();
+        expect(result, hasLength(5));
+        expect(
+          result.map((t) => t.title),
+          ['item-1', 'item-2', 'item-3', 'item-4', 'item-5'],
+        );
+
+        final cached = await table.all();
+        expect(cached, hasLength(5));
+        expect(
+          cached.map((t) => t.title),
+          containsAll(['item-1', 'item-2', 'item-3', 'item-4', 'item-5']),
+        );
+      },
+    );
+
+    test(
       'index() offline (connectionError) returns the previously-cached rows',
       () async {
         // Prime the cache via a successful online call first.
@@ -192,6 +217,86 @@ void main() {
           isTrue,
         );
         expect(defaultIsOfflineError(Exception('nope')), isFalse);
+      },
+    );
+
+    test(
+      'defaultIsOfflineError classifies a normalized ApiException with '
+      'isConnectionError set as offline, but a plain ApiException (e.g. a '
+      '404/500 that reached the server) as not offline',
+      () {
+        expect(
+          defaultIsOfflineError(
+            const ApiException(
+              message: 'Connection failed',
+              isConnectionError: true,
+            ),
+          ),
+          isTrue,
+        );
+        expect(
+          defaultIsOfflineError(
+            const ApiException(message: 'Not found', statusCode: 404),
+          ),
+          isFalse,
+        );
+      },
+    );
+
+    test(
+      'index() offline via a NORMALIZED ApiException (isConnectionError: '
+      'true, as VeloraApiService produces for a real connection failure) '
+      'still returns the previously-cached rows -- this is the case that '
+      'raw-DioException-only detection would miss',
+      () async {
+        remote.items = [const TodoModel(id: 1, title: 'cached-via-api-exc')];
+        await repository.index();
+
+        remote.indexError = const ApiException(
+          message: 'Failed host lookup',
+          isConnectionError: true,
+        );
+        final result = await repository.index();
+        expect(result, hasLength(1));
+        expect(result.single.title, 'cached-via-api-exc');
+      },
+    );
+
+    test(
+      'show(id) offline via a normalized ApiException (isConnectionError: '
+      'true) returns the cached row',
+      () async {
+        remote.showResponses[1] = const TodoModel(
+          id: 1,
+          title: 'shown-via-api-exc',
+        );
+        await repository.show(1);
+
+        remote.showError = const ApiException(
+          message: 'Connection timed out',
+          isConnectionError: true,
+        );
+        final shown = await repository.show(1);
+        expect(shown.title, 'shown-via-api-exc');
+      },
+    );
+
+    test(
+      'a plain (non-connection) ApiException from index() is rethrown, not '
+      'swallowed into a cache read',
+      () async {
+        remote.items = [const TodoModel(id: 1, title: 'primed')];
+        await repository.index();
+
+        remote.indexError = const ApiException(
+          message: 'Internal Server Error',
+          statusCode: 500,
+        );
+
+        await expectLater(
+          repository.index(),
+          throwsA(isA<ApiException>()),
+        );
       },
     );
   });

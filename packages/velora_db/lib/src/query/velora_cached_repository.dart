@@ -1,9 +1,10 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:sqflite/sqflite.dart';
 import 'package:velora/velora.dart';
 
+import 'socket_error.dart';
 import 'velora_table.dart';
 
 /// The default [VeloraCachedRepository.isOfflineError]: `true` for errors
@@ -16,8 +17,18 @@ import 'velora_table.dart';
 ///   [DioExceptionType.sendTimeout] — these are dio's "could not talk to the
 ///   server at all" states, as opposed to [DioExceptionType.badResponse]
 ///   (the server responded, just with an error status).
-/// - [SocketException] (dart:io) — a lower-level connection failure, in case
-///   the remote data source isn't dio-based.
+/// - [ApiException] with [ApiException.isConnectionError] set — this is the
+///   *normalized* form of the same connection-level [DioException] states
+///   above. `VeloraApiService._send` (the HTTP layer generated remote data
+///   sources go through) catches every [DioException] and rethrows it as an
+///   [ApiException] before it ever reaches this predicate, so without this
+///   check a real connection failure in a generated repository would arrive
+///   here as a plain [ApiException] — never matching the raw-[DioException]
+///   branch above — and get incorrectly rethrown instead of falling back to
+///   the cache.
+/// - [SocketException] (dart:io, via a web-safe conditional import) — a
+///   lower-level connection failure, in case the remote data source isn't
+///   dio-based. Not available on Web, where it's always non-matching.
 /// - [TimeoutException] (dart:async) — e.g. from `Future.timeout`.
 bool defaultIsOfflineError(Object error) {
   if (error is DioException) {
@@ -29,7 +40,10 @@ bool defaultIsOfflineError(Object error) {
     };
     return offlineTypes.contains(error.type);
   }
-  return error is SocketException || error is TimeoutException;
+  if (error is ApiException) {
+    return error.isConnectionError;
+  }
+  return isSocketException(error) || error is TimeoutException;
 }
 
 /// A network-first, read-through [VeloraRepository] that layers a local
@@ -80,9 +94,7 @@ class VeloraCachedRepository<T, ID> implements VeloraRepository<T, ID> {
   Future<List<T>> index() async {
     try {
       final items = await remote.index();
-      for (final item in items) {
-        await _tryCachePut(item);
-      }
+      await _tryCachePutAll(items);
       return items;
     } catch (error) {
       if (isOfflineError(error)) {
@@ -144,6 +156,28 @@ class VeloraCachedRepository<T, ID> implements VeloraRepository<T, ID> {
   Future<void> _tryCachePut(T item) async {
     try {
       await cache.insert(toCacheMap(item));
+    } catch (_) {
+      // Swallowed intentionally -- see dartdoc above.
+    }
+  }
+
+  /// Best-effort batch upsert into the cache: like [_tryCachePut], but
+  /// refreshes many rows in a single SQLite transaction instead of one
+  /// transaction per row. Used by [index], whose remote response can be
+  /// large enough that per-row transactions would noticeably block the
+  /// caller.
+  Future<void> _tryCachePutAll(List<T> items) async {
+    if (items.isEmpty) return;
+    try {
+      final batch = cache.db.batch();
+      for (final item in items) {
+        batch.insert(
+          cache.table,
+          toCacheMap(item),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+      await batch.commit(noResult: true);
     } catch (_) {
       // Swallowed intentionally -- see dartdoc above.
     }
