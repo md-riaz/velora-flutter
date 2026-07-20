@@ -514,6 +514,17 @@ Future<void> main() async {
     expect(package.pluginExpr, 'VeloraOfflinePlugin()');
   });
 
+  test('catalog contains velora_db', () {
+    expect(veloraPackageCatalog.containsKey('velora_db'), isTrue);
+    final package = veloraPackageCatalog['velora_db']!;
+    expect(package.name, 'velora_db');
+    expect(package.pluginExpr, 'VeloraDbPlugin()');
+    expect(
+      package.importLine,
+      "import 'package:velora_db/velora_db.dart';",
+    );
+  });
+
   test('install command wires a package into a generated app', () async {
     final temp = Directory.systemTemp.createTempSync('velora_cli_install_');
     addTearDown(() {

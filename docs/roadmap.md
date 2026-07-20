@@ -11,7 +11,7 @@
 
 ## Shipped
 
-- Package split into `velora`, `velora_cli`, `velora_lints`, and `velora_offline`.
+- Package split into `velora`, `velora_cli`, `velora_lints`, `velora_offline`, and `velora_db`.
 - Multi-page documentation site (mkdocs).
 
 ## Later

@@ -6,7 +6,7 @@
 
 ## The model: lean core, official packages
 
-Velora's core (`package:velora`) stays deliberately small — auth, API client, permissions, notifications, storage, routing. Everything else is meant to ship as its own package: `velora_offline`, `velora_analytics`, `velora_chat`, or whatever your app needs — installed from `pub.dev` and wired in at boot, the same way a Laravel app pulls in a Composer package and publishes its service provider.
+Velora's core (`package:velora`) stays deliberately small — auth, API client, permissions, notifications, storage, routing. Everything else is meant to ship as its own package: `velora_offline`, `velora_db`, `velora_analytics`, `velora_chat`, or whatever your app needs — installed from `pub.dev` and wired in at boot, the same way a Laravel app pulls in a Composer package and publishes its service provider.
 
 You've already seen this philosophy in a few places:
 
@@ -84,10 +84,15 @@ Velora.plugin<OfflinePlugin>();    // OfflinePlugin? — typed lookup, or null i
 
 This lets shared UI (e.g. a settings screen) conditionally show plugin-specific sections without a hard dependency on the plugin package.
 
-## The first official package
+## The official packages
 
-[`velora_offline`](packages/offline.md) is the reference implementation of this contract — connectivity awareness plus an offline write queue, installed as `plugins: [VeloraOfflinePlugin()]`. Read it alongside this page as a worked example of everything above.
+Two official packages are shipped so far, both built on this contract:
+
+- [`velora_offline`](packages/offline.md) — the reference implementation: connectivity awareness plus an offline write queue, installed as `plugins: [VeloraOfflinePlugin()]`.
+- [`velora_db`](packages/db.md) — a cross-platform local database with an Eloquent-style query API, installed as `plugins: [VeloraDbPlugin()]`.
+
+Read either alongside this page as a worked example of everything above.
 
 ---
 
-**See also:** [API Client →](api-client.md) for `VeloraApiInterceptor`, [Framework / App Boundary →](framework-app-boundary.md) for how core and app-owned code stay decoupled, and [velora_offline →](packages/offline.md) for a real plugin built on this contract.
+**See also:** [API Client →](api-client.md) for `VeloraApiInterceptor`, [Framework / App Boundary →](framework-app-boundary.md) for how core and app-owned code stay decoupled, [velora_offline →](packages/offline.md) and [velora_db →](packages/db.md) for real plugins built on this contract.
