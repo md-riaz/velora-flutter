@@ -1,0 +1,24 @@
+name: velora_local_notifications
+description: "On-device local notifications for Velora apps (flutter_local_notifications adapter)."
+version: 0.0.1
+publish_to: none
+
+environment:
+  sdk: ^3.11.1
+  flutter: '>=3.27.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  velora:
+    path: ../velora
+  flutter_local_notifications: ^18.0.0
+  timezone: ^0.9.0
+  flutter_timezone: ^2.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:

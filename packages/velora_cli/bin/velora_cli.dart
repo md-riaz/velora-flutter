@@ -389,7 +389,11 @@ void _install(List<String> args) {
   pubspecFile.writeAsStringSync(updatedPubspec);
   stdout.writeln('Added ${package.name}: ${package.constraint} to pubspec.yaml.');
 
-  if (!noWire) {
+  // Packages that only add a dependency (no plugins: [...] wiring — see
+  // VeloraPackageInstall.wiresPlugin) have nothing for wirePluginIntoBoot to
+  // splice in, so skip the wiring step entirely for them; their setup notes
+  // (printed below) carry the manual wiring instructions instead.
+  if (!noWire && package.wiresPlugin) {
     final mainFile = File(p.join(Directory.current.path, 'lib', 'main.dart'));
     if (!mainFile.existsSync()) {
       stdout.writeln(
@@ -400,8 +404,8 @@ void _install(List<String> args) {
     } else {
       final result = wirePluginIntoBoot(
         mainFile.readAsStringSync(),
-        importLine: package.importLine,
-        pluginExpr: package.pluginExpr,
+        importLine: package.importLine!,
+        pluginExpr: package.pluginExpr!,
       );
       mainFile.writeAsStringSync(result.content);
       if (result.wired) {
@@ -454,7 +458,11 @@ void _install(List<String> args) {
     }
   }
 
-  if (noWire) {
+  if (noWire && package.wiresPlugin) {
+    // --no-wire only means something for a package that would otherwise get
+    // spliced into plugins: [...] — for a package that never wires that way
+    // (package.wiresPlugin == false), the notes below already carry the
+    // manual-wiring instructions, so print those instead of this message.
     stdout.writeln(
       '--no-wire was passed: the dependency was added but Velora.boot() '
       'was NOT updated. Add plugins: [${package.pluginExpr}] yourself.',
@@ -502,11 +510,17 @@ void _doctor() {
     }
   }
 
-  // Check 3: every installable package that IS a dependency should also be
-  // wired into Velora.boot(). Read-only — never modifies main.dart.
+  // Check 3: every installable package that IS a dependency and wires via
+  // plugins: [...] should also be wired into Velora.boot(). Packages that
+  // wire via a named boot argument instead (package.wiresPlugin == false,
+  // e.g. velora_fcm's pushAdapter:, velora_local_notifications's
+  // localAdapter:) can't be detected this way — bootWiresPlugin only looks
+  // inside the plugins: list — so they're skipped here entirely. Read-only —
+  // never modifies main.dart.
   for (final package in veloraPackageCatalog.values) {
+    if (!package.wiresPlugin) continue;
     if (!pubspecDeclaresDependency(pubspecContent, package.name)) continue;
-    if (bootWiresPlugin(mainContent, package.pluginExpr)) {
+    if (bootWiresPlugin(mainContent, package.pluginExpr!)) {
       stdout.writeln('✓ ${package.name} is wired into Velora.boot().');
     } else {
       warn(

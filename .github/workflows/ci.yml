@@ -88,6 +88,40 @@ jobs:
             echo "No test files found — skipping"
           fi
 
+      - name: Install dependencies (velora_fcm)
+        working-directory: packages/velora_fcm
+        run: flutter pub get
+
+      - name: Analyze velora_fcm package
+        working-directory: packages/velora_fcm
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run velora_fcm tests
+        working-directory: packages/velora_fcm
+        run: |
+          if [ -d "test" ] && find test -name '*_test.dart' -print -quit | grep -q .; then
+            flutter test --coverage
+          else
+            echo "No test files found — skipping"
+          fi
+
+      - name: Install dependencies (velora_local_notifications)
+        working-directory: packages/velora_local_notifications
+        run: flutter pub get
+
+      - name: Analyze velora_local_notifications package
+        working-directory: packages/velora_local_notifications
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run velora_local_notifications tests
+        working-directory: packages/velora_local_notifications
+        run: |
+          if [ -d "test" ] && find test -name '*_test.dart' -print -quit | grep -q .; then
+            flutter test --coverage
+          else
+            echo "No test files found — skipping"
+          fi
+
       - name: Install dependencies (claude_clone)
         working-directory: examples/claude_clone
         run: flutter pub get

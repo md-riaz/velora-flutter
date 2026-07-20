@@ -1,14 +1,27 @@
 const veloraCliName = 'velora_cli';
 const veloraCliVersion = '0.0.1';
 
-/// Describes a Velora plugin package that `velora install <package>` knows
-/// how to add to a generated app: its pub dependency, its `Velora.boot`
-/// wiring, and human-readable post-install notes.
+/// Describes a Velora package that `velora install <package>` knows how to
+/// add to a generated app: its pub dependency, its optional `Velora.boot`
+/// plugin wiring, and human-readable post-install notes.
+///
+/// Most official packages (`velora_offline`, `velora_db`) ship a
+/// [VeloraPlugin] and are spliced into the `plugins: [...]` list passed to
+/// `Velora.boot(...)` — for those, [importLine] and [pluginExpr] are both
+/// set, and [wiresPlugin] is `true`.
+///
+/// Some packages instead ship an adapter class passed to a *named* `boot()`
+/// argument (e.g. `pushAdapter:`/`localAdapter:`), not the `plugins:` list —
+/// `wirePluginIntoBoot` only knows how to splice into that list, so it can
+/// never auto-wire these safely, and some (like `velora_fcm`) also require
+/// manual native/platform setup that a CLI can't perform anyway. For those,
+/// [importLine] and [pluginExpr] are both `null`, [wiresPlugin] is `false`,
+/// and [notes] carries the manual wiring instructions instead.
 class VeloraPackageInstall {
   final String name;
   final String constraint;
-  final String importLine;
-  final String pluginExpr;
+  final String? importLine;
+  final String? pluginExpr;
   final List<String> notes;
 
   const VeloraPackageInstall({
@@ -18,6 +31,11 @@ class VeloraPackageInstall {
     required this.pluginExpr,
     required this.notes,
   });
+
+  /// Whether this package can be auto-wired into `Velora.boot(plugins:
+  /// [...])` by [wirePluginIntoBoot]. `false` for packages that wire via a
+  /// named boot argument instead (e.g. `pushAdapter:`/`localAdapter:`).
+  bool get wiresPlugin => importLine != null && pluginExpr != null;
 }
 
 /// Catalog of packages installable via `velora install <package>`.
@@ -45,6 +63,33 @@ const veloraPackageCatalog = <String, VeloraPackageInstall>{
       'To clear user-scoped data on logout (shared devices), pass clearOnLogout: [...tables] to VeloraDbPlugin.',
       'WEB: run `dart run sqflite_common_ffi_web:setup` once to add the SQLite WASM/worker assets (web uses IndexedDB-backed SQLite).',
       'Note: until velora_db is published to pub.dev, use a git or path dependency override.',
+    ],
+  ),
+  'velora_fcm': VeloraPackageInstall(
+    name: 'velora_fcm',
+    constraint: '^0.0.1',
+    importLine: null,
+    pluginExpr: null,
+    notes: [
+      'Added velora_fcm to pubspec.yaml. This package wires via a named Velora.boot() argument, not plugins: [...], so nothing was auto-wired — finish these steps by hand:',
+      '1. Also add firebase_core and firebase_messaging to pubspec.yaml, then run `flutterfire configure` to generate platform config (google-services.json for Android, GoogleService-Info.plist for iOS) and firebase_options.dart.',
+      "2. In main(), call `await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform)` BEFORE `Velora.boot(...)` — VeloraFcmAdapter does not initialize Firebase itself, and constructing it before Firebase.initializeApp() has run will fail.",
+      "3. Import `package:velora_fcm/velora_fcm.dart` and pass `pushAdapter: VeloraFcmAdapter()` to `Velora.boot(...)` (a top-level boot argument, not nested under notifications).",
+      'Set `notifications: VeloraNotificationConfig(provider: PushProvider.fcm)` on VeloraConfig (PushProvider.fcm is already the default).',
+      'Note: until velora_fcm is published to pub.dev, use a git or path dependency override.',
+    ],
+  ),
+  'velora_local_notifications': VeloraPackageInstall(
+    name: 'velora_local_notifications',
+    constraint: '^0.0.1',
+    importLine: null,
+    pluginExpr: null,
+    notes: [
+      'Added velora_local_notifications to pubspec.yaml. This package wires via a named Velora.boot() argument, not plugins: [...], so nothing was auto-wired — finish these steps by hand:',
+      "1. Import `package:velora_local_notifications/velora_local_notifications.dart` and pass `localAdapter: VeloraLocalNotificationsAdapter()` to `Velora.boot(...)` (a top-level boot argument, not nested under notifications).",
+      'ANDROID: add the notification permission and icon your channel needs; notification channels themselves are created automatically by the adapter on init() — no manual channel setup required.',
+      'iOS/macOS: request permission is handled by VeloraNotify — no extra Info.plist entries are required for basic local notifications.',
+      'Note: until velora_local_notifications is published to pub.dev, use a git or path dependency override.',
     ],
   ),
 };

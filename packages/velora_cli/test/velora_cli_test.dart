@@ -525,6 +525,114 @@ Future<void> main() async {
     );
   });
 
+  test('velora_offline and velora_db wire a plugin (wiresPlugin == true)', () {
+    for (final name in ['velora_offline', 'velora_db']) {
+      final package = veloraPackageCatalog[name]!;
+      expect(package.wiresPlugin, isTrue, reason: name);
+      expect(package.importLine, isNotNull, reason: name);
+      expect(package.pluginExpr, isNotNull, reason: name);
+    }
+  });
+
+  test(
+    'catalog contains velora_fcm and velora_local_notifications as '
+    'dependency-only entries (wiresPlugin == false)',
+    () {
+      for (final name in ['velora_fcm', 'velora_local_notifications']) {
+        expect(veloraPackageCatalog.containsKey(name), isTrue, reason: name);
+        final package = veloraPackageCatalog[name]!;
+        expect(package.name, name);
+        expect(package.constraint, '^0.0.1');
+        expect(package.wiresPlugin, isFalse, reason: name);
+        expect(package.importLine, isNull, reason: name);
+        expect(package.pluginExpr, isNull, reason: name);
+        expect(package.notes, isNotEmpty, reason: name);
+      }
+    },
+  );
+
+  test('velora_fcm notes reference the real adapter and boot argument', () {
+    final notes = veloraPackageCatalog['velora_fcm']!.notes.join('\n');
+    expect(notes, contains('VeloraFcmAdapter()'));
+    expect(notes, contains('pushAdapter:'));
+    expect(notes, contains('Firebase.initializeApp'));
+    expect(notes, contains('flutterfire configure'));
+  });
+
+  test(
+    'velora_local_notifications notes reference the real adapter and boot '
+    'argument',
+    () {
+      final notes = veloraPackageCatalog['velora_local_notifications']!.notes
+          .join('\n');
+      expect(notes, contains('VeloraLocalNotificationsAdapter()'));
+      expect(notes, contains('localAdapter:'));
+    },
+  );
+
+  test(
+    'install velora_fcm --no-pub-get adds the dependency without touching '
+    'lib/main.dart, and prints the setup notes',
+    () async {
+      final temp = Directory.systemTemp.createTempSync(
+        'velora_cli_install_fcm_',
+      );
+      addTearDown(() {
+        if (temp.existsSync()) temp.deleteSync(recursive: true);
+      });
+
+      final packageRoot = Directory.current.path;
+      Future<ProcessResult> runCli(List<String> args) {
+        return Process.run(Platform.resolvedExecutable, <String>[
+          '$packageRoot/bin/velora_cli.dart',
+          ...args,
+        ], workingDirectory: Directory.current.path);
+      }
+
+      final app = Directory('${temp.path}/app')..createSync();
+      File('${app.path}/pubspec.yaml').writeAsStringSync('''name: demo
+dependencies:
+  flutter:
+    sdk: flutter
+''');
+      Directory('${app.path}/lib').createSync();
+      const originalMain = '''
+Future<void> main() async {
+  await Velora.boot(config: config);
+}
+''';
+      File('${app.path}/lib/main.dart').writeAsStringSync(originalMain);
+
+      final original = Directory.current;
+      ProcessResult install;
+      try {
+        Directory.current = app;
+        install = await runCli(<String>[
+          'install',
+          'velora_fcm',
+          '--no-pub-get',
+        ]);
+        expect(install.exitCode, 0, reason: install.stderr.toString());
+      } finally {
+        Directory.current = original;
+      }
+
+      final pubspecContent = File(
+        '${app.path}/pubspec.yaml',
+      ).readAsStringSync();
+      expect(pubspecContent, contains('velora_fcm: ^0.0.1'));
+
+      final mainContent = File('${app.path}/lib/main.dart').readAsStringSync();
+      expect(mainContent, originalMain, reason: 'main.dart must be untouched');
+
+      final stdoutText = install.stdout.toString();
+      expect(stdoutText, contains('Added velora_fcm: ^0.0.1 to pubspec.yaml'));
+      expect(stdoutText, contains('pushAdapter: VeloraFcmAdapter()'));
+      expect(stdoutText, contains('Firebase.initializeApp'));
+      expect(stdoutText, isNot(contains('Wired')));
+    },
+  );
+
   test('install command wires a package into a generated app', () async {
     final temp = Directory.systemTemp.createTempSync('velora_cli_install_');
     addTearDown(() {

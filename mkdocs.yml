@@ -77,6 +77,8 @@ nav:
   - Official Packages:
     - velora_offline: packages/offline.md
     - velora_db: packages/db.md
+    - velora_fcm: packages/fcm.md
+    - velora_local_notifications: packages/local-notifications.md
   - Project:
     - Contributing: contributing.md
     - Roadmap: roadmap.md
