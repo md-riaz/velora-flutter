@@ -5,7 +5,7 @@ const veloraCliVersion = '0.0.1';
 /// add to a generated app: its pub dependency, its optional `Velora.boot`
 /// plugin wiring, and human-readable post-install notes.
 ///
-/// Most official packages (`velora_offline`, `velora_db`) ship a
+/// Most official packages (`velora_offline`, `velora_db`, `velora_env`) ship a
 /// [VeloraPlugin] and are spliced into the `plugins: [...]` list passed to
 /// `Velora.boot(...)` — for those, [importLine] and [pluginExpr] are both
 /// set, and [wiresPlugin] is `true`.
@@ -63,6 +63,20 @@ const veloraPackageCatalog = <String, VeloraPackageInstall>{
       'To clear user-scoped data on logout (shared devices), pass clearOnLogout: [...tables] to VeloraDbPlugin.',
       'WEB: run `dart run sqflite_common_ffi_web:setup` once to add the SQLite WASM/worker assets (web uses IndexedDB-backed SQLite).',
       'Note: until velora_db is published to pub.dev, use a git or path dependency override.',
+    ],
+  ),
+  'velora_env': VeloraPackageInstall(
+    name: 'velora_env',
+    constraint: '^0.0.1',
+    importLine: "import 'package:velora_env/velora_env.dart';",
+    pluginExpr: 'VeloraEnvPlugin()',
+    notes: [
+      'Added velora_env and wired VeloraEnvPlugin() into Velora.boot().',
+      'Create your env files: assets/env/.env (base) and per-flavor assets/env/.env.staging / .env.development / .env.production (both the long form -- .env.development, .env.production, recommended -- and the short form -- .env.dev, .env.prod -- are accepted), and declare `assets/env/` under flutter: assets: in pubspec.yaml.',
+      'For config needed to BUILD VeloraConfig (e.g. apiBaseUrl per environment), call `await VeloraEnv.load();` in main() BEFORE Velora.boot(...) and read via VeloraEnv.get(...)/VeloraEnv.pick(dev: ..., staging: ..., prod: ...).',
+      'Select the flavor at build/run time with --dart-define=VELORA_ENV=staging (values: dev, staging, prod).',
+      'Note: .env assets are bundled into the app and are readable — use them for config/flavor switching, NOT for secrets.',
+      'Note: until velora_env is published to pub.dev, use a git or path dependency override.',
     ],
   ),
   'velora_fcm': VeloraPackageInstall(

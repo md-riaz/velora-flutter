@@ -79,6 +79,7 @@ nav:
     - velora_db: packages/db.md
     - velora_fcm: packages/fcm.md
     - velora_local_notifications: packages/local-notifications.md
+    - velora_env: packages/env.md
   - Project:
     - Contributing: contributing.md
     - Roadmap: roadmap.md

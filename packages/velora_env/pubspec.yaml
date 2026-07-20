@@ -1,0 +1,22 @@
+name: velora_env
+description: "Laravel-style environment config and flavors (.env loading, typed accessors) for Velora apps."
+version: 0.0.1
+publish_to: none
+
+environment:
+  sdk: ^3.11.1
+  flutter: '>=3.27.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  velora:
+    path: ../velora
+  get: ^4.7.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:

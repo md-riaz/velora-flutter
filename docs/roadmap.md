@@ -11,7 +11,7 @@
 
 ## Shipped
 
-- Package split into `velora`, `velora_cli`, `velora_lints`, `velora_offline`, `velora_db`, `velora_fcm`, and `velora_local_notifications`.
+- Package split into `velora`, `velora_cli`, `velora_lints`, `velora_offline`, `velora_db`, `velora_env`, `velora_fcm`, and `velora_local_notifications`.
 - Multi-page documentation site (mkdocs).
 
 ## Later
