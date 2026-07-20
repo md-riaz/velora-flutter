@@ -107,6 +107,12 @@ class Velora {
     /// [NoopPushAdapter] when omitted.
     PushAdapter? pushAdapter,
 
+    /// Custom local-notification adapter. Pass a real adapter such as
+    /// [VeloraLocalNotificationsAdapter] from the `velora_local_notifications`
+    /// package (or any other [LocalNotificationAdapter] implementation).
+    /// Defaults to [InMemoryLocalNotificationAdapter] when omitted.
+    LocalNotificationAdapter? localAdapter,
+
     /// Optional handler invoked when a notification is tapped, so the app owns
     /// navigation instead of the notification service. When omitted, the
     /// service falls back to the routes in [VeloraNotificationConfig].
@@ -196,11 +202,12 @@ class Velora {
     Get.put<NotificationRepository>(notificationRepository, permanent: true);
 
     final resolvedPushAdapter = pushAdapter ?? NoopPushAdapter();
+    final resolvedLocalAdapter = localAdapter ?? InMemoryLocalNotificationAdapter();
 
     final notify = VeloraNotify(
       repository: notificationRepository,
       pushAdapter: resolvedPushAdapter,
-      localAdapter: InMemoryLocalNotificationAdapter(),
+      localAdapter: resolvedLocalAdapter,
       onNotificationTap: onNotificationTap,
       auth: auth,
       feature: feature,

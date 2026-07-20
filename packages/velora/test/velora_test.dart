@@ -673,6 +673,46 @@ void main() {
     },
   );
 
+  test(
+    'boot wires a custom localAdapter into VeloraNotify/NotificationService',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final fakeLocalAdapter = _FakeLocalNotificationAdapter();
+
+      await Velora.boot(
+        config: const VeloraConfig(
+          appName: 'Test',
+          apiBaseUrl: 'https://example.test',
+          notifications: VeloraNotificationConfig(
+            enabled: true,
+            provider: PushProvider.none,
+          ),
+        ),
+        localAdapter: fakeLocalAdapter,
+      );
+
+      // The facade's getter and the NotificationService locator entry must
+      // both resolve to the same VeloraNotify instance wired with our fake.
+      expect(Get.find<NotificationService>(), same(Velora.notify));
+
+      await Velora.notify.initForUser();
+      await Velora.notify.showLocal(title: 'Hello', body: 'World');
+      await Velora.notify.scheduleLocal(
+        id: 'reminder_1',
+        title: 'Reminder',
+        body: 'Submit',
+        dateTime: DateTime.now().add(const Duration(hours: 1)),
+      );
+
+      expect(fakeLocalAdapter.initCalled, isTrue);
+      expect(fakeLocalAdapter.shownTitles, ['Hello']);
+      expect(fakeLocalAdapter.scheduledIds, contains('reminder_1'));
+
+      await Velora.notify.cancelLocal('reminder_1');
+      expect(fakeLocalAdapter.cancelledIds, contains('reminder_1'));
+    },
+  );
+
   test('storage insecure fallback persists token to prefs when opted in', () async {
     SharedPreferences.setMockInitialValues({});
     final storage = await VeloraStorageService(
@@ -730,6 +770,51 @@ class _ThrowingSecureStorage extends FlutterSecureStorage {
     WindowsOptions? wOptions,
   }) async =>
       _boom();
+}
+
+/// Records every call made through it, proving [Velora.boot]'s `localAdapter`
+/// parameter is actually threaded into the registered [VeloraNotify] /
+/// [NotificationService] instead of the hardcoded in-memory default.
+class _FakeLocalNotificationAdapter implements LocalNotificationAdapter {
+  bool initCalled = false;
+  final List<String> shownTitles = [];
+  final List<String> scheduledIds = [];
+  final List<String> cancelledIds = [];
+
+  @override
+  Future<void> init() async {
+    initCalled = true;
+  }
+
+  @override
+  Future<void> show({
+    required String title,
+    required String body,
+    Map<String, dynamic> payload = const {},
+  }) async {
+    shownTitles.add(title);
+  }
+
+  @override
+  Future<void> schedule({
+    required String id,
+    required String title,
+    required String body,
+    required DateTime dateTime,
+    Map<String, dynamic> payload = const {},
+  }) async {
+    scheduledIds.add(id);
+  }
+
+  @override
+  Future<void> cancel(String id) async {
+    cancelledIds.add(id);
+  }
+
+  @override
+  Future<void> cancelAll() async {
+    cancelledIds.add('*all*');
+  }
 }
 
 class _FakeService {}

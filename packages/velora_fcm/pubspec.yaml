@@ -1,0 +1,23 @@
+name: velora_fcm
+description: "Firebase Cloud Messaging push adapter for Velora apps."
+version: 0.0.1
+publish_to: none
+
+environment:
+  sdk: ^3.11.1
+  flutter: '>=3.27.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  velora:
+    path: ../velora
+  firebase_core: ^3.6.0
+  firebase_messaging: ^15.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:

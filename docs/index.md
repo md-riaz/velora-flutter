@@ -31,7 +31,7 @@ Follow these guides in order. Each one builds on the last — from zero to a ful
 
     ---
 
-    The six-layer GetX stack, why services own state instead of controllers, and how a feature flows from data source to UI.
+    How a feature is actually wired — plain constructor injection via a per-module factory, controllers owning their own screen-local state, and why there's no service locator or `Bindings` subclass in sight.
 
     [→ Architecture](architecture.md)
 
@@ -76,6 +76,56 @@ Follow these guides in order. Each one builds on the last — from zero to a ful
     [→ Scaffold a Module](scaffolding.md)
 
 </div>
+
+---
+
+## Official packages
+
+The core (`package:velora`) stays deliberately small — auth, API client, permissions, notifications, storage, routing. Everything else ships as its own installable package, wired in at boot the same way a Laravel app pulls in a Composer package:
+
+<div class="grid cards" markdown>
+
+-   :material-cloud-off-outline:{ .lg } **velora_offline**
+
+    ---
+
+    Connectivity awareness plus an offline write queue that replays failed requests once you're back online.
+
+    [→ velora_offline](packages/offline.md)
+
+-   :material-database-outline:{ .lg } **velora_db**
+
+    ---
+
+    A cross-platform local database (native + Web) with an Eloquent-style query API, built on sqflite.
+
+    [→ velora_db](packages/db.md)
+
+-   :material-bell-ring-outline:{ .lg } **velora_fcm**
+
+    ---
+
+    A Firebase Cloud Messaging `PushAdapter` — wired via `Velora.boot(pushAdapter: VeloraFcmAdapter())`.
+
+    [→ velora_fcm](packages/fcm.md)
+
+-   :material-bell-outline:{ .lg } **velora_local_notifications**
+
+    ---
+
+    An on-device local-notification adapter over `flutter_local_notifications` — wired via `Velora.boot(localAdapter: VeloraLocalNotificationsAdapter())`.
+
+    [→ velora_local_notifications](packages/local-notifications.md)
+
+</div>
+
+`velora_offline` and `velora_db` are `VeloraPlugin`s, spliced automatically into `Velora.boot(plugins: [...])`; `velora_fcm` and `velora_local_notifications` wire via named `pushAdapter:`/`localAdapter:` boot arguments instead — see [Plugins →](plugins.md) for why. Either way, adding one to your app starts the same way:
+
+```bash
+velora install <package>
+```
+
+which adds the pub dependency, wires it into `Velora.boot()` when that's possible to do automatically, and prints any remaining manual setup steps.
 
 ---
 
