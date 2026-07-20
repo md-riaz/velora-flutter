@@ -93,6 +93,55 @@ void main() {
     );
   });
 
+  test(
+    'api service normalizes a connection-level DioException into an '
+    'ApiException with isConnectionError set, so callers never see the raw '
+    'DioException',
+    () async {
+      final api = await _apiService((options) {
+        throw DioException(
+          requestOptions: options,
+          type: DioExceptionType.connectionError,
+          error: 'Connection failed',
+        );
+      });
+
+      await expectLater(
+        api.get<Object?>('/todos'),
+        throwsA(
+          isA<ApiException>()
+              .having(
+                (error) => error.isConnectionError,
+                'isConnectionError',
+                isTrue,
+              )
+              .having((error) => error.statusCode, 'statusCode', isNull),
+        ),
+      );
+    },
+  );
+
+  test(
+    'api service does not flag a well-formed error response as a '
+    'connection error',
+    () async {
+      final api = await _apiService(
+        (_) => ResponseBody.fromString('Server exploded', 500),
+      );
+
+      await expectLater(
+        api.get<Object?>('/boom'),
+        throwsA(
+          isA<ApiException>().having(
+            (error) => error.isConnectionError,
+            'isConnectionError',
+            isFalse,
+          ),
+        ),
+      );
+    },
+  );
+
   test('auth user parses roles permissions features and defaults safely', () {
     final user = AuthUser.fromJson({
       'id': 1.5,
