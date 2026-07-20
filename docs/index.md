@@ -101,6 +101,14 @@ The core (`package:velora`) stays deliberately small — auth, API client, permi
 
     [→ velora_db](packages/db.md)
 
+-   :material-cog-outline:{ .lg } **velora_env**
+
+    ---
+
+    Laravel-style `.env` config and dev/staging/prod flavors, readable in `main()` before `Velora.boot()` even runs.
+
+    [→ velora_env](packages/env.md)
+
 -   :material-bell-ring-outline:{ .lg } **velora_fcm**
 
     ---
@@ -119,7 +127,7 @@ The core (`package:velora`) stays deliberately small — auth, API client, permi
 
 </div>
 
-`velora_offline` and `velora_db` are `VeloraPlugin`s, spliced automatically into `Velora.boot(plugins: [...])`; `velora_fcm` and `velora_local_notifications` wire via named `pushAdapter:`/`localAdapter:` boot arguments instead — see [Plugins →](plugins.md) for why. Either way, adding one to your app starts the same way:
+`velora_offline`, `velora_db`, and `velora_env` are `VeloraPlugin`s, spliced automatically into `Velora.boot(plugins: [...])`; `velora_fcm` and `velora_local_notifications` wire via named `pushAdapter:`/`localAdapter:` boot arguments instead — see [Plugins →](plugins.md) for why. Either way, adding one to your app starts the same way:
 
 ```bash
 velora install <package>

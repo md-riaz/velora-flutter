@@ -86,17 +86,20 @@ This lets shared UI (e.g. a settings screen) conditionally show plugin-specific 
 
 ## The official packages
 
-Four official packages are shipped so far:
+Five official packages are shipped so far:
 
 - [`velora_offline`](packages/offline.md) — the reference implementation: connectivity awareness plus an offline write queue, installed as `plugins: [VeloraOfflinePlugin()]`.
 - [`velora_db`](packages/db.md) — a cross-platform local database with an Eloquent-style query API, installed as `plugins: [VeloraDbPlugin()]`.
+- [`velora_env`](packages/env.md) — Laravel-style `.env` config and dev/staging/prod flavors, installed as `plugins: [VeloraEnvPlugin()]`.
 - [`velora_fcm`](packages/fcm.md) — a Firebase Cloud Messaging `PushAdapter`, wired as `Velora.boot(pushAdapter: VeloraFcmAdapter())`.
 - [`velora_local_notifications`](packages/local-notifications.md) — a `flutter_local_notifications`-backed `LocalNotificationAdapter`, wired as `Velora.boot(localAdapter: VeloraLocalNotificationsAdapter())`.
 
-`velora_offline` and `velora_db` are built on the `VeloraPlugin`/`VeloraContext` contract described above, and `velora install <package>` can fully auto-wire them into `plugins: [...]`. `velora_fcm` and `velora_local_notifications` are a different shape: instead of a `VeloraPlugin`, each ships a single adapter class passed to a *named* `Velora.boot()` argument (`pushAdapter:`/`localAdapter:` — the same extension points `PushAdapter`/`LocalNotificationAdapter` mentioned earlier on this page). `wirePluginIntoBoot` only knows how to splice into the `plugins:` list, so it cannot auto-wire a named argument — and `velora_fcm` additionally requires manual Firebase platform setup (`flutterfire configure`, `Firebase.initializeApp()`) that no CLI can perform for you anyway. For those two, `velora install <package>` adds the pub dependency and prints the manual wiring/setup steps instead of touching `main()`.
+`velora_offline`, `velora_db`, and `velora_env` are built on the `VeloraPlugin`/`VeloraContext` contract described above, and `velora install <package>` can fully auto-wire them into `plugins: [...]`. `velora_fcm` and `velora_local_notifications` are a different shape: instead of a `VeloraPlugin`, each ships a single adapter class passed to a *named* `Velora.boot()` argument (`pushAdapter:`/`localAdapter:` — the same extension points `PushAdapter`/`LocalNotificationAdapter` mentioned earlier on this page). `wirePluginIntoBoot` only knows how to splice into the `plugins:` list, so it cannot auto-wire a named argument — and `velora_fcm` additionally requires manual Firebase platform setup (`flutterfire configure`, `Firebase.initializeApp()`) that no CLI can perform for you anyway. For those two, `velora install <package>` adds the pub dependency and prints the manual wiring/setup steps instead of touching `main()`.
 
-Read any of the four pages alongside this one as a worked example of everything above.
+Note that `velora_env` is a special case even among the plugin-wired packages: its primary API, the static `VeloraEnv` facade, is designed to be used in `main()` *before* `Velora.boot()` runs at all (e.g. to build `VeloraConfig.apiBaseUrl` from a loaded `.env` value) — `VeloraEnvPlugin` itself is only needed for DI/introspection. See [velora_env →](packages/env.md) for the full boot sequence.
+
+Read any of the five pages alongside this one as a worked example of everything above.
 
 ---
 
-**See also:** [API Client →](api-client.md) for `VeloraApiInterceptor`, [Framework / App Boundary →](framework-app-boundary.md) for how core and app-owned code stay decoupled, [velora_offline →](packages/offline.md), [velora_db →](packages/db.md), [velora_fcm →](packages/fcm.md), and [velora_local_notifications →](packages/local-notifications.md) for real packages built on these contracts.
+**See also:** [API Client →](api-client.md) for `VeloraApiInterceptor`, [Framework / App Boundary →](framework-app-boundary.md) for how core and app-owned code stay decoupled, [velora_offline →](packages/offline.md), [velora_db →](packages/db.md), [velora_env →](packages/env.md), [velora_fcm →](packages/fcm.md), and [velora_local_notifications →](packages/local-notifications.md) for real packages built on these contracts.

@@ -525,14 +525,30 @@ Future<void> main() async {
     );
   });
 
-  test('velora_offline and velora_db wire a plugin (wiresPlugin == true)', () {
-    for (final name in ['velora_offline', 'velora_db']) {
-      final package = veloraPackageCatalog[name]!;
-      expect(package.wiresPlugin, isTrue, reason: name);
-      expect(package.importLine, isNotNull, reason: name);
-      expect(package.pluginExpr, isNotNull, reason: name);
-    }
+  test('catalog contains velora_env', () {
+    expect(veloraPackageCatalog.containsKey('velora_env'), isTrue);
+    final package = veloraPackageCatalog['velora_env']!;
+    expect(package.name, 'velora_env');
+    expect(package.pluginExpr, 'VeloraEnvPlugin()');
+    expect(
+      package.importLine,
+      "import 'package:velora_env/velora_env.dart';",
+    );
+    expect(package.notes, isNotEmpty);
   });
+
+  test(
+    'velora_offline, velora_db, and velora_env wire a plugin '
+    '(wiresPlugin == true)',
+    () {
+      for (final name in ['velora_offline', 'velora_db', 'velora_env']) {
+        final package = veloraPackageCatalog[name]!;
+        expect(package.wiresPlugin, isTrue, reason: name);
+        expect(package.importLine, isNotNull, reason: name);
+        expect(package.pluginExpr, isNotNull, reason: name);
+      }
+    },
+  );
 
   test(
     'catalog contains velora_fcm and velora_local_notifications as '
@@ -683,6 +699,73 @@ Future<void> main() async {
       contains("import 'package:velora_offline/velora_offline.dart';"),
     );
   });
+
+  test(
+    'install velora_env --no-pub-get adds the dependency, wires '
+    'VeloraEnvPlugin() into Velora.boot(), and prints the setup notes',
+    () async {
+      final temp = Directory.systemTemp.createTempSync(
+        'velora_cli_install_env_',
+      );
+      addTearDown(() {
+        if (temp.existsSync()) temp.deleteSync(recursive: true);
+      });
+
+      final packageRoot = Directory.current.path;
+      Future<ProcessResult> runCli(List<String> args) {
+        return Process.run(Platform.resolvedExecutable, <String>[
+          '$packageRoot/bin/velora_cli.dart',
+          ...args,
+        ], workingDirectory: Directory.current.path);
+      }
+
+      final app = Directory('${temp.path}/app')..createSync();
+      File('${app.path}/pubspec.yaml').writeAsStringSync('''name: demo
+dependencies:
+  flutter:
+    sdk: flutter
+''');
+      Directory('${app.path}/lib').createSync();
+      File('${app.path}/lib/main.dart').writeAsStringSync('''
+Future<void> main() async {
+  await Velora.boot(config: config);
+}
+''');
+
+      final original = Directory.current;
+      ProcessResult install;
+      try {
+        Directory.current = app;
+        install = await runCli(<String>[
+          'install',
+          'velora_env',
+          '--no-pub-get',
+        ]);
+        expect(install.exitCode, 0, reason: install.stderr.toString());
+      } finally {
+        Directory.current = original;
+      }
+
+      final pubspecContent = File(
+        '${app.path}/pubspec.yaml',
+      ).readAsStringSync();
+      expect(pubspecContent, contains('velora_env: ^0.0.1'));
+
+      final mainContent = File('${app.path}/lib/main.dart').readAsStringSync();
+      expect(mainContent, contains('VeloraEnvPlugin()'));
+      expect(
+        mainContent,
+        contains("import 'package:velora_env/velora_env.dart';"),
+      );
+      expect(mainContent, contains('plugins: [VeloraEnvPlugin()]'));
+
+      final stdoutText = install.stdout.toString();
+      expect(stdoutText, contains('Added velora_env: ^0.0.1 to pubspec.yaml'));
+      expect(stdoutText, contains('Wired VeloraEnvPlugin() into Velora.boot()'));
+      expect(stdoutText, contains('VeloraEnv.load()'));
+      expect(stdoutText, contains('VELORA_ENV'));
+    },
+  );
 
   test(
     'install --no-wire adds the dependency but leaves main.dart untouched '
