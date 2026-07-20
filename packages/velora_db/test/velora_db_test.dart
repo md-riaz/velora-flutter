@@ -103,6 +103,52 @@ void main() {
         await db.close();
       },
     );
+
+    test(
+      'onDowngrade is wired to VeloraMigrationRunner.onDowngrade: reopening '
+      'a persisted database at a lower version than its stored version '
+      'does not throw and the database remains usable',
+      () async {
+        final dir = await Directory.systemTemp.createTemp('velora_db_downgrade_test');
+        final path = p.join(dir.path, 'downgrade_test.db');
+        addTearDown(() => dir.delete(recursive: true));
+
+        final migrations = [
+          _CreateTodosTable(),
+          _AddArchivedColumn(onApplied: []),
+        ];
+
+        // Open at version 2: both migrations run via onCreate.
+        var db = await VeloraDatabase(
+          databaseName: path,
+          version: 2,
+          migrations: migrations,
+          factory: databaseFactoryFfi,
+        ).open();
+        expect(await db.db.getVersion(), 2);
+        await db.db.insert('todos', {'title': 'seed', 'done': 0});
+        await db.close();
+
+        // Reopen at version 1 with the same migrations list. sqflite's
+        // stored PRAGMA user_version (2) is now higher than the requested
+        // version (1), so it invokes onDowngrade. Without onDowngrade wired
+        // in VeloraDatabase.open(), sqflite throws instead of opening.
+        db = await VeloraDatabase(
+          databaseName: path,
+          version: 1,
+          migrations: migrations,
+          factory: databaseFactoryFfi,
+        ).open();
+
+        expect(await db.db.getVersion(), 1);
+        // The database is still usable after the downgrade -- the
+        // pre-existing row survived and the table can still be queried.
+        final rows = await db.db.query('todos');
+        expect(rows, hasLength(1));
+        expect(rows.single['title'], 'seed');
+        await db.close();
+      },
+    );
   });
 
   group('QueryBuilder', () {
@@ -196,6 +242,62 @@ void main() {
     );
   });
 
+  group('QueryBuilder null handling', () {
+    late VeloraDatabase db;
+
+    setUp(() async {
+      db = await VeloraDatabase(
+        databaseName: inMemoryDatabasePath,
+        version: 1,
+        migrations: [_CreateEntriesTable()],
+        factory: databaseFactoryFfi,
+      ).open();
+      // deleted_at is left unset (NULL) on the two "active" rows.
+      await db.db.insert('entries', {'name': 'active-1'});
+      await db.db.insert('entries', {'name': 'deleted', 'deleted_at': '2024-01-01'});
+      await db.db.insert('entries', {'name': 'active-2'});
+    });
+
+    tearDown(() => db.close());
+
+    test(
+      "where('col', null) compiles to 'col IS NULL' and matches only rows "
+      'whose column is NULL, excluding non-null rows',
+      () async {
+        final rows =
+            await QueryBuilder('entries').where('deleted_at', null).get(db.db);
+        expect(rows, hasLength(2));
+        expect(
+          rows.map((r) => r['name']),
+          containsAll(['active-1', 'active-2']),
+        );
+      },
+    );
+
+    test(
+      "whereOp('col', '!=', null) compiles to 'col IS NOT NULL' and matches "
+      'only rows whose column is non-null',
+      () async {
+        final rows = await QueryBuilder('entries')
+            .whereOp('deleted_at', '!=', null)
+            .get(db.db);
+        expect(rows, hasLength(1));
+        expect(rows.single['name'], 'deleted');
+      },
+    );
+
+    test(
+      'a normal equality comparison against a non-null value is unaffected '
+      'by the null-to-IS rewrite',
+      () async {
+        final rows =
+            await QueryBuilder('entries').where('name', 'deleted').get(db.db);
+        expect(rows, hasLength(1));
+        expect(rows.single['deleted_at'], '2024-01-01');
+      },
+    );
+  });
+
   group('VeloraTable', () {
     late VeloraDatabase db;
     late VeloraTable<TodoModel, int> table;
@@ -219,6 +321,15 @@ void main() {
       expect(found!.title, 'Buy milk');
       expect(found.done, isFalse);
     });
+
+    test(
+      'insert on an int-pk table with no id supplied returns the int rowid '
+      'directly (the "rowId is ID" fast path)',
+      () async {
+        final id = await table.insert(const TodoModel(title: 'x').toJson());
+        expect(id, isA<int>());
+      },
+    );
 
     test('create inserts and returns the hydrated model', () async {
       final created = await table.create(const TodoModel(title: 'Walk dog').toJson());
@@ -262,6 +373,88 @@ void main() {
       await table.create(const TodoModel(title: 'y').toJson());
       expect(await table.count(), 2);
     });
+  });
+
+  group('VeloraTable with a String primary key', () {
+    late VeloraDatabase db;
+    late VeloraTable<UuidItemModel, String> table;
+
+    setUp(() async {
+      db = await VeloraDatabase(
+        databaseName: inMemoryDatabasePath,
+        version: 1,
+        migrations: [_CreateItemsUuidTable()],
+        factory: databaseFactoryFfi,
+      ).open();
+      table = VeloraTable<UuidItemModel, String>(
+        db: db.db,
+        table: 'items_uuid',
+        primaryKey: 'uuid',
+        fromMap: UuidItemModel.fromJson,
+        toMap: (item) => item.toJson(),
+      );
+    });
+
+    tearDown(() => db.close());
+
+    test(
+      'create returns the hydrated model when the primary key is supplied '
+      'by the caller (providedId path)',
+      () async {
+        final created = await table.create(
+          const UuidItemModel(uuid: 'abc-123', name: 'explicit').toJson(),
+        );
+        expect(created.uuid, 'abc-123');
+        expect(created.name, 'explicit');
+      },
+    );
+
+    test(
+      'create resolves a DB-generated String primary key by reading the row '
+      'back by rowid, instead of crashing on an int-to-String cast',
+      () async {
+        final created = await table.create(
+          const UuidItemModel(name: 'generated').toJson(),
+        );
+        expect(created.uuid, isNotNull);
+        expect(created.uuid, isNotEmpty);
+        expect(created.name, 'generated');
+
+        // The resolved id round-trips through find().
+        final found = await table.find(created.uuid!);
+        expect(found!.name, 'generated');
+      },
+    );
+
+    test(
+      'conflictAlgorithm defaults to replace (overwrites a duplicate '
+      'primary key); passing .abort throws on the same duplicate instead',
+      () async {
+        await table.create(
+          const UuidItemModel(uuid: 'dup', name: 'first').toJson(),
+        );
+
+        // Default (replace) silently overwrites.
+        final replaced = await table.create(
+          const UuidItemModel(uuid: 'dup', name: 'second').toJson(),
+        );
+        expect(replaced.name, 'second');
+        expect(await table.count(), 1);
+
+        // Explicit abort throws instead of replacing.
+        await expectLater(
+          table.create(
+            const UuidItemModel(uuid: 'dup', name: 'third').toJson(),
+            conflictAlgorithm: ConflictAlgorithm.abort,
+          ),
+          throwsA(isA<DatabaseException>()),
+        );
+        // The aborted insert didn't touch the existing row.
+        final row = await table.find('dup');
+        expect(row!.name, 'second');
+        expect(await table.count(), 1);
+      },
+    );
   });
 
   group('VeloraDbRepository', () {
@@ -579,6 +772,42 @@ class _AddArchivedColumn extends VeloraMigration {
   }
 }
 
+class _CreateEntriesTable extends VeloraMigration {
+  @override
+  int get version => 1;
+
+  @override
+  Future<void> up(Database db) async {
+    await db.execute('''
+      CREATE TABLE entries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        deleted_at TEXT
+      )
+    ''');
+  }
+}
+
+/// A table keyed by a `TEXT` primary key with a SQL-side default, so an
+/// insert that doesn't supply `uuid` still gets one assigned by SQLite
+/// itself (not by the app) -- this is the case where the raw sqflite
+/// `insert()` rowid (an `int`) is not a valid `String` id on its own, and
+/// `VeloraTable.insert` must read the row back by `rowid` to recover it.
+class _CreateItemsUuidTable extends VeloraMigration {
+  @override
+  int get version => 1;
+
+  @override
+  Future<void> up(Database db) async {
+    await db.execute('''
+      CREATE TABLE items_uuid (
+        uuid TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(4)))),
+        name TEXT NOT NULL
+      )
+    ''');
+  }
+}
+
 /// Sample model used only in this test suite, mirroring the plain-Dart model
 /// convention (`const` constructor, `fromJson`/`toJson`) used across Velora
 /// packages -- not part of `velora_db`'s public API.
@@ -609,5 +838,28 @@ class TodoModel {
     if (value == null) return null;
     if (value is int) return value;
     return int.tryParse(value.toString());
+  }
+}
+
+/// Sample model with a `String` (UUID-shaped) primary key, used only in this
+/// test suite to exercise `VeloraTable`'s non-int id resolution path.
+class UuidItemModel {
+  final String? uuid;
+  final String name;
+
+  const UuidItemModel({this.uuid, required this.name});
+
+  factory UuidItemModel.fromJson(Map<String, dynamic> json) {
+    return UuidItemModel(
+      uuid: json['uuid']?.toString(),
+      name: json['name']?.toString() ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      if (uuid != null) 'uuid': uuid,
+      'name': name,
+    };
   }
 }

@@ -59,6 +59,8 @@ class VeloraDatabase extends GetxService {
         onCreate: (db, version) => _runner.onCreate(db, version),
         onUpgrade: (db, oldVersion, newVersion) =>
             _runner.onUpgrade(db, oldVersion, newVersion),
+        onDowngrade: (db, oldVersion, newVersion) =>
+            _runner.onDowngrade(db, oldVersion, newVersion),
       ),
     );
     return this;

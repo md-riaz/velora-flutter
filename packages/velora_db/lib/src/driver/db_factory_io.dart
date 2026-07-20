@@ -1,6 +1,16 @@
-import 'package:sqflite/sqflite.dart' as sqflite;
-import 'package:sqflite_common/sqlite_api.dart';
+import 'dart:io';
 
-/// Native (iOS/Android/desktop) database factory, backed by `sqflite`'s
-/// platform channel implementation.
-DatabaseFactory defaultVeloraDbFactory() => sqflite.databaseFactory;
+import 'package:sqflite/sqflite.dart' as sqflite;
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+/// Native database factory: `sqflite`'s platform channel implementation on
+/// iOS/Android/macOS, or `sqflite_common_ffi`'s FFI implementation on
+/// Windows/Linux, where `sqflite` has no platform channel plugin and
+/// `sqflite.databaseFactory` throws `MissingPluginException`.
+DatabaseFactory defaultVeloraDbFactory() {
+  if (Platform.isWindows || Platform.isLinux) {
+    sqfliteFfiInit();
+    return databaseFactoryFfi;
+  }
+  return sqflite.databaseFactory;
+}

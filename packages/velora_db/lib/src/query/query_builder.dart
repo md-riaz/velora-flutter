@@ -73,11 +73,26 @@ class QueryBuilder {
   /// Adds a condition using an explicit operator, e.g.
   /// `whereOp('age', '>', 18)`. [op] must be one of the allowlisted
   /// comparison operators (case-insensitive).
+  ///
+  /// In SQL, `= NULL` / `!= NULL` never match anything -- comparing to NULL
+  /// with an equality operator always evaluates to NULL (neither true nor
+  /// false), not "is null". So when [value] is `null` and [op] is `=`, this
+  /// is rewritten to `IS` (compiling to `column IS NULL`); when [op] is `!=`
+  /// or `<>`, it's rewritten to `IS NOT` (compiling to `column IS NOT
+  /// NULL`). `IS` / `IS NOT` passed explicitly with a non-null [value] are
+  /// left as ordinary bound parameters.
   QueryBuilder whereOp(String column, String op, Object? value) {
     _validateColumn(column);
-    final normalizedOp = op.trim().toUpperCase();
+    var normalizedOp = op.trim().toUpperCase();
     if (!_allowedOperators.contains(normalizedOp)) {
       throw ArgumentError.value(op, 'op', 'Unsupported operator');
+    }
+    if (value == null) {
+      if (normalizedOp == '=') {
+        normalizedOp = 'IS';
+      } else if (normalizedOp == '!=' || normalizedOp == '<>') {
+        normalizedOp = 'IS NOT';
+      }
     }
     return QueryBuilder._(
       table,
@@ -142,10 +157,28 @@ class QueryBuilder {
     return int.parse(value.toString());
   }
 
+  /// Whether [w] should compile to a bare `column IS [NOT] NULL` with no
+  /// bound `?` placeholder, rather than a parameterized comparison.
+  static bool _isUnboundNullCheck(_WhereClause w) =>
+      w.value == null && (w.op == 'IS' || w.op == 'IS NOT');
+
   String? get _whereClause => _wheres.isEmpty
       ? null
-      : _wheres.map((w) => '${w.column} ${w.op} ?').join(' AND ');
+      : _wheres
+          .map(
+            (w) => _isUnboundNullCheck(w)
+                ? '${w.column} ${w.op} NULL'
+                : '${w.column} ${w.op} ?',
+          )
+          .join(' AND ');
 
-  List<Object?>? get _whereArgs =>
-      _wheres.isEmpty ? null : _wheres.map((w) => w.value).toList();
+  // Must stay in lockstep with _whereClause: both iterate _wheres in the
+  // same order and skip the same unbound-null-check clauses, so the `?`
+  // placeholders line up positionally with the args sqflite binds into them.
+  List<Object?>? get _whereArgs => _wheres.isEmpty
+      ? null
+      : _wheres
+          .where((w) => !_isUnboundNullCheck(w))
+          .map((w) => w.value)
+          .toList();
 }

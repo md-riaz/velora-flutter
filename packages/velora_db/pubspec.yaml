@@ -16,18 +16,21 @@ dependencies:
   sqflite: ^2.3.0
   sqflite_common: ^2.5.0
   sqflite_common_ffi_web: ^0.4.0
-
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
-  flutter_lints: ^6.0.0
   # Pinned to 2.3.7 (still within ^2.3.0) rather than the newer 2.4.x line:
   # sqflite_common_ffi >=2.4.0 requires sqlite3 >=3.0.0, whose build hook
   # downloads a prebuilt binary from a GitHub release host that isn't
   # reachable in every sandboxed/offline CI environment. 2.3.7 depends on
   # sqlite3 ^2.9.4, which predates that hook and dynamically loads the
-  # system's libsqlite3 instead, so `flutter test` works fully offline.
+  # system's libsqlite3 instead, so `flutter test` works fully offline. This
+  # is a real (non-dev) dependency because `db_factory_io.dart` uses it as
+  # the runtime database factory on Windows/Linux, where `sqflite`'s
+  # platform channel implementation doesn't exist.
   sqflite_common_ffi: 2.3.7
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
   path: ^1.9.0
 
 flutter:
