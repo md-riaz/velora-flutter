@@ -72,7 +72,7 @@ const veloraPackageCatalog = <String, VeloraPackageInstall>{
     pluginExpr: 'VeloraEnvPlugin()',
     notes: [
       'Added velora_env and wired VeloraEnvPlugin() into Velora.boot().',
-      'Create your env files: assets/env/.env (base) and per-flavor assets/env/.env.staging / .env.production, and declare `assets/env/` under flutter: assets: in pubspec.yaml.',
+      'Create your env files: assets/env/.env (base) and per-flavor assets/env/.env.staging / .env.development / .env.production (both the long form -- .env.development, .env.production, recommended -- and the short form -- .env.dev, .env.prod -- are accepted), and declare `assets/env/` under flutter: assets: in pubspec.yaml.',
       'For config needed to BUILD VeloraConfig (e.g. apiBaseUrl per environment), call `await VeloraEnv.load();` in main() BEFORE Velora.boot(...) and read via VeloraEnv.get(...)/VeloraEnv.pick(dev: ..., staging: ..., prod: ...).',
       'Select the flavor at build/run time with --dart-define=VELORA_ENV=staging (values: dev, staging, prod).',
       'Note: .env assets are bundled into the app and are readable — use them for config/flavor switching, NOT for secrets.',

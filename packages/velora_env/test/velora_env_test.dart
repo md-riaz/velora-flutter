@@ -50,6 +50,27 @@ BAZ=qux
       },
     );
 
+    test(
+      'strips an inline comment that follows a closing double quote',
+      () {
+        final result = parseEnv('FOO="bar" # comment');
+        expect(result['FOO'], 'bar');
+      },
+    );
+
+    test(
+      'strips an inline comment that follows a closing single quote',
+      () {
+        final result = parseEnv("FOO='baz' # c");
+        expect(result['FOO'], 'baz');
+      },
+    );
+
+    test('strips a trailing inline comment on an unquoted value (X=y # c)', () {
+      final result = parseEnv('X=y # c');
+      expect(result['X'], 'y');
+    });
+
     test('skips malformed lines instead of throwing', () {
       final result = parseEnv('''
 this is not valid
@@ -308,6 +329,140 @@ FOO=bar
         throwsA(anything),
       );
     });
+
+    test(
+      'accepts the long-form flavor filename (.env.production) for prod',
+      () async {
+        final bundle = _FakeAssetBundle({
+          'assets/env/.env': 'API_URL=https://base.example.test',
+          'assets/env/.env.production': 'API_URL=https://prod.example.test',
+        });
+
+        await VeloraEnv.load(
+          environment: VeloraEnvironment.prod,
+          bundle: bundle,
+        );
+
+        expect(VeloraEnv.get('API_URL'), 'https://prod.example.test');
+      },
+    );
+
+    test(
+      'accepts the long-form flavor filename (.env.development) for dev',
+      () async {
+        final bundle = _FakeAssetBundle({
+          'assets/env/.env': 'API_URL=https://base.example.test',
+          'assets/env/.env.development': 'API_URL=https://dev.example.test',
+        });
+
+        await VeloraEnv.load(
+          environment: VeloraEnvironment.dev,
+          bundle: bundle,
+        );
+
+        expect(VeloraEnv.get('API_URL'), 'https://dev.example.test');
+      },
+    );
+
+    test(
+      'still accepts the short-form flavor filename (.env.prod)',
+      () async {
+        final bundle = _FakeAssetBundle({
+          'assets/env/.env.prod': 'API_URL=https://prod-short.example.test',
+        });
+
+        await VeloraEnv.load(
+          environment: VeloraEnvironment.prod,
+          bundle: bundle,
+        );
+
+        expect(VeloraEnv.get('API_URL'), 'https://prod-short.example.test');
+      },
+    );
+
+    test(
+      'loads only the first matching flavor candidate, not both '
+      '(short form wins over long form when both exist)',
+      () async {
+        final bundle = _FakeAssetBundle({
+          'assets/env/.env.prod': 'API_URL=https://short.example.test',
+          'assets/env/.env.production': 'API_URL=https://long.example.test',
+        });
+
+        await VeloraEnv.load(
+          environment: VeloraEnvironment.prod,
+          bundle: bundle,
+        );
+
+        expect(VeloraEnv.get('API_URL'), 'https://short.example.test');
+      },
+    );
+  });
+
+  group('VeloraEnv.current', () {
+    tearDown(VeloraEnv.reset);
+
+    test(
+      'current is directly settable (mockable) without a compile-time '
+      'define',
+      () {
+        VeloraEnv.current = VeloraEnvironment.prod;
+        expect(VeloraEnv.current, VeloraEnvironment.prod);
+        expect(VeloraEnv.isProd, isTrue);
+      },
+    );
+
+    test('load(environment: ...) updates current to match', () async {
+      final bundle = _FakeAssetBundle({
+        'assets/env/.env.staging': 'API_URL=https://staging.example.test',
+      });
+
+      await VeloraEnv.load(
+        environment: VeloraEnvironment.staging,
+        bundle: bundle,
+      );
+
+      expect(VeloraEnv.current, VeloraEnvironment.staging);
+      expect(VeloraEnv.isStaging, isTrue);
+      expect(
+        VeloraEnv.pick(dev: 'dev-value', staging: 'staging-value'),
+        'staging-value',
+      );
+    });
+
+    test(
+      'loadFromString(..., environment: ...) updates current to match',
+      () {
+        VeloraEnv.loadFromString(
+          'FOO=bar',
+          environment: VeloraEnvironment.staging,
+        );
+
+        expect(VeloraEnv.current, VeloraEnvironment.staging);
+        expect(VeloraEnv.isStaging, isTrue);
+        expect(
+          VeloraEnv.pick(dev: 'dev-value', staging: 'staging-value'),
+          'staging-value',
+        );
+      },
+    );
+
+    test(
+      'reset() clears the current override so it re-resolves to the '
+      'compile-time default',
+      () {
+        VeloraEnv.current = VeloraEnvironment.staging;
+        expect(VeloraEnv.current, VeloraEnvironment.staging);
+
+        VeloraEnv.reset();
+
+        // No VELORA_ENV compile-time define is set for this test run, so
+        // the compile-time default (dev) is what current re-resolves to --
+        // it must not still be stuck on staging.
+        expect(VeloraEnv.current, isNot(VeloraEnvironment.staging));
+        expect(VeloraEnv.current, VeloraEnvironment.dev);
+      },
+    );
   });
 
   group('VeloraEnvPlugin', () {

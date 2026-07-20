@@ -8,12 +8,14 @@
 /// - Keys must match `[A-Za-z_][A-Za-z0-9_]*`; lines that don't look like
 ///   `KEY=VALUE` (or whose key doesn't match) are silently skipped rather
 ///   than throwing, so a malformed line doesn't take down the whole file.
-/// - Values are trimmed. A value wrapped in matching single or double quotes
-///   has the quotes stripped:
+/// - Values are trimmed. A value starting with a quote (`"` or `'`) is
+///   scanned for its matching *closing* quote first; everything after that
+///   closing quote (e.g. a trailing ` # comment`) is ignored, and the quotes
+///   themselves are stripped:
 ///   - Inside **double** quotes, `\n`, `\t`, `\"`, and `\\` escapes are
-///     interpreted.
+///     interpreted, and a `\"` is not treated as the closing quote.
 ///   - Inside **single** quotes, the content is taken literally (no escape
-///     processing).
+///     processing) up to the first `'`.
 ///   - **Unquoted** values have a trailing ` #comment` stripped (a `#`
 ///     preceded by whitespace, to the end of the line).
 /// - Duplicate keys: the last occurrence in the file wins.
@@ -42,19 +44,44 @@ Map<String, String> parseEnv(String content) {
 }
 
 String _parseValue(String rawValue) {
-  if (rawValue.length >= 2 &&
-      rawValue.startsWith('"') &&
-      rawValue.endsWith('"')) {
-    return _unescapeDouble(rawValue.substring(1, rawValue.length - 1));
+  if (rawValue.startsWith('"')) {
+    final closingIndex = _findClosingDoubleQuote(rawValue);
+    if (closingIndex != -1) {
+      return _unescapeDouble(rawValue.substring(1, closingIndex));
+    }
   }
 
-  if (rawValue.length >= 2 &&
-      rawValue.startsWith("'") &&
-      rawValue.endsWith("'")) {
-    return rawValue.substring(1, rawValue.length - 1);
+  if (rawValue.startsWith("'")) {
+    final closingIndex = _findClosingSingleQuote(rawValue);
+    if (closingIndex != -1) {
+      return rawValue.substring(1, closingIndex);
+    }
   }
 
   return _stripInlineComment(rawValue).trim();
+}
+
+/// Finds the index of the closing (unescaped) `"` that matches the opening
+/// quote at index 0, or `-1` if there isn't one. `\"` and `\\` are honored
+/// as escapes while scanning, matching [_unescapeDouble]'s interpretation.
+int _findClosingDoubleQuote(String value) {
+  for (var i = 1; i < value.length; i++) {
+    final char = value[i];
+    if (char == r'\' && i + 1 < value.length) {
+      i++; // Skip the escaped character -- it can't be a closing quote.
+      continue;
+    }
+    if (char == '"') return i;
+  }
+  return -1;
+}
+
+/// Finds the index of the closing `'` that matches the opening quote at
+/// index 0, or `-1` if there isn't one. Single-quoted values are literal,
+/// so the first `'` after the opening one closes it -- no escapes.
+int _findClosingSingleQuote(String value) {
+  final index = value.indexOf("'", 1);
+  return index;
 }
 
 String _unescapeDouble(String value) {

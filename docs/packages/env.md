@@ -30,7 +30,7 @@ velora install velora_env
 
 This adds the dependency, adds the import, and wires `VeloraEnvPlugin()` into your `Velora.boot(plugins: [...])` call. But because `VeloraEnv` is a static facade, wiring the plugin is only half the setup — you still need to:
 
-1. Create your env files under `assets/env/`: a shared base `assets/env/.env`, plus optional per-flavor overrides `assets/env/.env.staging` / `assets/env/.env.production` (missing files are tolerated — nothing throws if one flavor has no override).
+1. Create your env files under `assets/env/`: a shared base `assets/env/.env`, plus optional per-flavor overrides — `assets/env/.env.staging` for staging, and for dev/prod either the long form (`assets/env/.env.development`, `assets/env/.env.production` — recommended) or the short form (`assets/env/.env.dev`, `assets/env/.env.prod`) is accepted (missing files are tolerated — nothing throws if one flavor has no override).
 2. Declare that directory as a Flutter asset in `pubspec.yaml`:
 
    ```yaml
@@ -107,10 +107,15 @@ final apiBaseUrl = VeloraEnv.pick(
 
 ## Flavors
 
-`VeloraEnv.current` resolves `VeloraEnvironment` from `--dart-define=VELORA_ENV=...`, defaulting to `dev`. `VeloraEnv.isDev` / `isStaging` / `isProd` are shorthand checks. `VeloraEnv.load()` merges two files, in order:
+`VeloraEnv.current` resolves `VeloraEnvironment` from `--dart-define=VELORA_ENV=...`, defaulting to `dev` (calling `VeloraEnv.load(environment: ...)` or `loadFromString(..., environment: ...)` with an explicit environment updates `current` to match, so `pick`/`isDev`/`isStaging`/`isProd` reflect the loaded config). `VeloraEnv.load()` merges two files, in order:
 
 1. `assets/env/.env` — the shared base, loaded first (if present).
-2. `assets/env/.env.<flavor>` — an override for the current flavor (`dev`, `staging`, or `prod`), whose keys win over the base file's.
+2. A flavor-specific override for the current flavor, whose keys win over the base file's. Both a long and short filename are accepted per flavor — the loader tries them in order and loads only the first that exists:
+   - `dev` → `assets/env/.env.dev`, then `assets/env/.env.development`
+   - `staging` → `assets/env/.env.staging`, then `assets/env/.env.stag`
+   - `prod` → `assets/env/.env.prod`, then `assets/env/.env.production`
+
+   The long form (`.env.development` / `.env.production`) is recommended for clarity.
 
 ```dotenv title="assets/env/.env"
 APP_NAME=My App
@@ -121,7 +126,7 @@ API_BASE_URL=http://localhost:8000/api
 API_BASE_URL=https://api.example.com/api
 ```
 
-Running with `--dart-define=VELORA_ENV=prod` yields `APP_NAME=My App` (from the base) and `API_BASE_URL=https://api.example.com/api` (overridden by the flavor file).
+Running with `--dart-define=VELORA_ENV=prod` yields `APP_NAME=My App` (from the base) and `API_BASE_URL=https://api.example.com/api` (overridden by the flavor file — `.env.production` is tried after `.env.prod`, so it's picked up even though it's not the shortest match for the `prod` flavor name).
 
 ## Security note
 

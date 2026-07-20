@@ -42,15 +42,27 @@ class VeloraEnv {
 
   static Map<String, String> _values = const {};
   static bool _isLoaded = false;
+  static VeloraEnvironment? _current;
 
-  /// The current [VeloraEnvironment], resolved from the `VELORA_ENV`
-  /// compile-time environment variable (set via
-  /// `--dart-define=VELORA_ENV=staging` or `--dart-define-from-file`).
+  /// The current [VeloraEnvironment].
   ///
-  /// Defaults to [VeloraEnvironment.dev] when not supplied.
-  static VeloraEnvironment get current => VeloraEnvironment.parse(
+  /// Resolved, on first read, from the `VELORA_ENV` compile-time environment
+  /// variable (set via `--dart-define=VELORA_ENV=staging` or
+  /// `--dart-define-from-file`), defaulting to [VeloraEnvironment.dev] when
+  /// not supplied.
+  ///
+  /// [load] and [loadFromString] update this to the environment they were
+  /// explicitly given, so [pick]/[isDev]/[isStaging]/[isProd] reflect the
+  /// loaded config. It can also be set directly (e.g. in tests, to mock the
+  /// active environment without a compile-time define).
+  static VeloraEnvironment get current => _current ??= VeloraEnvironment.parse(
         const String.fromEnvironment('VELORA_ENV'),
       );
+
+  /// Overrides [current]. Intended for tests (to mock the active
+  /// environment) and is also how [load]/[loadFromString] keep [current] in
+  /// sync with an explicitly loaded environment.
+  static set current(VeloraEnvironment value) => _current = value;
 
   static bool get isDev => current == VeloraEnvironment.dev;
   static bool get isStaging => current == VeloraEnvironment.staging;
@@ -65,10 +77,19 @@ class VeloraEnv {
   /// Asset resolution, when [asset] is omitted, follows a base + flavor
   /// convention:
   /// 1. `assets/env/.env` — the shared base file, loaded first (if present).
-  /// 2. `assets/env/.env.<flavor>` — an environment-specific override, where
-  ///    `<flavor>` is `(environment ?? current).name` (`dev`, `staging`, or
-  ///    `prod`). Its keys are merged over the base file's, overriding
-  ///    duplicates.
+  /// 2. A flavor-specific override for `(environment ?? current)`, whose
+  ///    keys are merged over the base file's, overriding duplicates. Both a
+  ///    short and a long filename are accepted per flavor (the long form is
+  ///    recommended, matching the docs):
+  ///    - `dev` → `assets/env/.env.dev`, then `assets/env/.env.development`
+  ///    - `staging` → `assets/env/.env.staging`, then
+  ///      `assets/env/.env.stag`
+  ///    - `prod` → `assets/env/.env.prod`, then
+  ///      `assets/env/.env.production`
+  ///
+  ///    Only the *first* candidate that exists is loaded (they're not both
+  ///    applied) — this avoids double-applying if a project happens to have
+  ///    both files.
   ///
   /// A missing flavor asset is tolerated (it's normal for a project to not
   /// define an override for every flavor); the base file is also tolerated
@@ -83,6 +104,10 @@ class VeloraEnv {
   /// By default, a successful load **replaces** any previously loaded
   /// values. Pass [merge] to instead merge the newly loaded keys over the
   /// existing ones.
+  ///
+  /// If [environment] is supplied, [current] is updated to match, so
+  /// [pick]/[isDev]/[isStaging]/[isProd] reflect the environment that was
+  /// just loaded.
   static Future<void> load({
     String? asset,
     VeloraEnvironment? environment,
@@ -92,11 +117,15 @@ class VeloraEnv {
     final effectiveBundle = bundle ?? rootBundle;
     final merged = <String, String>{};
 
+    if (environment != null) {
+      current = environment;
+    }
+
     if (asset != null) {
       final content = await effectiveBundle.loadString(asset);
       merged.addAll(parseEnv(content));
     } else {
-      final flavor = (environment ?? current).name;
+      final resolvedEnvironment = environment ?? current;
 
       try {
         final base = await effectiveBundle.loadString('assets/env/.env');
@@ -105,13 +134,14 @@ class VeloraEnv {
         // No shared base file — that's fine.
       }
 
-      try {
-        final flavorContent = await effectiveBundle.loadString(
-          'assets/env/.env.$flavor',
-        );
-        merged.addAll(parseEnv(flavorContent));
-      } catch (_) {
-        // No flavor-specific override — that's fine too.
+      for (final candidate in _flavorAssetCandidates(resolvedEnvironment)) {
+        try {
+          final flavorContent = await effectiveBundle.loadString(candidate);
+          merged.addAll(parseEnv(flavorContent));
+          break; // Only the first existing candidate is applied.
+        } catch (_) {
+          // This candidate doesn't exist — try the next one.
+        }
       }
     }
 
@@ -119,18 +149,35 @@ class VeloraEnv {
     _isLoaded = true;
   }
 
+  /// Candidate `assets/env/.env.*` filenames for [environment], in the
+  /// order they should be tried. Only the first one that exists is loaded.
+  static List<String> _flavorAssetCandidates(VeloraEnvironment environment) {
+    switch (environment) {
+      case VeloraEnvironment.dev:
+        return const ['assets/env/.env.dev', 'assets/env/.env.development'];
+      case VeloraEnvironment.staging:
+        return const ['assets/env/.env.staging', 'assets/env/.env.stag'];
+      case VeloraEnvironment.prod:
+        return const ['assets/env/.env.prod', 'assets/env/.env.production'];
+    }
+  }
+
   /// Synchronously loads `.env` values from an in-memory string. Intended
   /// for tests (and any caller that already has the file contents, e.g.
   /// read via `dart:io` outside of Flutter assets).
   ///
-  /// [environment] is accepted for symmetry with [load] but doesn't affect
-  /// parsing — it exists so callers can express intent ("this is the
-  /// staging config") without it changing behavior.
+  /// [environment], if supplied, doesn't affect parsing, but updates
+  /// [current] to match — so callers can express intent ("this is the
+  /// staging config") and have [pick]/[isDev]/[isStaging]/[isProd] reflect
+  /// it.
   static void loadFromString(
     String content, {
     VeloraEnvironment? environment,
     bool merge = false,
   }) {
+    if (environment != null) {
+      current = environment;
+    }
     final parsed = parseEnv(content);
     _values = merge ? {..._values, ...parsed} : parsed;
     _isLoaded = true;
@@ -221,10 +268,13 @@ class VeloraEnv {
     return pickFor<T>(current, dev: dev, staging: staging, prod: prod);
   }
 
-  /// Clears all loaded values and resets [isLoaded] to false. Intended for
-  /// tests, to avoid state leaking between test cases.
+  /// Clears all loaded values, resets [isLoaded] to false, and clears any
+  /// explicitly-set/loaded [current] override (so it re-resolves from the
+  /// `VELORA_ENV` compile-time define on next read). Intended for tests, to
+  /// avoid state leaking between test cases.
   static void reset() {
     _values = const {};
     _isLoaded = false;
+    _current = null;
   }
 }
