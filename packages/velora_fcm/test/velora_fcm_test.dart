@@ -87,6 +87,7 @@ void main() {
 
     test('onMessage emits mapped PushMessage from the client stream',
         () async {
+      await adapter.init();
       final events = <PushMessage>[];
       final sub = adapter.onMessage.listen(events.add);
 
@@ -109,6 +110,7 @@ void main() {
     test(
         'onMessageOpenedApp emits mapped PushMessage from the client stream',
         () async {
+      await adapter.init();
       final events = <PushMessage>[];
       final sub = adapter.onMessageOpenedApp.listen(events.add);
 
@@ -126,18 +128,110 @@ void main() {
       await sub.cancel();
     });
 
-    test('dispose cancels subscriptions and closes the streams', () async {
-      final events = <PushMessage>[];
-      adapter.onMessage.listen(events.add);
+    test(
+      'init() consumes a non-null getInitialMessage() once and emits it on '
+      'onMessageOpenedApp, delivering a terminated-app (cold-start) '
+      'notification tap',
+      () async {
+        client.initialMessage = RemoteMessage.fromMap({
+          'messageId': 'cold-start-1',
+          'notification': {'title': 'Cold Start', 'body': 'Tapped while dead'},
+        });
 
-      await adapter.dispose();
+        final events = <PushMessage>[];
+        final sub = adapter.onMessageOpenedApp.listen(events.add);
 
-      // Underlying client stream still has a listener at the controller
-      // level is irrelevant; what matters is the adapter released its own
-      // subscription so no more work happens after dispose.
-      expect(client.onMessageController.hasListener, isFalse);
-      expect(client.onMessageOpenedAppController.hasListener, isFalse);
-    });
+        await adapter.init();
+        await Future<void>.delayed(Duration.zero);
+
+        expect(events, hasLength(1));
+        expect(events.single.id, 'cold-start-1');
+        expect(events.single.title, 'Cold Start');
+        expect(events.single.body, 'Tapped while dead');
+        expect(client.getInitialMessageCalls, 1);
+
+        await sub.cancel();
+      },
+    );
+
+    test(
+      'init() with a null getInitialMessage() emits nothing extra on '
+      'onMessageOpenedApp',
+      () async {
+        client.initialMessage = null;
+
+        final events = <PushMessage>[];
+        final sub = adapter.onMessageOpenedApp.listen(events.add);
+
+        await adapter.init();
+        await Future<void>.delayed(Duration.zero);
+
+        expect(events, isEmpty);
+        expect(client.getInitialMessageCalls, 1);
+
+        await sub.cancel();
+      },
+    );
+
+    test(
+      'dispose() cancels the underlying client subscriptions but leaves the '
+      'adapter streams open, and a subsequent init() re-subscribes so '
+      'events flow again (re-login after logout)',
+      () async {
+        await adapter.init();
+        expect(client.onMessageController.hasListener, isTrue);
+        expect(client.onMessageOpenedAppController.hasListener, isTrue);
+
+        await adapter.dispose();
+
+        // The adapter released its own subscription to the underlying
+        // client streams -- no more work happens on them post-dispose.
+        expect(client.onMessageController.hasListener, isFalse);
+        expect(client.onMessageOpenedAppController.hasListener, isFalse);
+
+        // But the adapter's own public streams are still open/usable.
+        final events = <PushMessage>[];
+        final sub = adapter.onMessage.listen(events.add);
+
+        // Re-init (simulating a subsequent login) re-subscribes to the
+        // client streams.
+        await adapter.init();
+        expect(client.onMessageController.hasListener, isTrue);
+
+        client.pushOnMessage(RemoteMessage.fromMap({
+          'messageId': 'after-relogin',
+          'notification': {'title': 'Back', 'body': 'Again'},
+        }));
+        await Future<void>.delayed(Duration.zero);
+
+        expect(events, hasLength(1));
+        expect(events.single.id, 'after-relogin');
+
+        await sub.cancel();
+      },
+    );
+
+    test(
+      'calling init() twice in a row without an intervening dispose() does '
+      'not double-deliver events (no duplicate subscriptions)',
+      () async {
+        await adapter.init();
+        await adapter.init();
+
+        final events = <PushMessage>[];
+        final sub = adapter.onMessage.listen(events.add);
+
+        client.pushOnMessage(RemoteMessage.fromMap({
+          'messageId': 'no-dupe',
+          'notification': {'title': 'Once', 'body': 'Only'},
+        }));
+        await Future<void>.delayed(Duration.zero);
+
+        expect(events, hasLength(1));
+
+        await sub.cancel();
+      },
+    );
   });
 }
 
@@ -147,6 +241,8 @@ class _FakeFcmClient implements FcmClient {
   int requestPermissionCalls = 0;
   int getTokenCalls = 0;
   int deleteTokenCalls = 0;
+  int getInitialMessageCalls = 0;
+  RemoteMessage? initialMessage;
 
   final onMessageController = StreamController<RemoteMessage>.broadcast();
   final onMessageOpenedAppController =
@@ -175,6 +271,12 @@ class _FakeFcmClient implements FcmClient {
   @override
   Stream<RemoteMessage> get onMessageOpenedApp =>
       onMessageOpenedAppController.stream;
+
+  @override
+  Future<RemoteMessage?> getInitialMessage() async {
+    getInitialMessageCalls++;
+    return initialMessage;
+  }
 
   void pushOnMessage(RemoteMessage message) =>
       onMessageController.add(message);

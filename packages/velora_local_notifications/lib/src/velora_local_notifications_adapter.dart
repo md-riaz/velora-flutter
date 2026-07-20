@@ -10,19 +10,19 @@ import 'local_notifications_client.dart';
 /// `flutter_local_notifications` requires integer notification ids, but
 /// [LocalNotificationAdapter.schedule] and [LocalNotificationAdapter.cancel]
 /// deal in `String` ids, and [LocalNotificationAdapter.show] doesn't take an
-/// id at all. This adapter bridges that gap with a small, deterministic id
-/// registry:
+/// id at all. This adapter bridges that gap without any in-memory
+/// registry, so it stays correct across app restarts:
 ///
-/// * A private incrementing counter is the source of every synthesized int
-///   id (starting at 1).
-/// * For [schedule], a `Map<String, int>` remembers the int id assigned to
-///   each caller-supplied string id. Scheduling the *same* string id again
-///   reuses its existing int id (so the underlying plugin call overwrites
-///   the previous notification instead of leaving a stale duplicate behind)
-///   -- it does not consume a new counter value. [cancel] looks the string
-///   id up in this map to find the int id to cancel.
-/// * [show] has no caller-supplied id to key off of, so it simply draws the
-///   next counter value every call; there is nothing to look up later.
+/// * [schedule] and [cancel] derive the int id from the caller-supplied
+///   string id via a stable 32-bit FNV-1a hash ([_hashId]). The same string
+///   id always hashes to the same int, in this run and in every future run,
+///   so re-scheduling a string id overwrites the previous notification (no
+///   stale duplicate) and canceling a string id works even after an app
+///   restart -- there is no map that could have been reset to empty.
+/// * [show] has no caller-supplied id to key off of and nothing to look up
+///   later, so it draws ids from a separate counter seeded from the current
+///   time (so it doesn't collide with ids used in a previous session) and
+///   wrapping on overflow.
 ///
 /// All plugin-specific concerns (notification channels, Darwin settings,
 /// timezone conversion, ...) live in [LocalNotificationsClient]
@@ -35,11 +35,37 @@ class VeloraLocalNotificationsAdapter implements LocalNotificationAdapter {
 
   final LocalNotificationsClient _client;
 
-  /// Maps a caller-supplied `schedule`/`cancel` string id to the int id
-  /// registered with the underlying client.
-  final Map<String, int> _scheduledIds = <String, int>{};
+  /// Seeds the [show] id counter from the current time so ids drawn in this
+  /// session don't collide with ids drawn in a previous session (which the
+  /// OS may still remember as "shown").
+  int _nextShowId = DateTime.now().millisecondsSinceEpoch % 0x7FFFFFFF;
 
-  int _nextId = 1;
+  /// Returns the next `show` notification id and advances the counter.
+  ///
+  /// `flutter_local_notifications` ids are plain 32-bit platform ints, so
+  /// once the counter would overflow `Int32.maxValue` (2147483647) it wraps
+  /// back around to 1 instead of growing past what the platform can
+  /// represent.
+  int _getAndIncrementShowId() {
+    final id = _nextShowId;
+    _nextShowId = _nextShowId >= 0x7FFFFFFF ? 1 : _nextShowId + 1;
+    return id;
+  }
+
+  /// Deterministically hashes [id] to a positive 32-bit int using FNV-1a.
+  ///
+  /// This is stable across app executions (unlike [String.hashCode], which
+  /// Dart does not guarantee is stable across isolates/runs), so the same
+  /// string id always maps to the same notification id -- including after
+  /// an app restart.
+  int _hashId(String id) {
+    var hash = 0x811c9dc5;
+    for (final codeUnit in id.codeUnits) {
+      hash ^= codeUnit;
+      hash = (hash * 0x01000193) & 0xFFFFFFFF;
+    }
+    return hash & 0x7FFFFFFF;
+  }
 
   @override
   Future<void> init() => _client.initialize();
@@ -50,7 +76,7 @@ class VeloraLocalNotificationsAdapter implements LocalNotificationAdapter {
     required String body,
     Map<String, dynamic> payload = const {},
   }) {
-    final id = _nextId++;
+    final id = _getAndIncrementShowId();
     return _client.show(
       id,
       title,
@@ -67,7 +93,7 @@ class VeloraLocalNotificationsAdapter implements LocalNotificationAdapter {
     required DateTime dateTime,
     Map<String, dynamic> payload = const {},
   }) {
-    final intId = _scheduledIds.putIfAbsent(id, () => _nextId++);
+    final intId = _hashId(id);
     return _client.zonedSchedule(
       intId,
       title,
@@ -79,16 +105,11 @@ class VeloraLocalNotificationsAdapter implements LocalNotificationAdapter {
 
   @override
   Future<void> cancel(String id) {
-    final intId = _scheduledIds.remove(id);
-    if (intId == null) {
-      return Future<void>.value();
-    }
-    return _client.cancel(intId);
+    return _client.cancel(_hashId(id));
   }
 
   @override
   Future<void> cancelAll() {
-    _scheduledIds.clear();
     return _client.cancelAll();
   }
 

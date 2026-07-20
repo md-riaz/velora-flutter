@@ -33,6 +33,19 @@ import 'push_message_mapper.dart';
 /// seam) and [pushMessageFromRemoteMessage] (the pure mapping function) — the
 /// adapter's own logic (stream mapping, provider id, dispose semantics) is
 /// exercised in tests via a fake [FcmClient], with no real Firebase involved.
+///
+/// ## init()/dispose() are reversible
+///
+/// `NotificationService` owns a single, permanent `VeloraFcmAdapter`
+/// instance for the app's whole lifetime and calls `init()` on login and
+/// `dispose()` on logout (`disposeForUser()`), potentially many times across
+/// a session (login -> logout -> login -> ...). So that later logins keep
+/// working, [dispose] only cancels the underlying Firebase stream
+/// subscriptions — it never closes [onMessage]/[onMessageOpenedApp]
+/// themselves. Those broadcast controllers are created once and live for
+/// the lifetime of the adapter; [init] (re)subscribes to the Firebase
+/// streams every time it runs, so events start flowing again on the next
+/// login.
 class VeloraFcmAdapter implements PushAdapter {
   final FcmClient _client;
 
@@ -41,11 +54,26 @@ class VeloraFcmAdapter implements PushAdapter {
   final StreamController<PushMessage> _onMessageOpenedAppController =
       StreamController<PushMessage>.broadcast();
 
-  late final StreamSubscription<Object?> _onMessageSub;
-  late final StreamSubscription<Object?> _onMessageOpenedAppSub;
+  StreamSubscription<Object?>? _onMessageSub;
+  StreamSubscription<Object?>? _onMessageOpenedAppSub;
 
   VeloraFcmAdapter({FcmClient? client})
-      : _client = client ?? FirebaseMessagingClient() {
+      : _client = client ?? FirebaseMessagingClient();
+
+  @override
+  String get provider => 'fcm';
+
+  @override
+  Future<void> init() async {
+    // Firebase itself must already be initialized by the app (see class doc)
+    // before this adapter is constructed.
+
+    // Guard against double-subscription: if init() is called again without
+    // an intervening dispose() (or after a previous dispose()), cancel any
+    // existing subscriptions before wiring up fresh ones.
+    await _onMessageSub?.cancel();
+    await _onMessageOpenedAppSub?.cancel();
+
     _onMessageSub = _client.onMessage.listen(
       (message) =>
           _onMessageController.add(pushMessageFromRemoteMessage(message)),
@@ -54,16 +82,21 @@ class VeloraFcmAdapter implements PushAdapter {
       (message) => _onMessageOpenedAppController
           .add(pushMessageFromRemoteMessage(message)),
     );
-  }
 
-  @override
-  String get provider => 'fcm';
-
-  @override
-  Future<void> init() async {
-    // Firebase itself must already be initialized by the app (see class doc)
-    // before this adapter is constructed. Nothing else is required, so this
-    // is intentionally a no-op.
+    // `onMessageOpenedApp` never fires for a notification tap that launches
+    // the app from a terminated state -- that launch message only shows up
+    // via `getInitialMessage()`. Surface it through the same
+    // `onMessageOpenedApp` stream so `NotificationService`'s single
+    // opened-app listener handles cold-start taps identically to
+    // warm/background ones. `getInitialMessage()` returns the message at
+    // most once (it's consumed after being read), so this can't double-fire
+    // across repeated init() calls within the same app launch.
+    final initialMessage = await _client.getInitialMessage();
+    if (initialMessage != null) {
+      _onMessageOpenedAppController.add(
+        pushMessageFromRemoteMessage(initialMessage),
+      );
+    }
   }
 
   @override
@@ -84,9 +117,14 @@ class VeloraFcmAdapter implements PushAdapter {
 
   @override
   Future<void> dispose() async {
-    await _onMessageSub.cancel();
-    await _onMessageOpenedAppSub.cancel();
-    await _onMessageController.close();
-    await _onMessageOpenedAppController.close();
+    // Deliberately does NOT close `_onMessageController` /
+    // `_onMessageOpenedAppController` -- see the class doc. Only the
+    // underlying Firebase subscriptions are torn down, so a later `init()`
+    // call can re-subscribe and resume delivering events on the same
+    // (still-open) streams.
+    await _onMessageSub?.cancel();
+    await _onMessageOpenedAppSub?.cancel();
+    _onMessageSub = null;
+    _onMessageOpenedAppSub = null;
   }
 }

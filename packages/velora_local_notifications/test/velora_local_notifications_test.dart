@@ -1,5 +1,18 @@
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:velora_local_notifications/velora_local_notifications.dart';
+
+/// Mirrors the private `_hashId` FNV-1a implementation in
+/// [VeloraLocalNotificationsAdapter] so tests can assert against the exact
+/// deterministic int a given string id maps to.
+int _expectedHash(String id) {
+  var hash = 0x811c9dc5;
+  for (final codeUnit in id.codeUnits) {
+    hash ^= codeUnit;
+    hash = (hash * 0x01000193) & 0xFFFFFFFF;
+  }
+  return hash & 0x7FFFFFFF;
+}
 
 void main() {
   late _FakeLocalNotificationsClient client;
@@ -46,10 +59,29 @@ void main() {
       expect(ids.toSet(), hasLength(2), reason: 'ids must be unique');
       expect(ids[1], greaterThan(ids[0]));
     });
+
+    test(
+      'ids stay positive and distinct across many calls '
+      '(the 32-bit-overflow wraparound itself is covered by inspection of '
+      'the show-id counter, since seeding the private counter near '
+      'Int32.maxValue is not reachable from outside the adapter)',
+      () async {
+        const callCount = 500;
+        for (var i = 0; i < callCount; i++) {
+          await adapter.show(title: 'n$i', body: 'n$i');
+        }
+
+        final ids = client.shown.map((c) => c.id).toList();
+        expect(ids, hasLength(callCount));
+        expect(ids.every((id) => id > 0), isTrue, reason: 'ids must be positive');
+        expect(ids.toSet(), hasLength(callCount), reason: 'ids must be unique');
+      },
+    );
   });
 
   group('schedule', () {
-    test('maps a string id to an int and forwards dateTime/payload', () async {
+    test('hashes the string id to a deterministic int and forwards '
+        'dateTime/payload', () async {
       final when = DateTime(2030, 1, 1, 9);
       await adapter.schedule(
         id: 'daily-reminder',
@@ -61,6 +93,7 @@ void main() {
 
       expect(client.scheduled, hasLength(1));
       final call = client.scheduled.single;
+      expect(call.id, _expectedHash('daily-reminder'));
       expect(call.title, 'Reminder');
       expect(call.body, 'Do the thing');
       expect(call.dateTime, when);
@@ -68,7 +101,7 @@ void main() {
     });
 
     test(
-      'scheduling the same string id twice reuses the same int id '
+      'scheduling the same string id twice reuses the same (hashed) int id '
       '(overwrite semantics), not a new one',
       () async {
         await adapter.schedule(
@@ -86,6 +119,7 @@ void main() {
 
         expect(client.scheduled, hasLength(2));
         expect(client.scheduled[0].id, client.scheduled[1].id);
+        expect(client.scheduled[0].id, _expectedHash('daily-reminder'));
       },
     );
 
@@ -111,7 +145,8 @@ void main() {
 
     test(
       'the int id mapping is stable/deterministic for the same string id '
-      'across repeated schedule calls',
+      'across repeated schedule calls, and across separate adapter '
+      'instances (i.e. survives an app restart)',
       () async {
         final seenIds = <int>{};
         for (var i = 0; i < 5; i++) {
@@ -124,33 +159,52 @@ void main() {
           seenIds.add(client.scheduled.last.id);
         }
         expect(seenIds, hasLength(1));
+        expect(seenIds.single, _expectedHash('stable-id'));
+
+        // A brand-new adapter (simulating a fresh process/app restart, with
+        // no in-memory state carried over) must hash the same string id to
+        // the same int.
+        final freshClient = _FakeLocalNotificationsClient();
+        final freshAdapter =
+            VeloraLocalNotificationsAdapter(client: freshClient);
+        await freshAdapter.schedule(
+          id: 'stable-id',
+          title: 'x',
+          body: 'x',
+          dateTime: DateTime(2030),
+        );
+        expect(freshClient.scheduled.single.id, seenIds.single);
       },
     );
   });
 
   group('cancel', () {
-    test('cancels the int id mapped to the given string id', () async {
+    test('cancels the hashed int id for the given string id', () async {
       await adapter.schedule(
         id: 'to-cancel',
         title: 'x',
         body: 'x',
         dateTime: DateTime(2030),
       );
-      final mappedId = client.scheduled.single.id;
 
       await adapter.cancel('to-cancel');
 
-      expect(client.canceled, [mappedId]);
-    });
-
-    test('canceling an id that was never scheduled is a harmless no-op', () async {
-      await adapter.cancel('never-scheduled');
-      expect(client.canceled, isEmpty);
+      expect(client.canceled, [_expectedHash('to-cancel')]);
     });
 
     test(
-      'canceling a string id removes it from the mapping, so scheduling it '
-      'again afterwards allocates a fresh int id',
+      'canceling an id that was never scheduled still calls through to the '
+      'client with the hashed id (safe no-op on the client side, but the '
+      'adapter no longer skips the call since there is no map to miss)',
+      () async {
+        await adapter.cancel('never-scheduled');
+        expect(client.canceled, [_expectedHash('never-scheduled')]);
+      },
+    );
+
+    test(
+      'canceling then re-scheduling the same string id reuses the same '
+      'hashed int id (no map to have removed it from)',
       () async {
         await adapter.schedule(
           id: 'reused',
@@ -169,13 +223,14 @@ void main() {
         );
         final secondId = client.scheduled.last.id;
 
-        expect(secondId, isNot(firstId));
+        expect(secondId, firstId);
+        expect(secondId, _expectedHash('reused'));
       },
     );
   });
 
   group('cancelAll', () {
-    test('delegates to the client and clears the id mapping', () async {
+    test('delegates to the client', () async {
       await adapter.schedule(
         id: 'a',
         title: 'a',
@@ -187,15 +242,42 @@ void main() {
       await adapter.cancelAll();
       expect(client.cancelAllCalls, 1);
 
-      // The mapping was cleared, so re-scheduling the same string id
-      // allocates a fresh int id rather than reusing the pre-cancelAll one.
+      // There is no id mapping to clear, so re-scheduling the same string
+      // id still resolves to the same hashed int id as before.
       await adapter.schedule(
         id: 'a',
         title: 'a',
         body: 'a',
         dateTime: DateTime(2030),
       );
-      expect(client.scheduled.last.id, isNot(firstId));
+      expect(client.scheduled.last.id, firstId);
+    });
+  });
+
+  group('FlutterLocalNotificationsClient', () {
+    // FlutterLocalNotificationsClient is backed by real platform channels
+    // (plugin.initialize/show/zonedSchedule/... all cross into native code),
+    // so it isn't headlessly callable under `flutter test`. This only
+    // exercises construction -- proving the androidScheduleMode parameter
+    // exists and accepts a non-default value -- and never invokes any
+    // method that would touch a platform channel.
+    test(
+      'constructs with a non-default androidScheduleMode without error',
+      () {
+        expect(
+          () => FlutterLocalNotificationsClient(
+            androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          ),
+          returnsNormally,
+        );
+      },
+    );
+
+    test('defaults androidScheduleMode to the safe, inexact mode', () {
+      // No platform call is made; this only checks that constructing with
+      // no explicit androidScheduleMode doesn't throw, i.e. the safe
+      // default documented on the constructor is exercised.
+      expect(() => FlutterLocalNotificationsClient(), returnsNormally);
     });
   });
 }

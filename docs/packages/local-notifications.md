@@ -19,7 +19,7 @@ await Velora.boot(
 
 The package is intentionally small:
 
-- **`VeloraLocalNotificationsAdapter`** — implements `LocalNotificationAdapter`'s `show`/`schedule`/`cancel`/`cancelAll`/`init`. Since `flutter_local_notifications` needs integer ids but Velora's contract uses `String` ids, the adapter keeps a small id registry internally: `show()` always gets a fresh id, and `schedule()` maps each caller-supplied string id to a stable int id (scheduling the same string id twice overwrites the previous notification instead of leaving a duplicate).
+- **`VeloraLocalNotificationsAdapter`** — implements `LocalNotificationAdapter`'s `show`/`schedule`/`cancel`/`cancelAll`/`init`. Since `flutter_local_notifications` needs integer ids but Velora's contract uses `String` ids, `schedule()`/`cancel()` derive the int id from the caller-supplied string id via a stable 32-bit hash — no in-memory registry is involved, so the mapping is the same on every run, including after an app restart (scheduling the same string id twice overwrites the previous notification instead of leaving a duplicate, and canceling a string id works even if it was scheduled in a previous app session). `show()` has no caller id to hash, so it draws from a separate counter seeded from the current time.
 - **`LocalNotificationsClient`** (and its real implementation `FlutterLocalNotificationsClient`) — the injectable seam between the adapter and the plugin's platform-channel-backed API, plus everything plugin-specific (Android notification channel, Darwin settings, timezone conversion via the `timezone` package).
 
 ## Install
@@ -50,11 +50,11 @@ await Velora.boot(
 
 ### Android
 
-No manual channel setup is needed — `FlutterLocalNotificationsClient.initialize()` (called by `VeloraLocalNotificationsAdapter.init()`, which `NotificationService.initForUser()` calls for you) creates the notification channel (`velora_default_channel` by default) on first use. Make sure your app has a launcher icon at the default path (`@mipmap/ic_launcher`) or pass a custom `androidDefaultIcon` when constructing `FlutterLocalNotificationsClient` yourself. On Android 13+, request the runtime notification permission the same way you would for push — `Velora.notify.requestPermission()` covers this.
+No manual channel setup is needed — `FlutterLocalNotificationsClient.initialize()` (called by `VeloraLocalNotificationsAdapter.init()`, which `NotificationService.initForUser()` calls for you) creates the notification channel (`velora_default_channel` by default) on first use. Make sure your app has a launcher icon at the default path (`@mipmap/ic_launcher`) or pass a custom `androidDefaultIcon` when constructing `FlutterLocalNotificationsClient` yourself. `initialize()` also requests the Android 13+ runtime notification permission itself (via `AndroidFlutterLocalNotificationsPlugin.requestNotificationsPermission()`), so local notifications work even in apps with no push adapter wired up — `Velora.notify.requestPermission()` (which only delegates to the *push* adapter) is not required for local notifications to appear.
 
 ### iOS / macOS
 
-`DarwinInitializationSettings()` is used with its defaults, so permission is requested through the normal `UNUserNotificationCenter` flow the first time a notification is scheduled or shown; call `Velora.notify.requestPermission()` (or let `requestPermissionAfterLogin` in `VeloraNotificationConfig` do it) before relying on notifications actually appearing.
+`initialize()` requests permission itself via `IOSFlutterLocalNotificationsPlugin`/`MacOSFlutterLocalNotificationsPlugin`'s `requestPermissions(alert: true, badge: true, sound: true)`, guarded so a platform without that implementation is a no-op. `Velora.notify.requestPermission()` is still worth calling for push notifications, but local notifications no longer depend on it.
 
 ## Usage
 
@@ -81,6 +81,18 @@ await Velora.notify.cancelAllLocal();
 ```
 
 Scheduling the same `id` again reuses the underlying platform notification (overwrite, not duplicate); canceling an id that was never scheduled is a harmless no-op.
+
+### Exact vs. inexact scheduling (Android)
+
+`FlutterLocalNotificationsClient` schedules with `AndroidScheduleMode.inexactAllowWhileIdle` by default -- it needs no special permission and never throws a `SecurityException` on Android 12+/14+. If you need exact-time delivery, pass `androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle` explicitly when constructing the client, and make sure your app declares/requests the `SCHEDULE_EXACT_ALARM` permission (Android 12+ requires declaring it; Android 14+ also requires the user to grant it via Settings). Most reminder-style notifications are fine a few seconds/minutes off and should stick with the (safe) default:
+
+```dart
+localAdapter: VeloraLocalNotificationsAdapter(
+  client: FlutterLocalNotificationsClient(
+    androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle, // only if you truly need exact timing
+  ),
+),
+```
 
 ## Testing without a device
 

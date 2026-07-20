@@ -24,8 +24,18 @@ abstract class FcmClient {
   /// Messages received while the app is in the foreground.
   Stream<RemoteMessage> get onMessage;
 
-  /// Messages that caused the user to tap a notification and open the app.
+  /// Messages that caused the user to tap a notification and open the app
+  /// while it was running in the background (but not terminated).
   Stream<RemoteMessage> get onMessageOpenedApp;
+
+  /// The message that caused the app to launch from a terminated state by
+  /// the user tapping a notification, or `null` if the app wasn't launched
+  /// this way.
+  ///
+  /// `onMessageOpenedApp` never fires for this case -- a cold start doesn't
+  /// have anything listening yet by the time the tap happens -- so this is
+  /// the only way to observe a terminated-app notification tap.
+  Future<RemoteMessage?> getInitialMessage();
 }
 
 /// The real [FcmClient], backed by `FirebaseMessaging.instance`.
@@ -58,4 +68,8 @@ class FirebaseMessagingClient implements FcmClient {
   @override
   Stream<RemoteMessage> get onMessageOpenedApp =>
       FirebaseMessaging.onMessageOpenedApp;
+
+  @override
+  Future<RemoteMessage?> getInitialMessage() =>
+      _messaging.getInitialMessage();
 }
