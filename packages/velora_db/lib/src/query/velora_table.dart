@@ -3,6 +3,7 @@ import 'package:drift/drift.dart';
 import '../velora_sql_database.dart';
 import 'conflict_algorithm.dart';
 import 'query_builder.dart';
+import 'sql_identifier.dart';
 
 /// A single Eloquent-style table binding: maps rows in [table] to/from a
 /// model type [T] keyed by [ID], via [fromMap] / [toMap].
@@ -82,6 +83,9 @@ class VeloraTable<T, ID> {
     ConflictAlgorithm conflictAlgorithm = ConflictAlgorithm.replace,
   }) async {
     final columns = data.keys.toList();
+    for (final column in columns) {
+      validateSqlIdentifier(column, argumentName: 'column');
+    }
     final placeholders = List.filled(columns.length, '?').join(', ');
     final sql =
         'INSERT ${conflictAlgorithm.sqlClause} INTO $table '
@@ -146,6 +150,9 @@ class VeloraTable<T, ID> {
   /// rows affected (`0` or `1`).
   Future<int> update(ID id, Map<String, dynamic> data) async {
     final columns = data.keys.toList();
+    for (final column in columns) {
+      validateSqlIdentifier(column, argumentName: 'column');
+    }
     final setClause = columns.map((c) => '$c = ?').join(', ');
     final sql = 'UPDATE $table SET $setClause WHERE $primaryKey = ?';
     final variables = [

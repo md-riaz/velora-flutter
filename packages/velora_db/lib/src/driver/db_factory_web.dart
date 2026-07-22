@@ -11,7 +11,7 @@ import 'package:drift/wasm.dart';
 /// come from and where to put them:
 ///
 /// - `sqlite3.wasm` (the compiled SQLite WebAssembly module)
-/// - `drift_worker.js` (the worker script that hosts the database)
+/// - `drift_worker.dart.js` (the worker script that hosts the database)
 ///
 /// Wrapped in a [LazyDatabase] so the async probing/worker-spawning only
 /// happens once the database is first used, not at construction time.
@@ -20,7 +20,7 @@ QueryExecutor defaultVeloraDbExecutor(String databaseName) {
     final result = await WasmDatabase.open(
       databaseName: databaseName,
       sqlite3Uri: Uri.parse('sqlite3.wasm'),
-      driftWorkerUri: Uri.parse('drift_worker.js'),
+      driftWorkerUri: Uri.parse('drift_worker.dart.js'),
     );
     return result.resolvedExecutor;
   });

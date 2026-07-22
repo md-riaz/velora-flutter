@@ -225,6 +225,18 @@ void main() {
       expect(page.single['title'], 'beta');
     });
 
+    test(
+      'offset without limit still returns valid SQL and skips the first n '
+      'rows (no limit applied)',
+      () async {
+        final rows = await QueryBuilder('todos')
+            .orderBy('title')
+            .offset(1)
+            .get(db.db);
+        expect(rows.map((r) => r['title']), ['beta', 'gamma']);
+      },
+    );
+
     test('first returns the first matching row or null', () async {
       final found = await QueryBuilder('todos').where('title', 'alpha').first(db.db);
       expect(found?['title'], 'alpha');
@@ -401,6 +413,44 @@ void main() {
       await table.create(const TodoModel(title: 'y').toJson());
       expect(await table.count(), 2);
     });
+
+    test(
+      'insert rejects a malicious data key instead of splicing it into the '
+      'column list',
+      () async {
+        expect(
+          () => table.insert(const {
+            'title': 'x',
+            'x); DROP TABLE todos;--': 'y',
+          }),
+          throwsArgumentError,
+        );
+
+        // The table must still exist and be untouched -- if the key had been
+        // interpolated instead of validated, the DROP TABLE would have
+        // executed.
+        expect(await table.count(), 0);
+      },
+    );
+
+    test(
+      'update rejects a malicious data key instead of splicing it into the '
+      'SET clause',
+      () async {
+        final created = await table.create(const TodoModel(title: 'original').toJson());
+
+        expect(
+          () => table.update(created.id!, const {
+            'x); DROP TABLE todos;--': 'y',
+          }),
+          throwsArgumentError,
+        );
+
+        // The row must still exist, untouched.
+        final reloaded = await table.find(created.id!);
+        expect(reloaded!.title, 'original');
+      },
+    );
   });
 
   group('VeloraTable with a String primary key', () {

@@ -2,15 +2,10 @@ import 'package:drift/drift.dart';
 import 'package:velora/velora.dart';
 
 import 'migration/velora_migration.dart';
+import 'query/sql_identifier.dart';
 import 'query/velora_table.dart';
 import 'velora_database.dart';
 import 'velora_sql_database.dart';
-
-/// A valid, unquoted SQL identifier — used to allowlist the developer-
-/// supplied table names in [VeloraDbPlugin.clearOnLogout] before they're
-/// interpolated into a `DELETE FROM <table>` statement (table names can't be
-/// bound as query parameters the way values can).
-final _validIdentifier = RegExp(r'^[A-Za-z_][A-Za-z0-9_]*$');
 
 /// An official Velora plugin that opens a drift-backed, reactive
 /// [VeloraDatabase] and registers it for the app's lifetime.
@@ -55,10 +50,17 @@ class VeloraDbPlugin extends VeloraPlugin {
   /// normally leave this `null`.
   final QueryExecutor? executor;
 
-  /// Table names whose rows are deleted on logout (`DELETE FROM <table>` —
-  /// all rows, schema and connection preserved). Use this for simple
+  /// Table names whose rows are deleted on logout (`DELETE FROM "<table>"` —
+  /// all rows, schema and connection preserved), all inside a single
+  /// transaction so a failure partway through rolls back every delete rather
+  /// than leaving some tables cleared and others not. Use this for simple
   /// "wipe the whole table" cases; for anything more selective (a `WHERE`
   /// clause, a `VACUUM`, etc.) use [onLogout] instead or in addition.
+  ///
+  /// Table names are allowlisted against [isValidSqlIdentifier] (see
+  /// [register]) before being interpolated into the (double-quoted)
+  /// `DELETE FROM` statement -- they can't be bound as query parameters the
+  /// way values can.
   final List<String> clearOnLogout;
 
   /// Optional callback for logout-time data clearing that needs more nuance
@@ -90,24 +92,39 @@ class VeloraDbPlugin extends VeloraPlugin {
 
     if (clearOnLogout.isNotEmpty || onLogout != null) {
       for (final table in clearOnLogout) {
-        if (!_validIdentifier.hasMatch(table)) {
-          throw ArgumentError.value(
-            table,
-            'clearOnLogout',
-            'Invalid table name',
-          );
-        }
+        validateSqlIdentifier(table, argumentName: 'clearOnLogout');
       }
 
       context.onBeforeLogout(() async {
-        for (final table in clearOnLogout) {
-          final affected = await db.db.customUpdate(
-            'DELETE FROM $table',
-            updateKind: UpdateKind.delete,
-          );
-          if (affected > 0) {
-            db.db.notifyUpdates({TableUpdate(table, kind: UpdateKind.delete)});
+        // Run every clearOnLogout delete inside a single transaction: if a
+        // later DELETE throws, earlier ones roll back too, rather than
+        // leaving some tables cleared and others not -- logout's caller
+        // swallows exceptions from this hook, so a partial failure here
+        // would otherwise complete "successfully" with residual data.
+        final clearedTables = <String>{};
+        await db.db.transaction(() async {
+          for (final table in clearOnLogout) {
+            // Table name is double-quoted as a SQL identifier (not a bound
+            // parameter -- identifiers can't be bound) so a valid-but-SQL-
+            // keyword table name (e.g. `order`) still works; the
+            // validateSqlIdentifier() allowlist above already rejects
+            // anything a `"`-quoted identifier wouldn't safely contain.
+            final affected = await db.db.customUpdate(
+              'DELETE FROM "$table"',
+              updateKind: UpdateKind.delete,
+            );
+            if (affected > 0) {
+              clearedTables.add(table);
+            }
           }
+        });
+        // Notify only after the transaction has committed, so watchers never
+        // see a "table changed" event for a delete that ends up rolled back.
+        if (clearedTables.isNotEmpty) {
+          db.db.notifyUpdates({
+            for (final table in clearedTables)
+              TableUpdate(table, kind: UpdateKind.delete),
+          });
         }
         await onLogout?.call(db.db);
       });

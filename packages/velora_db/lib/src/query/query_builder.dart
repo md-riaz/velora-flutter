@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:drift/drift.dart';
 
 import '../velora_sql_database.dart';
+import 'sql_identifier.dart';
 
 /// Comparison operators [QueryBuilder.whereOp] accepts. Anything else is
 /// rejected with [ArgumentError] rather than interpolated into SQL.
@@ -20,17 +21,14 @@ const _allowedOperators = {
   'IS NOT',
 };
 
-/// A valid, unquoted SQL identifier: letters, digits, underscore, not
-/// starting with a digit. Used to allowlist column names passed into raw SQL
-/// fragments (values are always parameterized separately via bound
-/// [Variable]s).
-final _validIdentifier = RegExp(r'^[A-Za-z_][A-Za-z0-9_]*$');
-
-void _validateColumn(String column) {
-  if (!_validIdentifier.hasMatch(column)) {
-    throw ArgumentError.value(column, 'column', 'Invalid column name');
-  }
-}
+/// Validates [column] against the shared [isValidSqlIdentifier] allowlist --
+/// column names passed into raw SQL fragments (values are always
+/// parameterized separately via bound [Variable]s). Delegates to
+/// [validateSqlIdentifier] so there's a single source of truth shared with
+/// every other raw-SQL construction site in this package (see
+/// `sql_identifier.dart`).
+void _validateColumn(String column) =>
+    validateSqlIdentifier(column, argumentName: 'column');
 
 class _WhereClause {
   final String column;
@@ -196,8 +194,15 @@ class QueryBuilder {
     final where = _whereClause;
     if (where != null) sql.write(' WHERE $where');
     if (_orderBy != null) sql.write(' ORDER BY $_orderBy');
-    if (_limit != null) sql.write(' LIMIT $_limit');
-    if (_offset != null) sql.write(' OFFSET $_offset');
+    if (_limit != null) {
+      sql.write(' LIMIT $_limit');
+      if (_offset != null) sql.write(' OFFSET $_offset');
+    } else if (_offset != null) {
+      // SQLite's OFFSET clause is only valid alongside LIMIT. `LIMIT -1`
+      // means "no limit", so this applies the offset without otherwise
+      // restricting the result set.
+      sql.write(' LIMIT -1 OFFSET $_offset');
+    }
     return sql.toString();
   }
 

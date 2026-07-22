@@ -54,5 +54,12 @@ class VeloraSqlDatabase extends GeneratedDatabase {
         await _runner.onDowngrade(context, from, to);
       }
     },
+    // SQLite disables foreign key enforcement by default on every new
+    // connection (it's a per-connection PRAGMA, not a persisted schema
+    // setting), so without this, `ON DELETE`/`ON UPDATE` foreign key actions
+    // declared in app migrations would silently never fire -- contradicting
+    // VeloraTable.insert()'s dartdoc note that REPLACE-driven deletes can
+    // cascade FK actions.
+    beforeOpen: (details) => customStatement('PRAGMA foreign_keys = ON'),
   );
 }

@@ -5,6 +5,7 @@ import 'package:drift/drift.dart';
 import 'package:velora/velora.dart';
 
 import 'socket_error.dart';
+import 'sql_identifier.dart';
 import 'velora_table.dart';
 
 /// The default [VeloraCachedRepository.isOfflineError]: `true` for errors
@@ -173,6 +174,9 @@ class VeloraCachedRepository<T, ID> implements VeloraRepository<T, ID> {
         for (final item in items) {
           final data = toCacheMap(item);
           final columns = data.keys.toList();
+          for (final column in columns) {
+            validateSqlIdentifier(column, argumentName: 'column');
+          }
           final placeholders = List.filled(columns.length, '?').join(', ');
           batch.customStatement(
             'INSERT OR REPLACE INTO ${cache.table} '

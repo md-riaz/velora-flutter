@@ -69,12 +69,20 @@ class VeloraDatabase extends GetxService {
       schemaVersion: version,
       runner: _runner,
     );
-    _db = database;
     // Force the connection open (and any pending migrations to run) now,
     // rather than lazily on the first query -- so open() truly doesn't
     // complete until migrations have finished, matching the old sqflite
-    // factory's openDatabase() contract.
-    await database.doWhenOpened((_) async {});
+    // factory's openDatabase() contract. Keep `database` local until this
+    // succeeds: if a migration throws, `_db` must never be left pointing at
+    // a half-open/broken connection, and the failed connection must be
+    // closed rather than leaked.
+    try {
+      await database.doWhenOpened((_) async {});
+    } catch (_) {
+      await database.close();
+      rethrow;
+    }
+    _db = database;
     return this;
   }
 

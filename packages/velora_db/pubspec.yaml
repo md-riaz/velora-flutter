@@ -16,7 +16,6 @@ dependencies:
   get: ^4.7.2
   drift: ^2.34.2
   sqlite3: ^3.4.0
-  sqlite3_flutter_libs: ^0.5.34
   path: ^1.9.0
   path_provider: ^2.1.5
 
@@ -38,9 +37,9 @@ flutter:
 # https://pub.dev/packages/sqlite3 -> doc/hook.md ("System-provided SQLite").
 #
 # This exists ONLY for velora_db's own host-side `flutter test` / CI: those
-# runs happen off-device, with no Flutter engine and no `sqlite3_flutter_libs`
-# plugin to supply a bundled binary, so the hook needs a network-free fallback
-# to `dlopen` -- the OS's system libsqlite3.
+# runs happen off-device, with no Flutter engine, so there's no bundled
+# native binary in the picture at all -- the hook needs a network-free
+# fallback to `dlopen` -- the OS's system libsqlite3.
 #
 # It does NOT propagate to apps that depend on velora_db: `hooks.user_defines`
 # is read from the pubspec.yaml of whichever package is *root* for the build
@@ -49,9 +48,11 @@ flutter:
 # never from a dependency's pubspec. So this block only takes effect when
 # velora_db itself is root -- i.e. its own tests -- and is invisible to a
 # consuming app's build/test, which reads its own pubspec's `hooks` section
-# instead (empty by default). On real devices, `sqlite3_flutter_libs` (see
-# `dependencies:` above) supplies the bundled native SQLite that the default
-# (non-system) hook path would otherwise have to download.
+# instead (empty by default). On real devices/desktop builds, `sqlite3` 3.x's
+# own build hook (see `dependencies:` above) bundles the native SQLite binary
+# automatically -- no separate `sqlite3_flutter_libs` plugin needed (that
+# package is now end-of-life -- see docs/packages/db.md's Cross-platform
+# section).
 hooks:
   user_defines:
     sqlite3:
