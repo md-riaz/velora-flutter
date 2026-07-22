@@ -1,16 +1,13 @@
 import 'dart:io';
 
+import 'package:drift/drift.dart' hide isNull, isNotNull;
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:velora/velora.dart';
 import 'package:velora_db/velora_db.dart';
 
 void main() {
-  setUpAll(() {
-    sqfliteFfiInit();
-  });
-
   setUp(() {
     Get.testMode = true;
   });
@@ -28,10 +25,9 @@ void main() {
         _RecordingMigration(3, applied),
       ]);
 
-      final db = await _openRaw();
-      await runner.onCreate(db, 3);
+      final context = _rawContext();
+      await runner.onCreate(context, 3);
       expect(applied, [1, 2, 3]);
-      await db.close();
     });
 
     test('onUpgrade runs only migrations with version in (old, new]', () async {
@@ -43,10 +39,9 @@ void main() {
         _RecordingMigration(4, applied),
       ]);
 
-      final db = await _openRaw();
-      await runner.onUpgrade(db, 2, 4);
+      final context = _rawContext();
+      await runner.onUpgrade(context, 2, 4);
       expect(applied, [3, 4]);
-      await db.close();
     });
 
     test('rejects duplicate versions with a clear ArgumentError', () {
@@ -72,10 +67,13 @@ void main() {
           databaseName: path,
           version: 1,
           migrations: [_CreateTodosTable()],
-          factory: databaseFactoryFfi,
+          executor: NativeDatabase(File(path)),
         ).open();
-        expect(await db.db.getVersion(), 1);
-        await db.db.insert('todos', {'title': 'seed', 'done': 0});
+        expect(await _userVersion(db.db), 1);
+        await db.db.customStatement(
+          'INSERT INTO todos (title, done) VALUES (?, ?)',
+          ['seed', 0],
+        );
         await db.close();
 
         // Reopen at version 2 with an additional migration: only the v2
@@ -88,62 +86,71 @@ void main() {
             _CreateTodosTable(),
             _AddArchivedColumn(onApplied: upgradeCalls),
           ],
-          factory: databaseFactoryFfi,
+          executor: NativeDatabase(File(path)),
         ).open();
 
         expect(upgradeCalls, [2]);
-        expect(await db.db.getVersion(), 2);
+        expect(await _userVersion(db.db), 2);
         // The pre-existing row survived the upgrade, and the new column is
         // usable.
-        final rows = await db.db.query('todos');
+        final rows = await _select(db.db, 'SELECT * FROM todos');
         expect(rows, hasLength(1));
-        await db.db.update('todos', {'archived': 1}, where: 'title = ?', whereArgs: ['seed']);
-        final updated = await db.db.query('todos', where: 'archived = ?', whereArgs: [1]);
+        await db.db.customStatement(
+          'UPDATE todos SET archived = 1 WHERE title = ?',
+          ['seed'],
+        );
+        final updated = await _select(
+          db.db,
+          'SELECT * FROM todos WHERE archived = ?',
+          [1],
+        );
         expect(updated, hasLength(1));
         await db.close();
       },
     );
 
     test(
-      'onDowngrade is wired to VeloraMigrationRunner.onDowngrade: reopening '
-      'a persisted database at a lower version than its stored version '
-      'does not throw and the database remains usable',
+      "drift's onUpgrade also fires for downgrades: reopening a persisted "
+      'database at a lower version than its stored version does not throw '
+      'and the database remains usable',
       () async {
-        final dir = await Directory.systemTemp.createTemp('velora_db_downgrade_test');
+        final dir = await Directory.systemTemp.createTemp(
+          'velora_db_downgrade_test',
+        );
         final path = p.join(dir.path, 'downgrade_test.db');
         addTearDown(() => dir.delete(recursive: true));
 
-        final migrations = [
-          _CreateTodosTable(),
-          _AddArchivedColumn(onApplied: []),
-        ];
+        final migrations = [_CreateTodosTable(), _AddArchivedColumn(onApplied: [])];
 
         // Open at version 2: both migrations run via onCreate.
         var db = await VeloraDatabase(
           databaseName: path,
           version: 2,
           migrations: migrations,
-          factory: databaseFactoryFfi,
+          executor: NativeDatabase(File(path)),
         ).open();
-        expect(await db.db.getVersion(), 2);
-        await db.db.insert('todos', {'title': 'seed', 'done': 0});
+        expect(await _userVersion(db.db), 2);
+        await db.db.customStatement(
+          'INSERT INTO todos (title, done) VALUES (?, ?)',
+          ['seed', 0],
+        );
         await db.close();
 
-        // Reopen at version 1 with the same migrations list. sqflite's
-        // stored PRAGMA user_version (2) is now higher than the requested
-        // version (1), so it invokes onDowngrade. Without onDowngrade wired
-        // in VeloraDatabase.open(), sqflite throws instead of opening.
+        // Reopen at version 1 with the same migrations list. The persisted
+        // PRAGMA user_version (2) is now higher than the requested version
+        // (1), so drift's onUpgrade fires with from=2, to=1 -- routed to
+        // VeloraMigrationRunner.onDowngrade.
         db = await VeloraDatabase(
           databaseName: path,
           version: 1,
           migrations: migrations,
-          factory: databaseFactoryFfi,
+          executor: NativeDatabase(File(path)),
         ).open();
 
-        expect(await db.db.getVersion(), 1);
+        expect(await _userVersion(db.db), 1);
         // The database is still usable after the downgrade -- the
         // pre-existing row survived and the table can still be queried.
-        final rows = await db.db.query('todos');
+        final rows = await _select(db.db, 'SELECT * FROM todos');
         expect(rows, hasLength(1));
         expect(rows.single['title'], 'seed');
         await db.close();
@@ -156,9 +163,18 @@ void main() {
 
     setUp(() async {
       db = await _openTodosDb();
-      await db.db.insert('todos', {'title': 'alpha', 'done': 0});
-      await db.db.insert('todos', {'title': 'beta', 'done': 1});
-      await db.db.insert('todos', {'title': 'gamma', 'done': 0});
+      await db.db.customStatement(
+        'INSERT INTO todos (title, done) VALUES (?, ?)',
+        ['alpha', 0],
+      );
+      await db.db.customStatement(
+        'INSERT INTO todos (title, done) VALUES (?, ?)',
+        ['beta', 1],
+      );
+      await db.db.customStatement(
+        'INSERT INTO todos (title, done) VALUES (?, ?)',
+        ['gamma', 0],
+      );
     });
 
     tearDown(() => db.close());
@@ -209,6 +225,18 @@ void main() {
       expect(page.single['title'], 'beta');
     });
 
+    test(
+      'offset without limit still returns valid SQL and skips the first n '
+      'rows (no limit applied)',
+      () async {
+        final rows = await QueryBuilder('todos')
+            .orderBy('title')
+            .offset(1)
+            .get(db.db);
+        expect(rows.map((r) => r['title']), ['beta', 'gamma']);
+      },
+    );
+
     test('first returns the first matching row or null', () async {
       final found = await QueryBuilder('todos').where('title', 'alpha').first(db.db);
       expect(found?['title'], 'alpha');
@@ -227,7 +255,10 @@ void main() {
       'a value containing a quote or semicolon is bound as data, not SQL',
       () async {
         const dangerous = "O'Brien; DROP TABLE todos;--";
-        await db.db.insert('todos', {'title': dangerous, 'done': 0});
+        await db.db.customStatement(
+          'INSERT INTO todos (title, done) VALUES (?, ?)',
+          [dangerous, 0],
+        );
 
         final rows =
             await QueryBuilder('todos').where('title', dangerous).get(db.db);
@@ -247,15 +278,24 @@ void main() {
 
     setUp(() async {
       db = await VeloraDatabase(
-        databaseName: inMemoryDatabasePath,
+        databaseName: ':memory:',
         version: 1,
         migrations: [_CreateEntriesTable()],
-        factory: databaseFactoryFfi,
+        executor: NativeDatabase.memory(),
       ).open();
       // deleted_at is left unset (NULL) on the two "active" rows.
-      await db.db.insert('entries', {'name': 'active-1'});
-      await db.db.insert('entries', {'name': 'deleted', 'deleted_at': '2024-01-01'});
-      await db.db.insert('entries', {'name': 'active-2'});
+      await db.db.customStatement(
+        'INSERT INTO entries (name) VALUES (?)',
+        ['active-1'],
+      );
+      await db.db.customStatement(
+        'INSERT INTO entries (name, deleted_at) VALUES (?, ?)',
+        ['deleted', '2024-01-01'],
+      );
+      await db.db.customStatement(
+        'INSERT INTO entries (name) VALUES (?)',
+        ['active-2'],
+      );
     });
 
     tearDown(() => db.close());
@@ -373,6 +413,44 @@ void main() {
       await table.create(const TodoModel(title: 'y').toJson());
       expect(await table.count(), 2);
     });
+
+    test(
+      'insert rejects a malicious data key instead of splicing it into the '
+      'column list',
+      () async {
+        expect(
+          () => table.insert(const {
+            'title': 'x',
+            'x); DROP TABLE todos;--': 'y',
+          }),
+          throwsArgumentError,
+        );
+
+        // The table must still exist and be untouched -- if the key had been
+        // interpolated instead of validated, the DROP TABLE would have
+        // executed.
+        expect(await table.count(), 0);
+      },
+    );
+
+    test(
+      'update rejects a malicious data key instead of splicing it into the '
+      'SET clause',
+      () async {
+        final created = await table.create(const TodoModel(title: 'original').toJson());
+
+        expect(
+          () => table.update(created.id!, const {
+            'x); DROP TABLE todos;--': 'y',
+          }),
+          throwsArgumentError,
+        );
+
+        // The row must still exist, untouched.
+        final reloaded = await table.find(created.id!);
+        expect(reloaded!.title, 'original');
+      },
+    );
   });
 
   group('VeloraTable with a String primary key', () {
@@ -381,10 +459,10 @@ void main() {
 
     setUp(() async {
       db = await VeloraDatabase(
-        databaseName: inMemoryDatabasePath,
+        databaseName: ':memory:',
         version: 1,
         migrations: [_CreateItemsUuidTable()],
-        factory: databaseFactoryFfi,
+        executor: NativeDatabase.memory(),
       ).open();
       table = VeloraTable<UuidItemModel, String>(
         db: db.db,
@@ -447,7 +525,7 @@ void main() {
             const UuidItemModel(uuid: 'dup', name: 'third').toJson(),
             conflictAlgorithm: ConflictAlgorithm.abort,
           ),
-          throwsA(isA<DatabaseException>()),
+          throwsA(isA<SqliteException>()),
         );
         // The aborted insert didn't touch the existing row.
         final row = await table.find('dup');
@@ -512,32 +590,18 @@ void main() {
 
   group('VeloraDbPlugin', () {
     test(
-      'a bare VeloraDbPlugin(factory: ...) — all other params defaulted — '
+      'a bare VeloraDbPlugin(executor: ...) — all other params defaulted — '
       'registers and opens a working empty database',
       () async {
         // This mirrors exactly what `velora install velora_db` wires into
         // `Velora.boot(plugins: [VeloraDbPlugin()])` — no databaseName,
-        // version, or migrations supplied — except the ffi factory is
-        // injected here so the test runs headless. databaseName defaults to
-        // 'app.db', a relative path, which `databaseFactoryFfi` resolves
-        // against the current working directory — so run from a scratch
-        // temp dir to avoid dropping a real app.db file next to the
-        // package's own source.
-        final tempDir = await Directory.systemTemp.createTemp(
-          'velora_db_default_ctor_',
-        );
-        final originalCwd = Directory.current;
-        addTearDown(() {
-          Directory.current = originalCwd;
-          if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
-        });
-        Directory.current = tempDir;
-
+        // version, or migrations supplied — except an in-memory executor is
+        // injected here so the test runs headless and never touches disk.
         const config = VeloraConfig(appName: 'Test', apiBaseUrl: 'https://example.test');
         final context = VeloraContext(config);
         Get.put<VeloraLifecycleRegistry>(VeloraLifecycleRegistry());
 
-        final plugin = VeloraDbPlugin(factory: databaseFactoryFfi);
+        final plugin = VeloraDbPlugin(executor: NativeDatabase.memory());
         await plugin.register(context);
 
         expect(plugin.databaseName, 'app.db');
@@ -547,7 +611,7 @@ void main() {
 
         // The empty database is still usable: create a table by hand and
         // query it through the facade, proving the connection is live.
-        await VeloraDb.db.execute('''
+        await VeloraDb.db.customStatement('''
           CREATE TABLE todos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
@@ -573,10 +637,10 @@ void main() {
       Get.put<VeloraLifecycleRegistry>(VeloraLifecycleRegistry());
 
       final plugin = VeloraDbPlugin(
-        databaseName: inMemoryDatabasePath,
+        databaseName: ':memory:',
         version: 1,
         migrations: [_CreateTodosTable()],
-        factory: databaseFactoryFfi,
+        executor: NativeDatabase.memory(),
       );
       await plugin.register(context);
 
@@ -603,25 +667,31 @@ void main() {
         Get.put<VeloraLifecycleRegistry>(lifecycle);
 
         final plugin = VeloraDbPlugin(
-          databaseName: inMemoryDatabasePath,
+          databaseName: ':memory:',
           version: 2,
           migrations: [_CreateTodosTable(), _CreateNotesTable()],
-          factory: databaseFactoryFfi,
+          executor: NativeDatabase.memory(),
           clearOnLogout: ['todos'],
         );
         await plugin.register(context);
 
         final db = VeloraDb.instance;
-        await db.db.insert('todos', {'title': 'secret todo', 'done': 0});
-        await db.db.insert('notes', {'body': 'keep me'});
+        await db.db.customStatement(
+          'INSERT INTO todos (title, done) VALUES (?, ?)',
+          ['secret todo', 0],
+        );
+        await db.db.customStatement(
+          'INSERT INTO notes (body) VALUES (?)',
+          ['keep me'],
+        );
 
         await lifecycle.beforeLogout();
 
-        final todos = await db.db.query('todos');
+        final todos = await _select(db.db, 'SELECT * FROM todos');
         expect(todos, isEmpty);
 
         // Non-listed table is untouched and the connection is still open.
-        final notes = await db.db.query('notes');
+        final notes = await _select(db.db, 'SELECT * FROM notes');
         expect(notes, hasLength(1));
         expect(notes.single['body'], 'keep me');
 
@@ -639,25 +709,28 @@ void main() {
 
         var onLogoutCalled = false;
         final plugin = VeloraDbPlugin(
-          databaseName: inMemoryDatabasePath,
+          databaseName: ':memory:',
           version: 1,
           migrations: [_CreateNotesTable()],
-          factory: databaseFactoryFfi,
+          executor: NativeDatabase.memory(),
           onLogout: (db) async {
             onLogoutCalled = true;
-            await db.delete('notes', where: 'body = ?', whereArgs: ['secret']);
+            await db.customStatement(
+              'DELETE FROM notes WHERE body = ?',
+              ['secret'],
+            );
           },
         );
         await plugin.register(context);
 
         final db = VeloraDb.instance;
-        await db.db.insert('notes', {'body': 'secret'});
-        await db.db.insert('notes', {'body': 'public'});
+        await db.db.customStatement('INSERT INTO notes (body) VALUES (?)', ['secret']);
+        await db.db.customStatement('INSERT INTO notes (body) VALUES (?)', ['public']);
 
         await lifecycle.beforeLogout();
 
         expect(onLogoutCalled, isTrue);
-        final remaining = await db.db.query('notes');
+        final remaining = await _select(db.db, 'SELECT * FROM notes');
         expect(remaining, hasLength(1));
         expect(remaining.single['body'], 'public');
 
@@ -674,41 +747,71 @@ void main() {
         Get.put<VeloraLifecycleRegistry>(lifecycle);
 
         final plugin = VeloraDbPlugin(
-          databaseName: inMemoryDatabasePath,
+          databaseName: ':memory:',
           version: 1,
           migrations: [_CreateTodosTable()],
-          factory: databaseFactoryFfi,
+          executor: NativeDatabase.memory(),
         );
         await plugin.register(context);
 
         final db = VeloraDb.instance;
-        await db.db.insert('todos', {'title': 'stays', 'done': 0});
+        await db.db.customStatement(
+          'INSERT INTO todos (title, done) VALUES (?, ?)',
+          ['stays', 0],
+        );
 
         // Should not throw and should not touch the data -- there is simply
         // no participant registered for this plugin.
         await lifecycle.beforeLogout();
 
-        expect(await db.db.query('todos'), hasLength(1));
+        expect(await _select(db.db, 'SELECT * FROM todos'), hasLength(1));
         await db.close();
       },
     );
   });
 }
 
-Future<Database> _openRaw() {
-  return databaseFactoryFfi.openDatabase(
-    inMemoryDatabasePath,
-    options: OpenDatabaseOptions(version: 1, onCreate: (db, version) async {}),
+/// A minimal, unopened [VeloraMigrationContext] backed by its own throwaway
+/// in-memory database -- used to unit-test [VeloraMigrationRunner] in
+/// isolation, independent of a full [VeloraDatabase]. The migrations
+/// exercised in these tests never call [VeloraMigrationContext.execute], so
+/// the underlying database is never actually touched.
+VeloraMigrationContext _rawContext() {
+  final raw = VeloraSqlDatabase(
+    NativeDatabase.memory(),
+    schemaVersion: 1,
+    runner: VeloraMigrationRunner(const []),
   );
+  return VeloraMigrationContext(raw);
 }
 
 Future<VeloraDatabase> _openTodosDb() {
   return VeloraDatabase(
-    databaseName: inMemoryDatabasePath,
+    databaseName: ':memory:',
     version: 1,
     migrations: [_CreateTodosTable()],
-    factory: databaseFactoryFfi,
+    executor: NativeDatabase.memory(),
   ).open();
+}
+
+/// Reads the current `PRAGMA user_version` -- drift's on-disk record of
+/// [VeloraDatabase.version], the thing sqflite exposed as `getVersion()`.
+Future<int> _userVersion(VeloraSqlDatabase db) async {
+  final row = await db.customSelect('PRAGMA user_version').getSingle();
+  return row.data['user_version'] as int;
+}
+
+/// Runs a raw `SELECT` and returns its rows as plain maps -- used in tests
+/// that assert on table contents without going through [VeloraTable].
+Future<List<Map<String, dynamic>>> _select(
+  VeloraSqlDatabase db,
+  String sql, [
+  List<Object?> args = const [],
+]) async {
+  final rows = await db
+      .customSelect(sql, variables: args.map((v) => Variable<Object>(v)).toList())
+      .get();
+  return rows.map((row) => row.data).toList();
 }
 
 class _RecordingMigration extends VeloraMigration {
@@ -719,7 +822,7 @@ class _RecordingMigration extends VeloraMigration {
   _RecordingMigration(this.version, this.applied);
 
   @override
-  Future<void> up(Database db) async {
+  Future<void> up(VeloraMigrationContext context) async {
     applied.add(version);
   }
 }
@@ -729,8 +832,8 @@ class _CreateTodosTable extends VeloraMigration {
   int get version => 1;
 
   @override
-  Future<void> up(Database db) async {
-    await db.execute('''
+  Future<void> up(VeloraMigrationContext context) async {
+    await context.execute('''
       CREATE TABLE todos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT NOT NULL,
@@ -745,8 +848,8 @@ class _CreateNotesTable extends VeloraMigration {
   int get version => 2;
 
   @override
-  Future<void> up(Database db) async {
-    await db.execute('''
+  Future<void> up(VeloraMigrationContext context) async {
+    await context.execute('''
       CREATE TABLE notes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         body TEXT NOT NULL
@@ -764,9 +867,9 @@ class _AddArchivedColumn extends VeloraMigration {
   int get version => 2;
 
   @override
-  Future<void> up(Database db) async {
+  Future<void> up(VeloraMigrationContext context) async {
     onApplied.add(version);
-    await db.execute(
+    await context.execute(
       'ALTER TABLE todos ADD COLUMN archived INTEGER NOT NULL DEFAULT 0',
     );
   }
@@ -777,8 +880,8 @@ class _CreateEntriesTable extends VeloraMigration {
   int get version => 1;
 
   @override
-  Future<void> up(Database db) async {
-    await db.execute('''
+  Future<void> up(VeloraMigrationContext context) async {
+    await context.execute('''
       CREATE TABLE entries (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
@@ -790,16 +893,16 @@ class _CreateEntriesTable extends VeloraMigration {
 
 /// A table keyed by a `TEXT` primary key with a SQL-side default, so an
 /// insert that doesn't supply `uuid` still gets one assigned by SQLite
-/// itself (not by the app) -- this is the case where the raw sqflite
-/// `insert()` rowid (an `int`) is not a valid `String` id on its own, and
+/// itself (not by the app) -- this is the case where the raw drift insert's
+/// rowid (an `int`) is not a valid `String` id on its own, and
 /// `VeloraTable.insert` must read the row back by `rowid` to recover it.
 class _CreateItemsUuidTable extends VeloraMigration {
   @override
   int get version => 1;
 
   @override
-  Future<void> up(Database db) async {
-    await db.execute('''
+  Future<void> up(VeloraMigrationContext context) async {
+    await context.execute('''
       CREATE TABLE items_uuid (
         uuid TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(4)))),
         name TEXT NOT NULL

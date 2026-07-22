@@ -1,20 +1,24 @@
 # velora_db
 
-**What you'll do:** Install `velora_db`, wire it into `Velora.boot`, define a table with a migration, and query it through the Eloquent-style facade — on native and Web, and in tests without a device.
+**What you'll do:** Install `velora_db`, wire it into `Velora.boot`, define a table with a migration, query it through the Eloquent-style facade, and bind a `watch()` stream to your UI for live-updating reads — on native and Web, and in tests without a device.
 
 ---
 
 ## What it does
 
-`velora_db` is a cross-platform local database plugin: a sqflite-backed store with an Eloquent-style query API, built on the same [Velora plugin](../plugins.md) contract as `velora_offline`. It adds:
+`velora_db` is a cross-platform, **reactive** local database plugin: a [drift](https://drift.simonbinder.eu/)-backed store with an Eloquent-style query API, built on the same [Velora plugin](../plugins.md) contract as `velora_offline`. It adds:
 
-- **`VeloraDatabase`** — opens and owns a versioned sqflite database, applying a list of `VeloraMigration`s deterministically on create/upgrade.
-- **`QueryBuilder`** — an immutable, fluent, allowlisted query builder (`where`, `whereOp`, `orderBy`, `limit`, `offset`) that always binds values as parameters, never interpolates them.
-- **`VeloraTable<T, ID>`** — maps rows of a single table to/from a model type, with `all`/`find`/`where`/`insert`/`create`/`update`/`delete`/`count`.
+- **`VeloraDatabase`** — opens and owns a versioned, reactive drift database, applying a list of `VeloraMigration`s deterministically on create/upgrade.
+- **`QueryBuilder`** — an immutable, fluent, allowlisted query builder (`where`, `whereOp`, `orderBy`, `limit`, `offset`) that always binds values as parameters, never interpolates them. Its terminal `watch()` method turns any compiled query into a live stream.
+- **`VeloraTable<T, ID>`** — maps rows of a single table to/from a model type, with `all`/`find`/`where`/`insert`/`create`/`update`/`delete`/`count`, plus the reactive `watchAll`/`watchQuery`/`watchFind`.
 - **`VeloraDbRepository<T, ID>`** — adapts a `VeloraTable` to Velora's `VeloraRepository` contract, so a local table is a drop-in repository alongside remote-backed ones.
 - **`VeloraCachedRepository<T, ID>`** — a network-first, read-through cache: wraps a remote data source with a `VeloraTable` cache so reads still work offline. See [Offline reads](#offline-reads-read-through-cache) below.
 
-It works identically on native (via `sqflite`) and Web (via `sqflite_common_ffi_web`, persisting to IndexedDB) — see [Cross-platform](#cross-platform) below.
+It works identically on native (drift's `NativeDatabase`, backed by `package:sqlite3`) and Web (drift's `WasmDatabase`, persisting to OPFS/IndexedDB) — see [Cross-platform](#cross-platform) below.
+
+### Why drift, and why no codegen
+
+drift is normally used with generated table classes (`@DriftDatabase(tables: [...])` + `build_runner`). `velora_db` deliberately does **not** do that: there are no drift-generated table classes anywhere in this package or in apps that use it. Every table is created by a plain `VeloraMigration` running raw SQL (`CREATE TABLE ...`), and every read/write goes through drift's untyped `customSelect`/`customStatement` APIs. This keeps the exact same map-based `VeloraTable<T, ID>` API sqflite-backed `velora_db` always had — **no `build_runner`, ever, for apps using this package** — while gaining drift's connection management and, especially, its stream-invalidation primitives (`tableUpdates`/`notifyUpdates`), which is what makes reactive queries possible at all.
 
 ## Install
 
@@ -32,11 +36,9 @@ velora install velora_db
 
 This adds the dependency, adds the import, and wires `VeloraDbPlugin()` into your `Velora.boot(plugins: [...])` call.
 
-**Web only:** run this once to add the SQLite WASM/worker assets `sqflite_common_ffi_web` needs:
+**Native platforms (iOS/Android/macOS/Windows/Linux):** nothing manual to do. `velora_db` depends on [`sqlite3`](https://pub.dev/packages/sqlite3) 3.x, whose build hook bundles a native SQLite build for each of those platforms automatically -- no separate plugin needed (drift's older `sqlite3_flutter_libs` companion package is now end-of-life and obsolete as of `sqlite3` 3.x; see [Cross-platform](#cross-platform) below). There is no equivalent of the old sqflite native setup step.
 
-```bash
-dart run sqflite_common_ffi_web:setup
-```
+**Web only:** drift needs two static assets served alongside your app — see [Cross-platform](#cross-platform) below for exactly what they are and where they go. There's no `dart run ...:setup` command for this (that was the old sqflite-based setup); the assets are copied by hand (or by your web build pipeline) into your `web/` directory. This is the *only* manual platform step `velora_db` requires.
 
 ## Boot
 
@@ -49,8 +51,8 @@ class CreateTodosTable extends VeloraMigration {
   int get version => 1;
 
   @override
-  Future<void> up(Database db) async {
-    await db.execute('''
+  Future<void> up(VeloraMigrationContext context) async {
+    await context.execute('''
       CREATE TABLE todos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT NOT NULL,
@@ -73,6 +75,8 @@ await Velora.boot(
 ```
 
 `databaseName`, `version`, and `migrations` all default (`'app.db'`, `1`, `const []`), so a bare `VeloraDbPlugin()` — what `velora install velora_db` wires in — is valid and opens an empty database. Add real migrations as soon as you know what tables you need; each `VeloraMigration.version` must be unique, and migrations run in ascending version order (`up()` for every migration on create, and only the migrations whose version falls in `(oldVersion, newVersion]` on upgrade).
+
+`VeloraMigration.up`/`down` receive a `VeloraMigrationContext` rather than a raw database handle — a thin, engine-agnostic wrapper exposing `execute(sql, [args])`. Migrations are always plain SQL strings; they never need to know they're running on drift.
 
 ## Define a table & query it
 
@@ -123,6 +127,73 @@ final all = await todoRepository.index();
 final created = await todoRepository.store(const Todo(title: 'Walk dog').toMap());
 ```
 
+## Reactive queries (live data)
+
+Every write through `VeloraTable` (`insert`/`update`/`delete`, and `VeloraCachedRepository`'s batched cache refresh) marks its table as changed. Three methods on `VeloraTable` turn that into a live stream, Dexie-`liveQuery`-style: subscribe once, and the stream re-emits the current result set every time something writes to that table — whether that write came from the user tapping a button, a background sync, or a websocket handler somewhere else in your app.
+
+```dart
+final todos = VeloraDb.table<Todo, int>(
+  table: 'todos',
+  fromMap: Todo.fromMap,
+  toMap: (todo) => todo.toMap(),
+);
+
+// The whole table, live.
+Stream<List<Todo>> allTodos = todos.watchAll();
+
+// A filtered, ordered, live query -- same QueryBuilder you'd pass to .get().
+Stream<List<Todo>> pending = todos.watchQuery(
+  todos.query().where('done', 0).orderBy('title'),
+);
+
+// A single row, live -- emits null if the row doesn't exist (yet, or anymore).
+Stream<Todo?> one = todos.watchFind(created.id!);
+```
+
+Bind any of these directly to a `StreamBuilder`:
+
+```dart
+StreamBuilder<List<Todo>>(
+  stream: todos.watchAll(),
+  builder: (context, snapshot) {
+    final items = snapshot.data ?? const <Todo>[];
+    return ListView(children: [for (final t in items) Text(t.title)]);
+  },
+);
+```
+
+Or, in a GetX controller, feed a stream into an `Rx` and bind with `Obx`:
+
+```dart
+class TodosController extends GetxController {
+  final todos = <Todo>[].obs;
+  StreamSubscription<List<Todo>>? _sub;
+
+  @override
+  void onInit() {
+    super.onInit();
+    _sub = VeloraDb.table<Todo, int>(
+      table: 'todos',
+      fromMap: Todo.fromMap,
+      toMap: (todo) => todo.toMap(),
+    ).watchAll().listen((rows) => todos.assignAll(rows));
+  }
+
+  @override
+  void onClose() {
+    _sub?.cancel();
+    super.onClose();
+  }
+}
+
+// In a widget:
+Obx(() => ListView(children: [for (final t in controller.todos) Text(t.title)]));
+```
+
+Because the stream re-emits on *any* write to the table — not just ones made through this exact `VeloraTable` instance — a background sync job, another screen's repository call, or `VeloraCachedRepository` refreshing its cache after a network fetch, all make every bound widget update automatically. This is the same mental model as [Dexie's `liveQuery`](https://dexie.org/docs/liveQuery()) or Room's `Flow`/`LiveData` queries: you write once, read reactively, and never manually re-fetch after a mutation.
+
+Every stream returned by `watchAll`/`watchQuery`/`watchFind` is broadcast (each `.listen()` call gets its own independent subscription and initial emission) and cancels its internal subscription cleanly when your `StreamSubscription` is cancelled — always cancel in `dispose()`/`onClose()` as shown above.
+
 ## Offline reads (read-through cache)
 
 `velora_offline` handles offline **writes** — it queues failed POST/PUT/PATCH/DELETE requests and replays them once you're back online. It does not cache reads. `VeloraCachedRepository` is the read counterpart: a **network-first** `VeloraRepository` that tries your remote data source first and falls back to a local `VeloraTable` cache when (and only when) the request looks like it never reached the server.
@@ -150,8 +221,10 @@ final one = await todoRepository.show(1);
 
 Behavior, method by method:
 
-- **`index()` / `show(id)`** — try the remote source first. On success, the result is used to refresh the cache (upserted row by row) and returned as-is. If the remote call throws an error that looks like "never reached the server" (see below), the cache is served instead — `index()` returns `cache.all()`, `show(id)` returns `cache.find(id)` if that row was ever cached, or rethrows the original error if it wasn't. Any *other* error — e.g. a 404 or 500 that the server actually returned — is rethrown untouched; it is not treated as offline, so a real API error never gets silently swallowed into a stale cache read.
+- **`index()` / `show(id)`** — try the remote source first. On success, the result is used to refresh the cache (upserted row by row, in a single batched write) and returned as-is. If the remote call throws an error that looks like "never reached the server" (see below), the cache is served instead — `index()` returns `cache.all()`, `show(id)` returns `cache.find(id)` if that row was ever cached, or rethrows the original error if it wasn't. Any *other* error — e.g. a 404 or 500 that the server actually returned — is rethrown untouched; it is not treated as offline, so a real API error never gets silently swallowed into a stale cache read.
 - **`store(data)` / `update(id, data)` / `destroy(id)`** — always delegate straight to the remote source (the source of truth for writes), then update the cache best-effort. A cache write failure here never masks or replaces the already-successful remote result. This class does **not** queue offline writes itself — that's what `velora_offline` is for; put its remote data source underneath (or in front of) a `VeloraCachedRepository` if you want both offline writes and offline reads.
+
+Because cache refreshes go through the same `notifyUpdates` mechanism as any other write, any `watchAll`/`watchQuery`/`watchFind` stream bound to `cache` (or an equivalent `VeloraTable` on the same table) re-emits automatically whenever `index()`/`show()` refreshes it — including a network-only refresh with no local user action at all.
 
 "Looks like never reached the server" is decided by `isOfflineError`, which defaults to `defaultIsOfflineError`: `true` for a `DioException` with type `connectionError`, `connectionTimeout`, `receiveTimeout`, or `sendTimeout`, or for a `SocketException`/`TimeoutException`; `false` for everything else (including `DioException(type: badResponse)`, i.e. a response the server actually sent). Override it if your remote data source surfaces offline conditions differently:
 
@@ -178,40 +251,42 @@ VeloraDbPlugin(
   migrations: [CreateTodosTable()],
   // Blanket `DELETE FROM <table>` for simple whole-table wipes.
   clearOnLogout: ['messages', 'permission_cache'],
-  // Anything more selective — a WHERE clause, a VACUUM — via a callback,
-  // which runs after clearOnLogout's deletes.
+  // Anything more selective -- a WHERE clause, a VACUUM -- via a callback,
+  // which runs after clearOnLogout's deletes. Receives the underlying
+  // VeloraSqlDatabase, whose customStatement/customSelect run raw SQL.
   onLogout: (db) async {
-    await db.delete('notes', where: 'user_scoped = ?', whereArgs: [1]);
+    await db.customStatement(
+      'DELETE FROM notes WHERE user_scoped = ?',
+      [1],
+    );
   },
 );
 ```
 
 ## Cross-platform
 
-`VeloraDatabase` opens its connection through a `DatabaseFactory`, resolved by a conditional-import seam so the same `VeloraDbPlugin`/`VeloraDb`/`VeloraTable` API works everywhere:
+`VeloraDatabase` opens its connection through a drift `QueryExecutor`, resolved by a conditional-import seam so the same `VeloraDbPlugin`/`VeloraDb`/`VeloraTable` API works everywhere:
 
-- **Native** (iOS/Android/desktop): the default `sqflite` factory, backed by the platform's real SQLite.
-- **Web**: `sqflite_common_ffi_web`'s factory, which persists to IndexedDB transparently — run `dart run sqflite_common_ffi_web:setup` once per app to install the required WASM/worker assets (see [Install](#install)).
+- **Native** (iOS/Android/macOS/Windows/Linux): a drift `NativeDatabase` running in a background isolate, backed by `package:sqlite3`. On a real device or desktop build, the native SQLite library it opens is bundled automatically by `package:sqlite3` 3.x's own build hook -- no companion plugin required. (Older drift setups depended on a separate `sqlite3_flutter_libs` package for this; that package is now discontinued -- its pub.dev listing marks it end-of-life as of its `0.6.0+eol` release, which says outright "update to version 3.x of `package:sqlite3` instead" -- and starting with drift 2.32.0 / `sqlite3` 3.x, native bundling needs no extra dependency at all, so `velora_db` doesn't depend on it.) There's no manual native setup step and no interaction with `velora_db`'s own `hooks.user_defines.sqlite3.source: system` pin (that pin only ever applies when `velora_db` itself is the root package being built/tested -- see [Testing without a device](#testing-without-a-device) -- `hooks.user_defines` is read from the *root* package's `pubspec.yaml`, never a dependency's, so it's invisible to apps that merely depend on `velora_db`).
+- **Web**: a drift `WasmDatabase`, opened via `WasmDatabase.open(...)`, which probes the browser for the best available persistence backend (OPFS when available, falling back to IndexedDB) and runs the database in a Web Worker. This needs two static assets in your app's `web/` directory:
+  - **`sqlite3.wasm`** — the compiled SQLite WebAssembly module, published as an asset of the `sqlite3` package. Copy it from `.dart_tool/pub/deps/... /sqlite3-<version>/example/web/sqlite3.wasm` (or the version drift's own example ships), or fetch the matching release asset directly — see the [drift Web docs](https://drift.simonbinder.eu/web/) for the current recommended source. **Deployment note:** your web server/hosting config must serve this file with the `Content-Type: application/wasm` header -- browsers refuse to `instantiateStreaming`/compile a `.wasm` module served with the wrong MIME type (e.g. a static-file server defaulting to `application/octet-stream`), which breaks the database at runtime even though the file itself is correct.
+  - **`drift_worker.dart.js`** — the worker script that hosts the database. drift can generate this: `dart run drift_dev make-worker`. This is a one-time, optional dev-time step for apps that want the worker (not required by `velora_db`'s own tests, and not `build_runner` codegen for your app's *schema* -- there is none) — see the same drift Web docs page for the exact command and output location.
 
-No code changes are needed between platforms — only the `factory` an app never has to touch directly.
+No code changes are needed between platforms — only these two files an app has to add for Web.
 
 ## Testing without a device
 
-Inject `sqflite_common_ffi`'s factory to run entirely headless, without any platform channel:
+Inject drift's own in-memory `NativeDatabase` to run entirely headless, without any platform channel:
 
 ```dart
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-
-setUpAll(() {
-  sqfliteFfiInit();
-});
+import 'package:drift/native.dart';
 
 test('todos round-trip', () async {
   final plugin = VeloraDbPlugin(
-    databaseName: inMemoryDatabasePath,
+    databaseName: ':memory:', // unused when executor is injected
     version: 1,
     migrations: [CreateTodosTable()],
-    factory: databaseFactoryFfi,
+    executor: NativeDatabase.memory(),
   );
   await plugin.register(context);
 
@@ -225,7 +300,9 @@ test('todos round-trip', () async {
 });
 ```
 
-`inMemoryDatabasePath` keeps each test isolated and fast — no file ever touches disk.
+`NativeDatabase.memory()` keeps each test isolated and fast — no file ever touches disk, and reactive `watch()` streams work exactly the same as in a real app (see `velora_db`'s own `test/velora_reactive_test.dart` for `watchAll`/`watchQuery`/`watchFind` examples).
+
+**Host tests use system SQLite, not the bundled binaries.** `flutter test` runs off-device with no Flutter engine, so `package:sqlite3`'s build-hook-bundled native binaries aren't in the picture at all — instead, the hook needs *some* SQLite to `dlopen`. `velora_db`'s `pubspec.yaml` pins that hook to `source: system` (dlopen the operating system's `libsqlite3`) precisely so its own `flutter test`/CI runs headlessly and offline, without downloading a prebuilt binary from GitHub releases. This only takes effect for `velora_db`'s *own* test runs (where it's the root package); it's a no-op for apps that merely depend on `velora_db`, since `hooks.user_defines` is read from the root package's pubspec, not a dependency's. If your own app's host tests need the same offline-friendly system-SQLite behavior, add the equivalent `hooks.user_defines.sqlite3.source: system` block to *your app's* `pubspec.yaml` — it won't be inherited from `velora_db`.
 
 ---
 

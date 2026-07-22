@@ -1,9 +1,8 @@
-import 'package:sqflite_common/sqlite_api.dart';
-
 import 'velora_migration.dart';
 
-/// Drives a list of [VeloraMigration]s deterministically against sqflite's
-/// `onCreate` / `onUpgrade` lifecycle hooks.
+/// Drives a list of [VeloraMigration]s deterministically against drift's
+/// `MigrationStrategy` (`onCreate` / `onUpgrade`, the latter also covering
+/// downgrades -- see [onDowngrade]) lifecycle hooks.
 ///
 /// Migrations are sorted by [VeloraMigration.version] ascending at
 /// construction time; a duplicate version throws [ArgumentError] immediately
@@ -34,32 +33,41 @@ class VeloraMigrationRunner {
   int get maxVersion => migrations.isEmpty ? 0 : migrations.last.version;
 
   /// Runs every migration's [VeloraMigration.up], in version order. Wire
-  /// this as sqflite's `onCreate` hook for a brand-new database.
-  Future<void> onCreate(Database db, int version) async {
+  /// this as drift's `MigrationStrategy.onCreate` for a brand-new database.
+  Future<void> onCreate(VeloraMigrationContext context, int version) async {
     for (final migration in migrations) {
-      await migration.up(db);
+      await migration.up(context);
     }
   }
 
   /// Runs [VeloraMigration.up] for every migration whose version falls in
-  /// `(oldVersion, newVersion]`, in version order. Wire this as sqflite's
-  /// `onUpgrade` hook.
-  Future<void> onUpgrade(Database db, int oldVersion, int newVersion) async {
+  /// `(oldVersion, newVersion]`, in version order. Wire this as drift's
+  /// `MigrationStrategy.onUpgrade` when `newVersion > oldVersion`.
+  Future<void> onUpgrade(
+    VeloraMigrationContext context,
+    int oldVersion,
+    int newVersion,
+  ) async {
     for (final migration in migrations) {
       if (migration.version > oldVersion && migration.version <= newVersion) {
-        await migration.up(db);
+        await migration.up(context);
       }
     }
   }
 
   /// Runs [VeloraMigration.down] for every migration whose version falls in
-  /// `(newVersion, oldVersion]`, in descending version order. Not wired by
-  /// default (sqflite has no `onDowngrade` hook unless explicitly opted
-  /// into) — available for callers that manage downgrades themselves.
-  Future<void> onDowngrade(Database db, int oldVersion, int newVersion) async {
+  /// `(newVersion, oldVersion]`, in descending version order. Wire this as
+  /// drift's `MigrationStrategy.onUpgrade` when `newVersion < oldVersion`
+  /// (drift's `onUpgrade` callback handles both upgrades and downgrades --
+  /// unlike sqflite, there's no separate `onDowngrade` hook to wire).
+  Future<void> onDowngrade(
+    VeloraMigrationContext context,
+    int oldVersion,
+    int newVersion,
+  ) async {
     for (final migration in migrations.reversed) {
       if (migration.version > newVersion && migration.version <= oldVersion) {
-        await migration.down(db);
+        await migration.down(context);
       }
     }
   }

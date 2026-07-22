@@ -2,16 +2,12 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:velora/velora.dart';
 import 'package:velora_db/velora_db.dart';
 
 void main() {
-  setUpAll(() {
-    sqfliteFfiInit();
-  });
-
   group('VeloraCachedRepository', () {
     late VeloraDatabase db;
     late VeloraTable<TodoModel, int> table;
@@ -20,10 +16,10 @@ void main() {
 
     setUp(() async {
       db = await VeloraDatabase(
-        databaseName: inMemoryDatabasePath,
+        databaseName: ':memory:',
         version: 1,
         migrations: [_CreateTodosTable()],
-        factory: databaseFactoryFfi,
+        executor: NativeDatabase.memory(),
       ).open();
       table = VeloraTable<TodoModel, int>(
         db: db.db,
@@ -355,8 +351,8 @@ class _CreateTodosTable extends VeloraMigration {
   int get version => 1;
 
   @override
-  Future<void> up(Database db) async {
-    await db.execute('''
+  Future<void> up(VeloraMigrationContext context) async {
+    await context.execute('''
       CREATE TABLE todos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT NOT NULL,
