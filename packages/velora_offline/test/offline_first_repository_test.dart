@@ -162,7 +162,7 @@ void main() {
 
     test('show throws StateError when the row is absent', () async {
       final repo = await buildRepo();
-      expect(() => repo.show('missing'), throwsA(isA<StateError>()));
+      await expectLater(repo.show('missing'), throwsA(isA<StateError>()));
     });
 
     test('show returns the row when present', () async {
@@ -170,6 +170,31 @@ void main() {
       await repo.store({'id': '1', 'title': 'here'});
       final shown = await repo.show('1');
       expect(shown['title'], 'here');
+    });
+
+    test(
+      'store rejects data without a client-generated primary key and writes '
+      'nothing locally',
+      () async {
+        final repo = await buildRepo();
+        await expectLater(
+          repo.store({'title': 'no id'}),
+          throwsA(isA<ArgumentError>()),
+        );
+        expect(await table.all(), isEmpty);
+        expect(queue.enqueued, isEmpty);
+      },
+    );
+
+    test('a failed enqueue rolls back the optimistic local store', () async {
+      final repo = await buildRepo();
+      queue.failEnqueue = true;
+      await expectLater(
+        repo.store({'id': '1', 'title': 'rollback me'}),
+        throwsA(isA<Exception>()),
+      );
+      // The optimistic local row must have been undone.
+      expect(await table.find('1'), isNull);
     });
   });
 }
@@ -180,11 +205,15 @@ void main() {
 class _RecordingQueue extends OfflineRequestQueue {
   final List<OfflineRequest> enqueued = [];
   int flushCalls = 0;
+  bool failEnqueue = false;
 
   _RecordingQueue({required super.storage, required super.api});
 
   @override
   Future<void> enqueue(OfflineRequest request) async {
+    if (failEnqueue) {
+      throw Exception('enqueue failed');
+    }
     enqueued.add(request);
     await super.enqueue(request);
   }

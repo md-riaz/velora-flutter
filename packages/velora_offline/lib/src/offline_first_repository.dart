@@ -28,13 +28,16 @@ import 'offline_request_queue.dart';
 ///    delete → `DELETE {endpoint}/{id}`. If [connectivity] is already online,
 ///    a flush is kicked off immediately; otherwise the enqueued request just
 ///    waits for `VeloraOfflinePlugin`'s `connectivity.onOnline` hook to flush
-///    it on reconnect.
+///    it on reconnect. If the outbox enqueue fails to persist, the optimistic
+///    local mutation is rolled back (and the error rethrown) so [table] never
+///    diverges from the durable outbox.
 /// 3. **IDs must be client-generated for offline creates.** Because [store]
 ///    writes to [table] before the server has ever seen the row, there is no
 ///    server-assigned id to fall back on while offline — include the primary
 ///    key in the `data` map passed to [store] yourself (e.g. a UUID
 ///    generated on-device), rather than relying on a database default or a
-///    server response to supply it.
+///    server response to supply it. [store] enforces this: it throws an
+///    [ArgumentError] if the primary key is absent from `data`.
 /// 4. **Server→local reconciliation is the app's job.** This class only
 ///    pushes local writes outward; it never pulls fresh data down. Wiring a
 ///    poll or a websocket that writes server data back into [table] (via
@@ -96,26 +99,66 @@ class VeloraOfflineFirstRepository<T, ID> implements VeloraRepository<T, ID> {
 
   @override
   Future<T> store(Map<String, dynamic> data) async {
+    _requireClientGeneratedId(data);
     // Local write first -- this is what makes watchAll()/watchQuery()/
-    // watchFind() re-emit immediately, before the server ever hears about
-    // it. See the id-resolution caveat in the class dartdoc: for this to
-    // work offline, `data` must already carry the primary key.
+    // watchFind() re-emit immediately, before the server ever hears about it.
     final model = await table.create(data);
-    await _enqueueSync('POST', endpoint, data);
+    try {
+      await _enqueueSync('POST', endpoint, data);
+    } catch (_) {
+      // Enqueue failed to persist the outbox request: undo the optimistic
+      // local write so the table never diverges from a durable sync request.
+      await table.delete(data[table.primaryKey] as ID);
+      rethrow;
+    }
     return model;
   }
 
   @override
   Future<T> update(ID id, Map<String, dynamic> data) async {
+    final prior = await table.find(id);
     await table.update(id, data);
-    await _enqueueSync('PUT', '$endpoint/$id', data);
+    try {
+      await _enqueueSync('PUT', '$endpoint/$id', data);
+    } catch (_) {
+      // Restore the prior row so the local table stays consistent with the
+      // durable outbox. (If there was no prior row, the update affected
+      // nothing and there is nothing to restore.)
+      if (prior != null) {
+        await table.insert(table.toMap(prior));
+      }
+      rethrow;
+    }
     return show(id);
   }
 
   @override
   Future<void> destroy(ID id) async {
+    final prior = await table.find(id);
     await table.delete(id);
-    await _enqueueSync('DELETE', '$endpoint/$id', null);
+    try {
+      await _enqueueSync('DELETE', '$endpoint/$id', null);
+    } catch (_) {
+      // Re-insert the row we just deleted so the local table stays consistent
+      // with the durable outbox.
+      if (prior != null) {
+        await table.insert(table.toMap(prior));
+      }
+      rethrow;
+    }
+  }
+
+  void _requireClientGeneratedId(Map<String, dynamic> data) {
+    if (data[table.primaryKey] == null) {
+      throw ArgumentError.value(
+        data,
+        'data',
+        'store() requires a client-generated "${table.primaryKey}" value: an '
+        'offline create writes to the local table before any server '
+        'round-trip, so the primary key must be present in the data map '
+        '(e.g. a UUID generated on-device). See this class\'s dartdoc.',
+      );
+    }
   }
 
   Future<void> _enqueueSync(String method, String path, Object? data) async {

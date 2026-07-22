@@ -72,6 +72,7 @@ Building one requires both `VeloraDbPlugin()` and `VeloraOfflinePlugin()` to hav
 
 ```dart
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
 import 'package:velora/velora.dart';
 import 'package:velora_db/velora_db.dart';
 import 'package:velora_offline/velora_offline.dart';
@@ -102,9 +103,11 @@ StreamBuilder<List<TodoModel>>(
   },
 );
 
-// A UUID must be generated client-side, since store() writes locally
-// before the server ever sees the row -- there's no server id to wait for.
-await todos.store({'id': uuid.v4(), 'title': 'Buy milk'});
+// store() writes locally before any server round-trip, so you supply the id
+// yourself -- e.g. a UUID from the `uuid` package (add it to your pubspec).
+// There's no server-assigned id to wait for.
+final clientGeneratedId = const Uuid().v4();
+await todos.store({'id': clientGeneratedId, 'title': 'Buy milk'});
 ```
 
 Two things to keep in mind:
