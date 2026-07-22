@@ -1,16 +1,29 @@
 import 'dart:io';
 
-import 'package:sqflite/sqflite.dart' as sqflite;
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:drift/drift.dart';
+import 'package:drift/native.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 
-/// Native database factory: `sqflite`'s platform channel implementation on
-/// iOS/Android/macOS, or `sqflite_common_ffi`'s FFI implementation on
-/// Windows/Linux, where `sqflite` has no platform channel plugin and
-/// `sqflite.databaseFactory` throws `MissingPluginException`.
-DatabaseFactory defaultVeloraDbFactory() {
-  if (Platform.isWindows || Platform.isLinux) {
-    sqfliteFfiInit();
-    return databaseFactoryFfi;
-  }
-  return sqflite.databaseFactory;
+/// Native default executor: a `NativeDatabase` (via `package:sqlite3`,
+/// dlopen-ing the platform's SQLite) running in a background isolate via
+/// [NativeDatabase.createInBackground].
+///
+/// [databaseName] is resolved relative to the app's documents directory
+/// (via `path_provider`) unless it's already an absolute path -- mirroring
+/// the old sqflite factory's behavior of resolving a bare filename like
+/// `'app.db'` to a sensible per-app location. Wrapped in a [LazyDatabase] so
+/// that directory lookup (`getApplicationDocumentsDirectory`, itself async
+/// and platform-channel-backed) only happens once the database is first
+/// used, not at construction time.
+QueryExecutor defaultVeloraDbExecutor(String databaseName) {
+  return LazyDatabase(() async {
+    final path = p.isAbsolute(databaseName)
+        ? databaseName
+        : p.join(
+            (await getApplicationDocumentsDirectory()).path,
+            databaseName,
+          );
+    return NativeDatabase.createInBackground(File(path));
+  });
 }

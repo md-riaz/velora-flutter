@@ -1,5 +1,7 @@
-import 'package:sqflite_common/sqlite_api.dart';
+import 'package:drift/drift.dart';
 
+import '../velora_sql_database.dart';
+import 'conflict_algorithm.dart';
 import 'query_builder.dart';
 
 /// A single Eloquent-style table binding: maps rows in [table] to/from a
@@ -10,8 +12,13 @@ import 'query_builder.dart';
 /// id (e.g. a UUID). [insert] adapts to both: if `data[primaryKey]` is
 /// already present it's returned as-is (the `String` case), otherwise the
 /// sqlite-assigned rowid is returned (the `int` autoincrement case).
+///
+/// Every write ([insert] / [update] / [delete]) calls
+/// `db.notifyUpdates({TableUpdate(table)})` after it completes, which is what
+/// drives [watchAll] / [watchQuery] / [watchFind] (and any other listener on
+/// `db.tableUpdates(...)`) to re-emit.
 class VeloraTable<T, ID> {
-  final Database db;
+  final VeloraSqlDatabase db;
   final String table;
   final T Function(Map<String, dynamic> row) fromMap;
   final Map<String, dynamic> Function(T model) toMap;
@@ -62,7 +69,7 @@ class VeloraTable<T, ID> {
   ///
   /// Id resolution: if [data] already has a value for [primaryKey] (the
   /// caller-supplied id case, typically a `String` UUID), that value is
-  /// returned as-is. Otherwise `db.insert` hands back the raw SQLite rowid
+  /// returned as-is. Otherwise the write hands back the raw SQLite rowid
   /// (always an `int`). If [ID] is `int`, that rowid *is* the id and is
   /// returned directly. If [ID] is some other type (e.g. a `String`
   /// primary key populated by a SQL-side default rather than by the
@@ -74,11 +81,18 @@ class VeloraTable<T, ID> {
     Map<String, dynamic> data, {
     ConflictAlgorithm conflictAlgorithm = ConflictAlgorithm.replace,
   }) async {
-    final rowId = await db.insert(
-      table,
-      data,
-      conflictAlgorithm: conflictAlgorithm,
+    final columns = data.keys.toList();
+    final placeholders = List.filled(columns.length, '?').join(', ');
+    final sql =
+        'INSERT ${conflictAlgorithm.sqlClause} INTO $table '
+        '(${columns.join(', ')}) VALUES ($placeholders)';
+
+    final rowId = await db.customInsert(
+      sql,
+      variables: columns.map((c) => Variable<Object>(data[c])).toList(),
     );
+    db.notifyUpdates({TableUpdate(table, kind: UpdateKind.insert)});
+
     final providedId = data[primaryKey];
     if (providedId != null) {
       return providedId as ID;
@@ -86,14 +100,19 @@ class VeloraTable<T, ID> {
     if (rowId is ID) {
       return rowId as ID;
     }
-    final rows = await db.query(table, where: 'rowid = ?', whereArgs: [rowId]);
+    final rows = await db
+        .customSelect(
+          'SELECT * FROM $table WHERE rowid = ?',
+          variables: [Variable<Object>(rowId)],
+        )
+        .get();
     if (rows.isEmpty) {
       throw StateError(
         'Insert into "$table" succeeded (rowid $rowId) but no row could be '
         'read back by that rowid to resolve its "$primaryKey" value.',
       );
     }
-    final resolvedId = rows.first[primaryKey];
+    final resolvedId = rows.first.data[primaryKey];
     if (resolvedId is ID) {
       return resolvedId;
     }
@@ -125,16 +144,61 @@ class VeloraTable<T, ID> {
 
   /// Updates the row identified by [id] with [data]. Returns the number of
   /// rows affected (`0` or `1`).
-  Future<int> update(ID id, Map<String, dynamic> data) {
-    return db.update(table, data, where: '$primaryKey = ?', whereArgs: [id]);
+  Future<int> update(ID id, Map<String, dynamic> data) async {
+    final columns = data.keys.toList();
+    final setClause = columns.map((c) => '$c = ?').join(', ');
+    final sql = 'UPDATE $table SET $setClause WHERE $primaryKey = ?';
+    final variables = [
+      ...columns.map((c) => Variable<Object>(data[c])),
+      Variable<Object>(id),
+    ];
+
+    final affected = await db.customUpdate(
+      sql,
+      variables: variables,
+      updateKind: UpdateKind.update,
+    );
+    if (affected > 0) {
+      db.notifyUpdates({TableUpdate(table, kind: UpdateKind.update)});
+    }
+    return affected;
   }
 
   /// Deletes the row identified by [id]. Returns the number of rows affected
   /// (`0` or `1`).
-  Future<int> delete(ID id) {
-    return db.delete(table, where: '$primaryKey = ?', whereArgs: [id]);
+  Future<int> delete(ID id) async {
+    final affected = await db.customUpdate(
+      'DELETE FROM $table WHERE $primaryKey = ?',
+      variables: [Variable<Object>(id)],
+      updateKind: UpdateKind.delete,
+    );
+    if (affected > 0) {
+      db.notifyUpdates({TableUpdate(table, kind: UpdateKind.delete)});
+    }
+    return affected;
   }
 
   /// The number of rows in [table].
   Future<int> count() => query().count(db);
+
+  /// A reactive version of [all]: emits the current rows immediately, then
+  /// re-emits every time [table] changes.
+  Stream<List<T>> watchAll() => watchQuery(query());
+
+  /// A reactive version of running [queryBuilder] via [QueryBuilder.get]:
+  /// emits the current matching rows immediately, then re-emits every time
+  /// [table] changes. This is the Dexie-`liveQuery`-style entry point for
+  /// arbitrary filters -- build a [QueryBuilder] with [query] and pass it
+  /// here instead of calling [QueryBuilder.get].
+  Stream<List<T>> watchQuery(QueryBuilder queryBuilder) {
+    return queryBuilder.watch(db).map((rows) => rows.map(fromMap).toList());
+  }
+
+  /// A reactive version of [find]: emits the current row (or `null`)
+  /// immediately, then re-emits every time [table] changes.
+  Stream<T?> watchFind(ID id) {
+    return query().where(primaryKey, id).limit(1).watch(db).map((rows) {
+      return rows.isEmpty ? null : fromMap(rows.first);
+    });
+  }
 }

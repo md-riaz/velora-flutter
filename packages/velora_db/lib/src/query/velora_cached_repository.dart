@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
-import 'package:sqflite/sqflite.dart';
+import 'package:drift/drift.dart';
 import 'package:velora/velora.dart';
 
 import 'socket_error.dart';
@@ -169,15 +169,22 @@ class VeloraCachedRepository<T, ID> implements VeloraRepository<T, ID> {
   Future<void> _tryCachePutAll(List<T> items) async {
     if (items.isEmpty) return;
     try {
-      final batch = cache.db.batch();
-      for (final item in items) {
-        batch.insert(
-          cache.table,
-          toCacheMap(item),
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-      }
-      await batch.commit(noResult: true);
+      await cache.db.batch((batch) {
+        for (final item in items) {
+          final data = toCacheMap(item);
+          final columns = data.keys.toList();
+          final placeholders = List.filled(columns.length, '?').join(', ');
+          batch.customStatement(
+            'INSERT OR REPLACE INTO ${cache.table} '
+            '(${columns.join(', ')}) VALUES ($placeholders)',
+            columns.map((c) => data[c]).toList(),
+            {TableUpdate(cache.table, kind: UpdateKind.insert)},
+          );
+        }
+      });
+      // drift's Batch.commit already calls notifyUpdates for every
+      // TableUpdate passed to customStatement above, so bound watchers
+      // (VeloraTable.watchAll/watchQuery/watchFind) re-emit automatically.
     } catch (_) {
       // Swallowed intentionally -- see dartdoc above.
     }

@@ -1,5 +1,5 @@
 name: velora_db
-description: Cross-platform local database (sqflite + Eloquent-style API) for Velora apps.
+description: Cross-platform reactive local database (drift + Eloquent-style API) for Velora apps.
 version: 0.0.1
 publish_to: none
 
@@ -14,24 +14,45 @@ dependencies:
     path: ../velora
   dio: ^5.9.0
   get: ^4.7.2
-  sqflite: ^2.3.0
-  sqflite_common: ^2.5.0
-  sqflite_common_ffi_web: ^0.4.0
-  # Pinned to 2.3.7 (still within ^2.3.0) rather than the newer 2.4.x line:
-  # sqflite_common_ffi >=2.4.0 requires sqlite3 >=3.0.0, whose build hook
-  # downloads a prebuilt binary from a GitHub release host that isn't
-  # reachable in every sandboxed/offline CI environment. 2.3.7 depends on
-  # sqlite3 ^2.9.4, which predates that hook and dynamically loads the
-  # system's libsqlite3 instead, so `flutter test` works fully offline. This
-  # is a real (non-dev) dependency because `db_factory_io.dart` uses it as
-  # the runtime database factory on Windows/Linux, where `sqflite`'s
-  # platform channel implementation doesn't exist.
-  sqflite_common_ffi: 2.3.7
+  drift: ^2.34.2
+  sqlite3: ^3.4.0
+  sqlite3_flutter_libs: ^0.5.34
+  path: ^1.9.0
+  path_provider: ^2.1.5
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-  path: ^1.9.0
 
 flutter:
+
+# `package:sqlite3` (which drift's native executor depends on) bundles its
+# own SQLite by default via a Dart/Flutter build hook that downloads a
+# prebuilt binary from GitHub releases -- a host that isn't reachable in
+# every sandboxed/offline CI environment. This mirrors the exact issue the
+# old sqflite_common_ffi pin (see git history) worked around by pinning to a
+# pre-hook version; here we instead tell the hook to `dlopen("libsqlite3.so")`
+# from the operating system, which is virtually always present and avoids
+# any network access at build time. See:
+# https://pub.dev/packages/sqlite3 -> doc/hook.md ("System-provided SQLite").
+#
+# This exists ONLY for velora_db's own host-side `flutter test` / CI: those
+# runs happen off-device, with no Flutter engine and no `sqlite3_flutter_libs`
+# plugin to supply a bundled binary, so the hook needs a network-free fallback
+# to `dlopen` -- the OS's system libsqlite3.
+#
+# It does NOT propagate to apps that depend on velora_db: `hooks.user_defines`
+# is read from the pubspec.yaml of whichever package is *root* for the build
+# (see `package:hooks_runner`'s `UserDefines.workspacePubspec`: "The
+# pubspec.yaml of the pub workspace. User-defines are read from this file."),
+# never from a dependency's pubspec. So this block only takes effect when
+# velora_db itself is root -- i.e. its own tests -- and is invisible to a
+# consuming app's build/test, which reads its own pubspec's `hooks` section
+# instead (empty by default). On real devices, `sqlite3_flutter_libs` (see
+# `dependencies:` above) supplies the bundled native SQLite that the default
+# (non-system) hook path would otherwise have to download.
+hooks:
+  user_defines:
+    sqlite3:
+      source: system

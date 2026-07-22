@@ -97,7 +97,7 @@ The core (`package:velora`) stays deliberately small — auth, API client, permi
 
     ---
 
-    A cross-platform local database (native + Web) with an Eloquent-style query API, built on sqflite.
+    A cross-platform, reactive local database (native + Web) with an Eloquent-style query API, built on drift.
 
     [→ velora_db](packages/db.md)
 
