@@ -58,6 +58,45 @@ void main() {
     expect(File('${app.path}/docs/reminders/laravel.md').existsSync(), isTrue);
   });
 
+  test('make:pwa writes a manifest', () async {
+    final temp = Directory.systemTemp.createTempSync('velora_cli_pwa_');
+    addTearDown(() {
+      if (temp.existsSync()) temp.deleteSync(recursive: true);
+    });
+
+    final packageRoot = Directory.current.path;
+    Future<ProcessResult> runCli(List<String> args) {
+      return Process.run(Platform.resolvedExecutable, <String>[
+        '$packageRoot/bin/velora_cli.dart',
+        ...args,
+      ], workingDirectory: Directory.current.path);
+    }
+
+    final app = Directory('${temp.path}/app')..createSync();
+    File('${app.path}/pubspec.yaml').writeAsStringSync('''name: demo_app
+dependencies:
+  flutter:
+    sdk: flutter
+''');
+    Directory('${app.path}/web').createSync();
+
+    final original = Directory.current;
+    ProcessResult make;
+    try {
+      Directory.current = app;
+      make = await runCli(<String>['make:pwa']);
+      expect(make.exitCode, 0, reason: make.stderr.toString());
+    } finally {
+      Directory.current = original;
+    }
+
+    final manifestFile = File('${app.path}/web/manifest.json');
+    expect(manifestFile.existsSync(), isTrue);
+    final manifestContent = manifestFile.readAsStringSync();
+    expect(manifestContent, contains('"display": "standalone"'));
+    expect(manifestContent, contains('Demo App'));
+  });
+
   group('addDependencyToPubspec', () {
     test('inserts the dependency as the first entry under dependencies:', () {
       const pubspec = '''name: demo

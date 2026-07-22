@@ -74,6 +74,7 @@ nav:
     - CLI Commands: commands.md
     - Framework / App Boundary: framework-app-boundary.md
     - Plugins: plugins.md
+    - Web & PWA: pwa.md
   - Official Packages:
     - velora_offline: packages/offline.md
     - velora_db: packages/db.md

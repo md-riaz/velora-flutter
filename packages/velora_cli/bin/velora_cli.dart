@@ -22,6 +22,8 @@ void main(List<String> arguments) {
         _makeAuth(arguments.skip(1).toList());
       case 'make:notifications':
         _makeNotifications(arguments.skip(1).toList());
+      case 'make:pwa':
+        _makePwa(arguments.skip(1).toList());
       case 'install:push':
         _installPush(arguments.skip(1).toList());
       case 'install':
@@ -47,6 +49,7 @@ void _printHelp() {
   stdout.writeln('  velora make:module <name> [--crud]');
   stdout.writeln('  velora make:auth --sanctum');
   stdout.writeln('  velora make:notifications');
+  stdout.writeln('  velora make:pwa');
   stdout.writeln('  velora install:push --fcm');
   stdout.writeln('  velora install:push --local');
   stdout.writeln(
@@ -321,6 +324,89 @@ void _makeNotifications(List<String> args) {
   _writePushReminderDocs(includeFcm: true, includeLocal: true);
   stdout.writeln('Created notifications module.');
 }
+
+void _makePwa(List<String> args) {
+  final pubspecFile = File(p.join(Directory.current.path, 'pubspec.yaml'));
+  if (!pubspecFile.existsSync()) {
+    _fail('Run this inside a Velora app (no pubspec.yaml found).');
+  }
+
+  final pubspecContent = pubspecFile.readAsStringSync();
+  final nameMatch = RegExp(
+    r'^name:\s*(.+)$',
+    multiLine: true,
+  ).firstMatch(pubspecContent);
+  final name = nameMatch?.group(1)?.trim();
+  if (name == null || name.isEmpty) {
+    _fail('Could not read the app name from pubspec.yaml.');
+  }
+  final title = _title(name);
+
+  if (!Directory('web').existsSync()) {
+    _fail(
+      'No web/ directory found. Enable web first: '
+      '`flutter create --platforms web .`, then re-run `velora make:pwa`.',
+    );
+  }
+
+  _write(p.join('web', 'manifest.json'), _pwaManifest(name, title));
+
+  stdout.writeln(
+    'Wrote web/manifest.json (installable PWA manifest for "$title").',
+  );
+  stdout.writeln(
+    "Flutter's built-in service worker already caches your app shell for "
+    'offline use — no custom service worker needed.',
+  );
+  stdout.writeln(
+    'For offline data (velora_db on web), place sqlite3.wasm and '
+    'drift_worker.dart.js in web/ so the service worker caches them too — '
+    'see docs/packages/db.md.',
+  );
+  stdout.writeln(
+    'Build and serve over HTTPS to test: flutter build web && (serve '
+    'build/web).',
+  );
+  stdout.writeln('Full guide: docs/pwa.md.');
+}
+
+String _pwaManifest(String shortName, String title) => '''{
+    "name": "$title",
+    "short_name": "$title",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#FFFFFF",
+    "theme_color": "#111827",
+    "description": "$title, built with Velora.",
+    "orientation": "any",
+    "prefer_related_applications": false,
+    "categories": ["productivity"],
+    "icons": [
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "icons/Icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}
+''';
 
 void _installPush(List<String> args) {
   final fcm = args.contains('--fcm');

@@ -23,6 +23,7 @@ dart run velora_cli new admin_panel
 dart run velora_cli make:auth --sanctum
 dart run velora_cli make:module users --crud
 dart run velora_cli make:notifications
+dart run velora_cli make:pwa
 dart run velora_cli install:push --fcm
 dart run velora_cli install:push --local
 dart run velora_cli install velora_offline
@@ -46,6 +47,10 @@ flutter test
 `install:push --fcm` writes FCM setup placeholders, including `web/firebase-messaging-sw.js`, and reminders for Android, iOS, Web, and Laravel. Placeholder Firebase credentials must be replaced by the app team.
 
 `install:push --local` writes the local notification adapter placeholder and setup reminders without requiring FCM server credentials. Keep the generated noop/mock adapter bound until real platform push is configured.
+
+## PWA command
+
+`make:pwa` writes a production `web/manifest.json` (real name/description, `display: standalone`, `orientation: any`, neutral colors, the existing maskable icon set) in place of the `flutter create` default, and prints a checklist covering offline data (`velora_db`'s Web WASM assets) and how to test the result. Run it from the app root; it requires a `web/` directory (`flutter create --platforms web .` first if you don't have one yet). See [Web & PWA →](pwa.md) for the full guide.
 
 ## Installing a plugin package
 
