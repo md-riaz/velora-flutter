@@ -48,6 +48,9 @@ const veloraPackageCatalog = <String, VeloraPackageInstall>{
     notes: [
       'Added velora_offline and wired VeloraOfflinePlugin() into Velora.boot().',
       'Use it anywhere: `if (VeloraOffline.isOnline) { ... }`.',
+      'velora_offline now bundles velora_db as its reactive local store engine (no separate pub dependency needed) and offers an offline-first repository: VeloraOfflineFirstRepository.',
+      'For offline-first reads, also boot VeloraDbPlugin() and define a table, then build `VeloraOffline.offlineFirst(table: VeloraDb.table<Model, ID>(...), endpoint: \'todos\')` and bind its watchAll()/watchQuery(...)/watchFind(id) streams to your UI.',
+      'Since velora_offline now brings in velora_db: WEB needs drift\'s sqlite3.wasm + drift_worker.dart.js assets, NATIVE needs nothing (sqlite3 3.x build hook) -- see docs/packages/db.md\'s Cross-platform section.',
       'Note: until velora_offline is published to pub.dev, use a git or path dependency override.',
     ],
   ),

@@ -2,9 +2,11 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:velora/velora.dart';
+import 'package:velora_db/velora_db.dart';
 
 import 'connectivity_service.dart';
 import 'connectivity_source.dart';
+import 'offline_first_repository.dart';
 import 'offline_queue_interceptor.dart';
 import 'offline_request_queue.dart';
 
@@ -88,4 +90,19 @@ class VeloraOffline {
   static bool get isOnline => connectivity.isOnline.value;
 
   static OfflineRequestQueue get queue => Get.find<OfflineRequestQueue>();
+
+  /// Builds a [VeloraOfflineFirstRepository] over [table], resolving the
+  /// registered [OfflineRequestQueue] and [ConnectivityService] from GetX.
+  /// Requires both VeloraOfflinePlugin and VeloraDbPlugin to have booted.
+  static VeloraOfflineFirstRepository<T, ID> offlineFirst<T, ID>({
+    required VeloraTable<T, ID> table,
+    required String endpoint,
+  }) {
+    return VeloraOfflineFirstRepository<T, ID>(
+      table: table,
+      queue: queue,
+      connectivity: connectivity,
+      endpoint: endpoint,
+    );
+  }
 }
