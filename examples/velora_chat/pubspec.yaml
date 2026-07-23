@@ -34,24 +34,28 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
-# `package:sqlite3` (which drift's native executor depends on, transitively
-# via velora_db) bundles its own SQLite by default via a Dart/Flutter build
-# hook that downloads a prebuilt binary from GitHub releases -- a host that
-# isn't reachable in every sandboxed/offline CI environment. This mirrors the
-# exact fix velora_db's own pubspec.yaml applies (see that file for the full
-# rationale): tell the hook to `dlopen("libsqlite3.so")` from the operating
-# system instead, which is virtually always present and avoids any network
-# access at build time. See: https://pub.dev/packages/sqlite3 -> doc/hook.md
-# ("System-provided SQLite").
+# WARNING: this is a repo-CI/host-test-only workaround. Do NOT copy this
+# block into a real app's pubspec.yaml.
 #
-# This exists ONLY for velora_chat's own host-side `flutter test` / CI: those
-# runs happen off-device, with no Flutter engine, so there's no bundled
-# native binary in the picture at all -- the hook needs a network-free
-# fallback to `dlopen` the OS's system libsqlite3. `hooks.user_defines` is
-# only read from the pubspec.yaml of whichever package is *root* for the
-# build, so this block only takes effect for velora_chat's own tests -- it
-# never affects velora_db or any other dependency's build.
+# A real app depending on velora_db/velora_offline does NOT need this block
+# at all: `package:sqlite3` (which drift's native executor depends on,
+# transitively via velora_db) bundles its own native SQLite by default via a
+# Dart/Flutter build hook, no config required. This block exists only
+# because this repo's build environments (sandbox/CI) block that hook's
+# download, and we want every build here -- sandbox, CI, and real
+# device/desktop builds alike -- to be reproducible and work fully offline.
+# It points the hook at a vendored copy of the official SQLite amalgamation
+# (see `third_party/sqlite3/README.md`) and tells it to compile that source
+# directly instead of downloading a prebuilt binary.
+#
+# `hooks.user_defines` is only read from the pubspec.yaml of whichever
+# package is *root* for the build, so this block only takes effect for
+# velora_chat's own tests -- it never affects velora_db or any other
+# dependency's build. Real device/desktop builds of velora_chat itself would
+# still hit this block since velora_chat is the app being built, which is
+# why vendoring keeps even those builds offline/deterministic here.
 hooks:
   user_defines:
     sqlite3:
-      source: system
+      source: source
+      path: ../../third_party/sqlite3/sqlite3.c
