@@ -19,7 +19,7 @@ Velora MVP focuses on Laravel-like productivity for Flutter apps.
 - Multi-page documentation site (built with mkdocs; see `docs/`).
 - Package split into focused libraries: `velora` (runtime), `velora_cli` (scaffolding), `velora_lints`, `velora_offline`, `velora_db`, `velora_env`, `velora_fcm`, and `velora_local_notifications`.
 - Reactive local database (`velora_db`) on drift — native and web (WASM SQLite), with an Eloquent-style API and `watch*` reactive reads.
-- Offline-first data layer (`velora_offline`): connectivity, an offline write outbox, and a reactive, optimistic offline-first repository over `velora_db`.
+- Offline-first data layer (`velora_offline`): connectivity, an offline outbox for writes, and a reactive, optimistic offline-first repository over `velora_db`.
 - Installable, offline-capable web (PWA) via `velora make:pwa` (manifest + a service worker caching the app shell and `velora_db`'s WASM assets).
 
 ## Out of scope for MVP
