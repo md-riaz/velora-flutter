@@ -19,7 +19,7 @@ Velora is a batteries-included Flutter DX framework for Android, iOS, and Web ap
 - CRUD module scaffolding and conventions for controller -> service -> repository -> data source.
 - Notification module scaffolding with remote push, local notification, in-app notification center, and noop/mock adapter conventions.
 - AI-ready generated app context in `.ai/`.
-- Official installable plugins (e.g. `velora_offline`) via `velora install <package>`.
+- Official installable packages via `velora install <package>`: `velora_offline` (offline-first data layer), `velora_db` (reactive local database), `velora_env` (env config/flavors), plus `velora_fcm` / `velora_local_notifications` for push and on-device notifications.
 
 ## Architecture rule
 

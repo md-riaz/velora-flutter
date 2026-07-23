@@ -89,7 +89,7 @@ The core (`package:velora`) stays deliberately small — auth, API client, permi
 
     ---
 
-    Connectivity awareness plus an offline write queue that replays failed requests once you're back online.
+    Connectivity awareness, an offline write queue that replays on reconnect, and an offline-first repository — reactive local reads plus optimistic writes — layered over velora_db.
 
     [→ velora_offline](packages/offline.md)
 
