@@ -107,9 +107,12 @@ class ToggleConnectivitySource implements ConnectivitySource {
   Stream<bool> get onConnectivityChanged => _controller.stream;
 
   void setOnline(bool online) {
+    if (_online == online) return;
     _online = online;
     _controller.add(online);
   }
+
+  void dispose() => _controller.close();
 }
 ```
 

@@ -63,7 +63,6 @@ class ChatController extends VeloraController {
   Future<void> send(String text) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return;
-    composeController.clear();
 
     final now = DateTime.now();
     final message = Message(
@@ -85,5 +84,9 @@ class ChatController extends VeloraController {
       'last_message': trimmed,
       'last_at': now.millisecondsSinceEpoch,
     });
+
+    // Only clear the compose field once both writes have succeeded, so a
+    // thrown error leaves the user's typed text intact instead of losing it.
+    composeController.clear();
   }
 }

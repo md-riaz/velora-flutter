@@ -53,19 +53,32 @@ class MockChatServerInterceptor extends VeloraApiInterceptor {
     final data = options.data;
     await Future<void>.delayed(const Duration(milliseconds: 400));
 
-    if (data is Map) {
-      final id = data['id']?.toString();
-      final conversationId = data['conversation_id']?.toString();
-      if (id != null && id.isNotEmpty) {
-        await messagesTable().update(id, {'status': 'sent'});
-        _outgoingCount++;
-        // Every 3rd outgoing message gets a simulated reply, to show
-        // server -> local push flowing back into the reactive UI without
-        // relying on nondeterministic randomness.
-        if (_outgoingCount % 3 == 0 && conversationId != null) {
-          unawaited(_simulateIncomingReply(conversationId));
+    try {
+      if (data is Map) {
+        final id = data['id']?.toString();
+        final conversationId = data['conversation_id']?.toString();
+        if (id != null && id.isNotEmpty) {
+          await messagesTable().update(id, {'status': 'sent'});
+          _outgoingCount++;
+          // Every 3rd outgoing message gets a simulated reply, to show
+          // server -> local push flowing back into the reactive UI without
+          // relying on nondeterministic randomness.
+          if (_outgoingCount % 3 == 0 && conversationId != null) {
+            // Guarded so a failure here can't escape as an unhandled async
+            // error -- the Dio handler above has already been (or is about
+            // to be) completed independently of this fire-and-forget reply.
+            unawaited(
+              _simulateIncomingReply(conversationId).catchError((_) {}),
+            );
+          }
         }
       }
+    } catch (e) {
+      // The Dio handler must be completed exactly once. If persisting the
+      // ack failed, reject instead of resolving so the outbox sees the
+      // write as failed rather than silently hanging.
+      handler.reject(DioException(requestOptions: options, error: e));
+      return;
     }
 
     handler.resolve(
