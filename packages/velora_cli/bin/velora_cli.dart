@@ -477,6 +477,9 @@ String _serviceWorkerJs() =>
 // Bump CACHE (e.g. v1 -> v2) to force every client to discard the old cache
 // on the next load -- useful if a deploy ever appears stale.
 const CACHE = 'velora-app-shell-v1';
+// Stable prefix shared by every CACHE version this worker has ever used, so
+// cleanup can recognize this app's own old caches across version bumps.
+const CACHE_PREFIX = 'velora-app-shell';
 
 self.addEventListener('install', (event) => {
   // Activate this worker as soon as it finishes installing, without waiting
@@ -486,9 +489,17 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
-    // Drop caches left behind by older CACHE versions of this worker.
+    // caches.keys() is origin-wide, not scoped to this service worker -- it
+    // returns every cache on the origin, including ones owned by other
+    // apps/PWAs served from the same origin. Only delete keys that belong to
+    // this app (start with CACHE_PREFIX) and aren't the current CACHE, so we
+    // drop our own stale versions without touching anyone else's caches.
     const keys = await caches.keys();
-    await Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key)));
+    await Promise.all(
+      keys
+        .filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE)
+        .map((key) => caches.delete(key)),
+    );
     await self.clients.claim();
   })());
 });

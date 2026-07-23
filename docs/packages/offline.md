@@ -121,6 +121,8 @@ Compare with `velora_db`'s `VeloraCachedRepository`: that one is **network-first
 
 `velora_offline` is unit-testable without `connectivity_plus`'s platform channels: `VeloraOfflinePlugin(source: ...)` accepts any `ConnectivitySource`, so tests can inject a fake that pushes connectivity events on demand instead of touching a real device radio.
 
+The package ships one ready-made: `ToggleConnectivitySource`, a `ConnectivitySource` you flip programmatically with `setOnline(bool)`. Reach for it in tests, in demos/previews that simulate connectivity drops, or in a real app that exposes a manual "work offline" toggle — `VeloraOfflinePlugin(source: ToggleConnectivitySource())` wires it in just like any other source.
+
 ---
 
 **See also:** [Plugins →](../plugins.md) for the `VeloraPlugin` / `VeloraContext` contract this package implements, and [API Client →](../api-client.md) for `VeloraApiInterceptor`.

@@ -81,6 +81,8 @@ nav:
     - velora_fcm: packages/fcm.md
     - velora_local_notifications: packages/local-notifications.md
     - velora_env: packages/env.md
+  - Examples:
+    - Example apps: examples.md
   - Project:
     - Contributing: contributing.md
     - Roadmap: roadmap.md

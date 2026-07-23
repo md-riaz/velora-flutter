@@ -21,16 +21,16 @@ void main() {
 
   group('ConnectivityService', () {
     test('reflects initial state and updates on stream events', () async {
-      final source = FakeConnectivitySource(initial: true);
+      final source = ToggleConnectivitySource(online: true);
       final service = await ConnectivityService(source).init();
 
       expect(service.isOnline.value, isTrue);
 
-      source.push(false);
+      source.setOnline(false);
       await Future<void>.delayed(Duration.zero);
       expect(service.isOnline.value, isFalse);
 
-      source.push(true);
+      source.setOnline(true);
       await Future<void>.delayed(Duration.zero);
       expect(service.isOnline.value, isTrue);
 
@@ -38,7 +38,7 @@ void main() {
     });
 
     test('fires onOnline callbacks only on offline -> online transition', () async {
-      final source = FakeConnectivitySource(initial: false);
+      final source = ToggleConnectivitySource(online: false);
       final service = await ConnectivityService(source).init();
 
       var calls = 0;
@@ -46,17 +46,18 @@ void main() {
         calls += 1;
       });
 
-      // Already offline -> offline is not a transition.
-      source.push(false);
+      // Already offline -> offline is not a transition (and setOnline is a
+      // no-op here since the value isn't actually changing).
+      source.setOnline(false);
       await Future<void>.delayed(Duration.zero);
       expect(calls, 0);
 
-      source.push(true);
+      source.setOnline(true);
       await Future<void>.delayed(Duration.zero);
       expect(calls, 1);
 
-      // online -> online is not a transition.
-      source.push(true);
+      // online -> online is not a transition (and setOnline is a no-op).
+      source.setOnline(true);
       await Future<void>.delayed(Duration.zero);
       expect(calls, 1);
 
@@ -461,7 +462,7 @@ void main() {
           apiBaseUrl: 'https://example.test',
         );
         final context = VeloraContext(config);
-        final source = FakeConnectivitySource(initial: false);
+        final source = ToggleConnectivitySource(online: false);
         final plugin = VeloraOfflinePlugin(source: source);
 
         await plugin.register(context);
@@ -481,7 +482,7 @@ void main() {
           ),
         );
 
-        source.push(true);
+        source.setOnline(true);
         // Allow the fire-and-forget flush triggered by onOnline to complete.
         await pumpEventQueue();
 
@@ -545,7 +546,7 @@ void main() {
         );
         final context = VeloraContext(config);
         // Already online at startup -- no connectivity transition ever fires.
-        final source = FakeConnectivitySource(initial: true);
+        final source = ToggleConnectivitySource(online: true);
         final plugin = VeloraOfflinePlugin(source: source);
 
         await plugin.register(context);
@@ -568,24 +569,6 @@ void main() {
 class _NoopErrorHandler extends ErrorInterceptorHandler {
   @override
   void next(DioException error) {}
-}
-
-class FakeConnectivitySource implements ConnectivitySource {
-  bool _connected;
-  final StreamController<bool> _controller = StreamController<bool>.broadcast();
-
-  FakeConnectivitySource({bool initial = true}) : _connected = initial;
-
-  void push(bool online) {
-    _connected = online;
-    _controller.add(online);
-  }
-
-  @override
-  Future<bool> isConnected() async => _connected;
-
-  @override
-  Stream<bool> get onConnectivityChanged => _controller.stream;
 }
 
 Future<VeloraApiService> _apiService(
