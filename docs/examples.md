@@ -1,6 +1,6 @@
 # Example apps
 
-**What you'll find here:** two full apps in `examples/`, built entirely on shipped Velora packages, that show what a real app looks like end to end rather than isolated snippets.
+**What you'll find here:** three full apps in `examples/`, built entirely on shipped Velora packages, that show what a real app looks like end to end rather than isolated snippets.
 
 ---
 
@@ -153,10 +153,84 @@ Toggle the `Switch` in the app bar to offline, send a message (it shows a clock 
 
 ---
 
-## claude_clone — theming & core reference app
+## velora_catalog — network-first catalog/reader demo
 
-`examples/claude_clone` is the other example app in this repo: a Claude-style AI chat UI demonstrating Velora's *core* DX layer — a brand-specific `ThemeExtension` system, light/dark mode persistence, auth guards, attachments, and the module/controller/page structure every Velora app follows. Where `velora_chat` is the offline/local-data reference, `claude_clone` is the theming/core reference — read it for how to structure routes, controllers, and app-owned mock data sources before swapping in a real backend.
+`examples/velora_catalog` is the network-first counterpart to `velora_chat` above: a catalog/reader app — a list of articles and a per-article reading view — backed by `velora_db`'s `VeloraCachedRepository` instead of a reactive local store. Where `velora_chat` treats the local database as the source of truth (reactive reads, optimistic writes, an outbox that survives disconnects), `velora_catalog` treats the **remote API as the source of truth**: every read always tries the network first, and the local `velora_db` table is just a read-through cache it falls back to when that fails.
+
+### Which do I use?
+
+| | `velora_offline` (velora_chat) | `velora_db`'s `VeloraCachedRepository` (velora_catalog) |
+|---|---|---|
+| Source of truth | Local database | Remote API |
+| Reads | Reactive (`watchQuery` stream) | One-shot (`index()`/`show()` per call) |
+| Writes while offline | Queued in a write outbox, replayed on reconnect | Not supported — `store`/`update`/`destroy` always hit the remote directly |
+| Best for | Chat, drafts, anything the user must be able to keep writing to while offline | Catalogs, feeds, reference data — content you read, that's fine to see slightly stale when offline |
+
+If your app needs to *write* while offline, reach for `velora_offline`. If it only needs to keep *reading* something reasonable when the network drops, `VeloraCachedRepository` is the simpler tool — no outbox, no conflict resolution, just "try the network, fall back to what's cached." Nothing stops composing both in a larger app (different data has different needs), but neither package depends on the other.
+
+### The repository
+
+The whole pattern is one line at the composition root — a `VeloraCachedRepository<Article, String>` wrapping a mock remote data source and a `velora_db` table:
+
+```dart
+VeloraRepository<Article, String> articlesRepository(
+  ToggleConnectivitySource toggleSource,
+) {
+  return VeloraCachedRepository<Article, String>(
+    remote: MockArticlesRemoteDataSource(toggleSource),
+    cache: articlesTable(),
+  );
+}
+```
+
+`toggleSource` is passed in explicitly by each module's factory (which resolves it once via `Get.find`, since `main.dart` registers it with `Get.put` at boot) rather than the data layer reaching for `Get.find` itself -- plain constructor injection all the way down, the same way `velora_chat` passes its toggle source into its controllers.
+
+`index()`/`show(id)` always call `remote` first. On success, the cache is refreshed and the remote result is returned. If `remote` throws an error that `defaultIsOfflineError` classifies as "offline" -- a `DioException` of type `connectionError`, `connectionTimeout`, `receiveTimeout`, or `sendTimeout`; an `ApiException` with `isConnectionError` set; a `SocketException`; or a `TimeoutException` -- the cache is served instead. Everything else (e.g. a `DioException` of type `badResponse`, such as a real 404/500 that *did* reach the server) is rethrown as-is, never masked by a stale cache read. See `defaultIsOfflineError`'s dartdoc in [`velora_db`](packages/db.md) for the exact rule.
+
+### The mock remote: simulating "unreachable"
+
+`MockArticlesRemoteDataSource` stands in for a real REST API. It holds a fixed in-memory list of seeded articles and, on every call, checks the same `ToggleConnectivitySource` the catalog page's `Switch` drives:
+
+```dart
+Future<void> _throwIfOffline(String path) async {
+  if (_connectivity.isOnline) return;
+  throw DioException(
+    requestOptions: RequestOptions(path: path),
+    type: DioExceptionType.connectionError,
+    error: 'No route to host (simulated by ToggleConnectivitySource).',
+  );
+}
+
+@override
+Future<List<Article>> index() async {
+  await _simulateLatency();
+  await _throwIfOffline('/articles');
+  return List.unmodifiable(_seedArticles);
+}
+```
+
+That `DioExceptionType.connectionError` is exactly the shape `VeloraCachedRepository`'s default offline check recognizes — flip the toggle off and `index()`/`show()` transparently start serving whatever was last cached, with no other code path change. `store`/`update`/`destroy` all throw `UnsupportedError` — this demo is a read-only reader, so `VeloraCachedRepository`'s write-through-to-remote path is intentionally left unexercised.
+
+### One-shot reads, not reactive
+
+`CatalogController.load()` calls `_repository.index()` once (via `VeloraController.run` for loading/error bookkeeping) and pushes the result into an `.obs` list — there's no `watchQuery` stream to bind to, because `VeloraCachedRepository` isn't a reactive local store. Pull-to-refresh just re-runs the same one-shot fetch. This is the deliberate contrast with `velora_chat`'s controllers, which never explicitly "load" anything.
+
+### Running it
+
+```bash
+cd examples/velora_catalog
+flutter pub get
+flutter run -d chrome   # or any connected device
+```
+
+Toggle the `Switch` in the app bar offline and pull to refresh (or reopen the app) — the list keeps showing whatever was cached from the last successful online fetch, with a banner explaining why. Toggle back online and refresh again to see it re-fetch from the (mock) network.
 
 ---
 
-**See also:** [velora_db →](packages/db.md) and [velora_offline →](packages/offline.md) for the packages this app wires together, and [Web & PWA →](pwa.md) for what `make:pwa` generates.
+## claude_clone — theming & core reference app
+
+`examples/claude_clone` is the other example app in this repo: a Claude-style AI chat UI demonstrating Velora's *core* DX layer — a brand-specific `ThemeExtension` system, light/dark mode persistence, auth guards, attachments, and the module/controller/page structure every Velora app follows. Where `velora_chat` and `velora_catalog` are the offline/local-data references, `claude_clone` is the theming/core reference — read it for how to structure routes, controllers, and app-owned mock data sources before swapping in a real backend.
+
+---
+
+**See also:** [velora_db →](packages/db.md) and [velora_offline →](packages/offline.md) for the packages these apps wire together, and [Web & PWA →](pwa.md) for what `make:pwa` generates.

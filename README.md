@@ -10,6 +10,7 @@ Velora is a batteries-included Flutter DX framework for Android, iOS, and Web ap
 - `packages/velora_cli` — scaffolding CLI.
 - `examples/claude_clone` — hand-built reference example app.
 - `examples/velora_chat` — WhatsApp-style offline-first messaging demo built on `velora_db` + `velora_offline` (see [Example apps](docs/examples.md)).
+- `examples/velora_catalog` — network-first catalog/reader demo built on `velora_db`'s `VeloraCachedRepository` (see [Example apps](docs/examples.md)).
 
 ## MVP scope
 
