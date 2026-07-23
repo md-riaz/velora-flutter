@@ -1,0 +1,38 @@
+{
+    "name": "Velora Chat",
+    "short_name": "Velora Chat",
+    "start_url": ".",
+    "display": "standalone",
+    "orientation": "any",
+    "background_color": "#FFFFFF",
+    "theme_color": "#111827",
+    "description": "WhatsApp-style offline-first messaging demo — shows velora_db (reactive local DB) + velora_offline (offline-first repository, write outbox, connectivity) wired together, with PWA support.",
+    "prefer_related_applications": false,
+    "categories": [
+        "productivity"
+    ],
+    "icons": [
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "icons/Icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}

@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:drift/native.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -53,7 +51,7 @@ void main() {
       await queue.load();
 
       final connectivity = await ConnectivityService(
-        _FakeConnectivitySource(initial: online),
+        ToggleConnectivitySource(online: online),
       ).init();
 
       return VeloraOfflineFirstRepository<Map<String, dynamic>, String>(
@@ -222,22 +220,4 @@ class _RecordingQueue extends OfflineRequestQueue {
   Future<void> flush() async {
     flushCalls += 1;
   }
-}
-
-class _FakeConnectivitySource implements ConnectivitySource {
-  bool _connected;
-  final StreamController<bool> _controller = StreamController<bool>.broadcast();
-
-  _FakeConnectivitySource({bool initial = true}) : _connected = initial;
-
-  void push(bool online) {
-    _connected = online;
-    _controller.add(online);
-  }
-
-  @override
-  Future<bool> isConnected() async => _connected;
-
-  @override
-  Stream<bool> get onConnectivityChanged => _controller.stream;
 }
