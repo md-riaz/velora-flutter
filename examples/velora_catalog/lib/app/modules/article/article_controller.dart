@@ -34,8 +34,8 @@ class ArticleController extends VeloraController {
     }, showErrorToast: false);
   }
 
-  /// See `CatalogController.refresh`'s dartdoc for why this shadows
-  /// `GetxController.refresh()`.
-  @override
-  Future<void> refresh() => load();
+  /// Re-runs [load] -- used by the page's pull-to-refresh gesture. Named
+  /// `reload` (not `refresh`) to avoid shadowing `GetxController.refresh()`;
+  /// see `CatalogController.reload`'s dartdoc for the same reasoning.
+  Future<void> reload() => load();
 }

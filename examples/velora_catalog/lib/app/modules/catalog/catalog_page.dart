@@ -76,6 +76,7 @@ class CatalogPage extends GetView<CatalogController> {
                 return RefreshIndicator(
                   onRefresh: controller.reload,
                   child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
                     children: [
                       SizedBox(
                         height: MediaQuery.sizeOf(context).height * 0.6,
@@ -97,6 +98,7 @@ class CatalogPage extends GetView<CatalogController> {
               return RefreshIndicator(
                 onRefresh: controller.reload,
                 child: ListView.separated(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   itemCount: items.length,
                   separatorBuilder: (_, _) => const Divider(height: 1),
                   itemBuilder: (context, index) => _ArticleTile(

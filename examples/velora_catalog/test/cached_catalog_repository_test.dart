@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:velora/velora.dart';
@@ -99,6 +100,37 @@ void main() {
       final items = await repository.index();
 
       expect(items, isEmpty);
+    },
+  );
+
+  test(
+    'online, 404: show() for an id the mock remote does not recognize '
+    'rethrows instead of falling back to the cache, even though the cache '
+    'was already populated by a prior online index()',
+    () async {
+      await setUpWith(online: true);
+
+      // Populate the cache with a successful online index() first, so
+      // there's cached data available to (wrongly) fall back to if the 404
+      // were ever mis-classified as "offline".
+      final onlineItems = await repository.index();
+      expect(onlineItems, isNotEmpty);
+
+      // MockArticlesRemoteDataSource.show() throws a `badResponse`
+      // DioException (a well-formed 404) for any unrecognized id -- this is
+      // not one of defaultIsOfflineError's offline types, so
+      // VeloraCachedRepository must rethrow it rather than serving
+      // (nonexistent) cached data for it.
+      expect(
+        () => repository.show('does-not-exist'),
+        throwsA(
+          isA<DioException>().having(
+            (e) => e.type,
+            'type',
+            DioExceptionType.badResponse,
+          ),
+        ),
+      );
     },
   );
 }

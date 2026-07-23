@@ -35,8 +35,10 @@ Future<void> main() async {
   );
 
   // Registered so the catalog page can reach this exact instance to flip
-  // simulated connectivity from its online/offline `Switch`, and so
-  // `articlesRepository()` can hand it to `MockArticlesRemoteDataSource`.
+  // simulated connectivity from its online/offline `Switch`, and so each
+  // module factory can resolve it once and pass it explicitly into
+  // `articlesRepository(toggleSource)` -- the data layer itself never calls
+  // `Get.find` for it.
   Get.put<ToggleConnectivitySource>(toggleSource, permanent: true);
 
   runApp(const VeloraCatalogApp());

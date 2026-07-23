@@ -13,9 +13,17 @@ import 'mock_articles_remote_data_source.dart';
 /// of truth, `articlesTable()` as the local read-through cache. Mirrors
 /// `velora_chat`'s `*_tables.dart` helpers, which do the same thing for a
 /// bound `VeloraTable`.
-VeloraRepository<Article, String> articlesRepository() {
+///
+/// [toggleSource] is passed in explicitly by the caller (each module's
+/// factory, resolved from the composition root's `Get.put` in `main.dart`)
+/// rather than resolved here via `Get.find` -- the data layer takes plain
+/// constructor-injected dependencies, the same way `MockArticlesRemoteDataSource`
+/// itself does.
+VeloraRepository<Article, String> articlesRepository(
+  ToggleConnectivitySource toggleSource,
+) {
   return VeloraCachedRepository<Article, String>(
-    remote: MockArticlesRemoteDataSource(Get.find<ToggleConnectivitySource>()),
+    remote: MockArticlesRemoteDataSource(toggleSource),
     cache: articlesTable(),
   );
 }

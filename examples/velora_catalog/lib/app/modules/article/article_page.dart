@@ -20,7 +20,7 @@ class ArticlePage extends GetView<ArticleController> {
         title: const Text('Article'),
       ),
       body: RefreshIndicator(
-        onRefresh: controller.refresh,
+        onRefresh: controller.reload,
         child: Obx(() {
           final article = controller.article.value;
           if (article == null) {
@@ -28,6 +28,7 @@ class ArticlePage extends GetView<ArticleController> {
               return const Center(child: CircularProgressIndicator());
             }
             return ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
               children: [
                 SizedBox(
                   height: MediaQuery.sizeOf(context).height * 0.6,
@@ -50,6 +51,7 @@ class ArticlePage extends GetView<ArticleController> {
               '${updated.day.toString().padLeft(2, '0')}';
 
           return ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(16),
             children: [
               Text(

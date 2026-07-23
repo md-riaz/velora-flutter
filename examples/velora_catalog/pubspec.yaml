@@ -31,6 +31,9 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
+# WARNING: this is a repo-CI/host-test-only workaround. Do NOT copy this
+# block into a real app's pubspec.yaml.
+#
 # `package:sqlite3` (which drift's native executor depends on, transitively
 # via velora_db) bundles its own SQLite by default via a Dart/Flutter build
 # hook that downloads a prebuilt binary from GitHub releases -- a host that
@@ -48,6 +51,12 @@ flutter:
 # only read from the pubspec.yaml of whichever package is *root* for the
 # build, so this block only takes effect for velora_catalog's own tests -- it
 # never affects velora_db or any other dependency's build.
+#
+# A REAL app should NOT copy this into its own pubspec.yaml: real device/app
+# builds should let `sqlite3` bundle its own native artifact normally (the
+# default behavior this block overrides), since the app store/device
+# environment can actually reach GitHub to download it, and system-provided
+# SQLite versions vary by OS/device in ways a bundled artifact avoids.
 hooks:
   user_defines:
     sqlite3:

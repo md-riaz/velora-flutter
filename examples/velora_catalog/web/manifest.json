@@ -1,11 +1,11 @@
 {
-    "name": "velora_catalog",
-    "short_name": "velora_catalog",
+    "name": "Velora Catalog",
+    "short_name": "Catalog",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "A network-first article catalog/reader demo with offline cache fallback.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

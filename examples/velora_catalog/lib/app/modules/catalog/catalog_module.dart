@@ -9,9 +9,11 @@ import 'catalog_controller.dart';
 /// service locators itself.
 class CatalogModule {
   static CatalogController controller() {
+    final toggleSource = Get.find<ToggleConnectivitySource>();
+
     return CatalogController(
-      repository: articlesRepository(),
-      toggleSource: Get.find<ToggleConnectivitySource>(),
+      repository: articlesRepository(toggleSource),
+      toggleSource: toggleSource,
     );
   }
 }

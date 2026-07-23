@@ -173,15 +173,19 @@ If your app needs to *write* while offline, reach for `velora_offline`. If it on
 The whole pattern is one line at the composition root — a `VeloraCachedRepository<Article, String>` wrapping a mock remote data source and a `velora_db` table:
 
 ```dart
-VeloraRepository<Article, String> articlesRepository() {
+VeloraRepository<Article, String> articlesRepository(
+  ToggleConnectivitySource toggleSource,
+) {
   return VeloraCachedRepository<Article, String>(
-    remote: MockArticlesRemoteDataSource(Get.find<ToggleConnectivitySource>()),
+    remote: MockArticlesRemoteDataSource(toggleSource),
     cache: articlesTable(),
   );
 }
 ```
 
-`index()`/`show(id)` always call `remote` first. On success, the cache is refreshed and the remote result is returned. If `remote` throws an error that looks like "offline" — a `DioException` with a connection/timeout type, or an `ApiException` with `isConnectionError` set — the cache is served instead. Any other error (e.g. a real 404) is rethrown as-is, never masked by a stale cache read. See `VeloraCachedRepository`'s dartdoc in [`velora_db`](packages/db.md) for the exact rule.
+`toggleSource` is passed in explicitly by each module's factory (which resolves it once via `Get.find`, since `main.dart` registers it with `Get.put` at boot) rather than the data layer reaching for `Get.find` itself -- plain constructor injection all the way down, the same way `velora_chat` passes its toggle source into its controllers.
+
+`index()`/`show(id)` always call `remote` first. On success, the cache is refreshed and the remote result is returned. If `remote` throws an error that `defaultIsOfflineError` classifies as "offline" -- a `DioException` of type `connectionError`, `connectionTimeout`, `receiveTimeout`, or `sendTimeout`; an `ApiException` with `isConnectionError` set; a `SocketException`; or a `TimeoutException` -- the cache is served instead. Everything else (e.g. a `DioException` of type `badResponse`, such as a real 404/500 that *did* reach the server) is rethrown as-is, never masked by a stale cache read. See `defaultIsOfflineError`'s dartdoc in [`velora_db`](packages/db.md) for the exact rule.
 
 ### The mock remote: simulating "unreachable"
 

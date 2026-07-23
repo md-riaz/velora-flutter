@@ -1,4 +1,5 @@
 import 'package:velora/velora.dart';
+import 'package:velora_offline/velora_offline.dart';
 
 import '../../data/article.dart';
 import '../../data/articles_repository.dart';
@@ -13,10 +14,11 @@ class ArticleModule {
   static ArticleController controller() {
     final id = Get.parameters['id'] ?? '';
     final args = Get.arguments;
+    final toggleSource = Get.find<ToggleConnectivitySource>();
 
     return ArticleController(
       articleId: id,
-      repository: articlesRepository(),
+      repository: articlesRepository(toggleSource),
       initial: args is Article ? args : null,
     );
   }
