@@ -111,6 +111,20 @@ const veloraPackageCatalog = <String, VeloraPackageInstall>{
       'Note: until velora_local_notifications is published to pub.dev, use a git or path dependency override.',
     ],
   ),
+  'velora_ui': VeloraPackageInstall(
+    name: 'velora_ui',
+    constraint: '^0.0.1',
+    importLine: null,
+    pluginExpr: null,
+    notes: [
+      'Added velora_ui to pubspec.yaml. This package is not a VeloraPlugin -- it is not wired into Velora.boot(plugins: [...]) or any named boot argument. It is applied via your app\'s theme, exactly like any other ThemeData:',
+      "1. Import `package:velora_ui/velora_ui.dart` and pass `theme: VeloraTheme.light()` / `darkTheme: VeloraTheme.dark()` to your MaterialApp (or VeloraApp, if your app uses one).",
+      'For a specific brand preset or brightness, call `buildVeloraTheme(brightness: ..., preset: VeloraThemePreset.aurora | VeloraThemePreset.meadow)` directly instead of the light()/dark() shortcuts.',
+      'Read design tokens (spacing, radius, success/warning/info colors, elevation, motion) anywhere below that theme via `context.veloraTokens`.',
+      'Layer 1 only: tokens + theme. Components (buttons, inputs, cards, ...) are a future layer, not shipped yet.',
+      'Note: until velora_ui is published to pub.dev, use a git or path dependency override.',
+    ],
+  ),
 };
 
 /// The location of the top-level `dependencies:` block within a

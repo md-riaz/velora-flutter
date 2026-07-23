@@ -136,6 +136,23 @@ jobs:
             echo "No test files found — skipping"
           fi
 
+      - name: Install dependencies (velora_ui)
+        working-directory: packages/velora_ui
+        run: flutter pub get
+
+      - name: Analyze velora_ui package
+        working-directory: packages/velora_ui
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run velora_ui tests
+        working-directory: packages/velora_ui
+        run: |
+          if [ -d "test" ] && find test -name '*_test.dart' -print -quit | grep -q .; then
+            flutter test --coverage
+          else
+            echo "No test files found — skipping"
+          fi
+
       - name: Install dependencies (claude_clone)
         working-directory: examples/claude_clone
         run: flutter pub get
