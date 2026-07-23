@@ -192,7 +192,7 @@ Obx(() => ListView(children: [for (final t in controller.todos) Text(t.title)]))
 
 Because the stream re-emits on *any* write to the table — not just ones made through this exact `VeloraTable` instance — a background sync job, another screen's repository call, or `VeloraCachedRepository` refreshing its cache after a network fetch, all make every bound widget update automatically. This is the same mental model as [Dexie's `liveQuery`](https://dexie.org/docs/liveQuery()) or Room's `Flow`/`LiveData` queries: you write once, read reactively, and never manually re-fetch after a mutation.
 
-Every stream returned by `watchAll`/`watchQuery`/`watchFind` is broadcast (each `.listen()` call gets its own independent subscription and initial emission) and cancels its internal subscription cleanly when your `StreamSubscription` is cancelled — always cancel in `dispose()`/`onClose()` as shown above.
+Every stream returned by `watchAll`/`watchQuery`/`watchFind` is broadcast (each `.listen()` call gets its own independent subscription and initial emission) and cancels its internal subscription cleanly when your `StreamSubscription` is cancelled — always cancel in `dispose()`/`onClose()` as shown above. If your controller extends `VeloraController` (see [Architecture](../architecture.md)), skip the manual `StreamSubscription` field entirely and bind with `listenStream(todos.watchAll(), items.assignAll)` — it cancels automatically on `onClose`.
 
 ## Offline reads (read-through cache)
 

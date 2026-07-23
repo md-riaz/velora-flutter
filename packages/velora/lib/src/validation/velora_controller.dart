@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:get/get.dart';
 
 import '../core/velora_facade.dart';
@@ -5,6 +7,8 @@ import '../core/velora_facade.dart';
 abstract class VeloraController extends GetxController {
   final RxBool loading = false.obs;
   final RxString error = ''.obs;
+
+  final List<StreamSubscription<dynamic>> _subscriptions = [];
 
   /// Runs [task] with loading/error bookkeeping.
   ///
@@ -44,4 +48,49 @@ abstract class VeloraController extends GetxController {
   }
 
   void clearError() => error.value = '';
+
+  /// Subscribes to [source], routing each event to [onData], and cancels the
+  /// subscription automatically when this controller is disposed ([onClose]).
+  ///
+  /// Use this to bind a reactive source — e.g. a `velora_db` `watchAll()` /
+  /// `watchQuery(...)` stream — into controller state without hand-managing a
+  /// [StreamSubscription]:
+  ///
+  /// ```dart
+  /// final messages = <Message>[].obs;
+  ///
+  /// @override
+  /// void onInit() {
+  ///   super.onInit();
+  ///   listenStream(repo.watchAll(), messages.assignAll);
+  /// }
+  /// ```
+  ///
+  /// Returns the [StreamSubscription] so a caller can cancel it early if it
+  /// needs to; that is optional — [onClose] cancels any still-active ones.
+  StreamSubscription<T> listenStream<T>(
+    Stream<T> source,
+    void Function(T event) onData, {
+    Function? onError,
+    void Function()? onDone,
+    bool? cancelOnError,
+  }) {
+    final subscription = source.listen(
+      onData,
+      onError: onError,
+      onDone: onDone,
+      cancelOnError: cancelOnError,
+    );
+    _subscriptions.add(subscription);
+    return subscription;
+  }
+
+  @override
+  void onClose() {
+    for (final subscription in _subscriptions) {
+      subscription.cancel();
+    }
+    _subscriptions.clear();
+    super.onClose();
+  }
 }

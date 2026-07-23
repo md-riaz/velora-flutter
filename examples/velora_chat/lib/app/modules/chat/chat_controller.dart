@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/widgets.dart';
 import 'package:uuid/uuid.dart';
 import 'package:velora/velora.dart';
@@ -29,8 +27,6 @@ class ChatController extends VeloraController {
   final messages = <Message>[].obs;
   final composeController = TextEditingController();
 
-  StreamSubscription<List<Message>>? _subscription;
-
   ChatController({
     required this.conversationId,
     required this.conversationTitle,
@@ -43,19 +39,19 @@ class ChatController extends VeloraController {
   @override
   void onInit() {
     super.onInit();
-    _subscription = _messages
-        .watchQuery(
-          _messages
-              .query()
-              .where('conversation_id', conversationId)
-              .orderBy('created_at'),
-        )
-        .listen((rows) => messages.assignAll(rows));
+    listenStream(
+      _messages.watchQuery(
+        _messages
+            .query()
+            .where('conversation_id', conversationId)
+            .orderBy('created_at'),
+      ),
+      messages.assignAll,
+    );
   }
 
   @override
   void onClose() {
-    _subscription?.cancel();
     composeController.dispose();
     super.onClose();
   }

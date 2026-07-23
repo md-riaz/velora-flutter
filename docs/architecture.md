@@ -63,6 +63,8 @@ class UsersController extends VeloraController {
 
 For list screens, `VeloraPaginatedController<T>` (page-number pagination) and `VeloraCursorController<T, C>` (cursor pagination) add `items`, `hasMore`, `reload()`, and `loadMore()` on top of the same `loading`/`error`/`run()` base — **the controller itself owns that screen's Rx list**, not a separate service. For forms, `VeloraFormController` adds an `errors` map keyed by field name. This screen-local Rx state (`loading`/`error`/`items`/`errors`) is the only state a controller should own directly; shared or cross-screen business data belongs in a plain service wired through the module factory — not in a `GetxService`, and not duplicated across controllers.
 
+For binding a reactive source — e.g. a `velora_db`/`velora_offline` `watch*` stream — into that Rx state, `VeloraController.listenStream(stream, onData)` subscribes and automatically cancels the subscription when the controller is disposed, so a controller never has to hand-manage a `StreamSubscription` field or an `onClose` cancel call itself.
+
 ## A concrete example: the generated `users` module
 
 This is what `dart run velora_cli make:module users --crud` actually produces (see [Scaffolding](scaffolding.md) for the full file tree):

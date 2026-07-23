@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:velora/velora.dart';
 import 'package:velora_db/velora_db.dart';
 import 'package:velora_offline/velora_offline.dart';
@@ -16,8 +14,6 @@ class ConversationsController extends VeloraController {
 
   final conversations = <Conversation>[].obs;
 
-  StreamSubscription<List<Conversation>>? _subscription;
-
   ConversationsController({
     required VeloraTable<Conversation, String> table,
     required this.toggleSource,
@@ -26,15 +22,10 @@ class ConversationsController extends VeloraController {
   @override
   void onInit() {
     super.onInit();
-    _subscription = _table
-        .watchQuery(_table.query().orderBy('last_at', desc: true))
-        .listen((rows) => conversations.assignAll(rows));
-  }
-
-  @override
-  void onClose() {
-    _subscription?.cancel();
-    super.onClose();
+    listenStream(
+      _table.watchQuery(_table.query().orderBy('last_at', desc: true)),
+      conversations.assignAll,
+    );
   }
 
   /// Reactive online/offline flag, driven by `velora_offline`'s
