@@ -1,0 +1,54 @@
+name: velora_catalog
+description: Network-first catalog/reader demo — shows velora_db's VeloraCachedRepository (remote-first reads with a local read-through cache/offline fallback), the network-first counterpart to velora_chat's local-first offline demo.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  get: ^4.7.2
+  dio: ^5.9.0
+  velora:
+    path: ../../packages/velora
+  velora_db:
+    path: ../../packages/velora_db
+  velora_offline:
+    path: ../../packages/velora_offline
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  custom_lint: ^0.6.0
+  velora_lints:
+    path: ../../packages/velora_lints
+  drift: ^2.34.2
+
+flutter:
+  uses-material-design: true
+
+# `package:sqlite3` (which drift's native executor depends on, transitively
+# via velora_db) bundles its own SQLite by default via a Dart/Flutter build
+# hook that downloads a prebuilt binary from GitHub releases -- a host that
+# isn't reachable in every sandboxed/offline CI environment. This mirrors the
+# exact fix velora_db's own pubspec.yaml applies (see that file for the full
+# rationale): tell the hook to `dlopen("libsqlite3.so")` from the operating
+# system instead, which is virtually always present and avoids any network
+# access at build time. See: https://pub.dev/packages/sqlite3 -> doc/hook.md
+# ("System-provided SQLite").
+#
+# This exists ONLY for velora_catalog's own host-side `flutter test` / CI:
+# those runs happen off-device, with no Flutter engine, so there's no bundled
+# native binary in the picture at all -- the hook needs a network-free
+# fallback to `dlopen` the OS's system libsqlite3. `hooks.user_defines` is
+# only read from the pubspec.yaml of whichever package is *root* for the
+# build, so this block only takes effect for velora_catalog's own tests -- it
+# never affects velora_db or any other dependency's build.
+hooks:
+  user_defines:
+    sqlite3:
+      source: system
