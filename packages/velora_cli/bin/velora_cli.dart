@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
@@ -22,6 +23,8 @@ void main(List<String> arguments) {
         _makeAuth(arguments.skip(1).toList());
       case 'make:notifications':
         _makeNotifications(arguments.skip(1).toList());
+      case 'make:pwa':
+        _makePwa(arguments.skip(1).toList());
       case 'install:push':
         _installPush(arguments.skip(1).toList());
       case 'install':
@@ -47,6 +50,7 @@ void _printHelp() {
   stdout.writeln('  velora make:module <name> [--crud]');
   stdout.writeln('  velora make:auth --sanctum');
   stdout.writeln('  velora make:notifications');
+  stdout.writeln('  velora make:pwa');
   stdout.writeln('  velora install:push --fcm');
   stdout.writeln('  velora install:push --local');
   stdout.writeln(
@@ -321,6 +325,213 @@ void _makeNotifications(List<String> args) {
   _writePushReminderDocs(includeFcm: true, includeLocal: true);
   stdout.writeln('Created notifications module.');
 }
+
+void _makePwa(List<String> args) {
+  final pubspecFile = File(p.join(Directory.current.path, 'pubspec.yaml'));
+  if (!pubspecFile.existsSync()) {
+    _fail('Run this inside a Velora app (no pubspec.yaml found).');
+  }
+
+  final pubspecContent = pubspecFile.readAsStringSync();
+  final nameMatch = RegExp(
+    r'^name:\s*(.+)$',
+    multiLine: true,
+  ).firstMatch(pubspecContent);
+  final name = nameMatch?.group(1)?.trim();
+  if (name == null || name.isEmpty) {
+    _fail('Could not read the app name from pubspec.yaml.');
+  }
+  final title = _title(name);
+
+  final descriptionMatch = RegExp(
+    r'^description:\s*(.+)$',
+    multiLine: true,
+  ).firstMatch(pubspecContent);
+  final rawDescription = descriptionMatch?.group(1)?.trim();
+  final description = rawDescription == null || rawDescription.isEmpty
+      ? '$title, built with Velora.'
+      : rawDescription;
+
+  if (!Directory('web').existsSync()) {
+    _fail(
+      'No web/ directory found. Enable web first: '
+      '`flutter create --platforms web .`, then re-run `velora make:pwa`.',
+    );
+  }
+
+  _write(
+    p.join('web', 'manifest.json'),
+    _pwaManifest(title: title, description: description),
+  );
+  _write(p.join('web', 'service_worker.js'), _serviceWorkerJs());
+
+  stdout.writeln(
+    'Wrote web/manifest.json (installable PWA manifest for "$title").',
+  );
+
+  final indexHtmlFile = File(p.join('web', 'index.html'));
+  if (!indexHtmlFile.existsSync()) {
+    stdout.writeln(
+      'web/index.html not found -- add the service worker registration '
+      'snippet from docs/pwa.md yourself.',
+    );
+  } else {
+    final indexHtml = indexHtmlFile.readAsStringSync();
+    if (indexHtml.contains('service_worker.js')) {
+      stdout.writeln(
+        'web/index.html already registers service_worker.js -- left as-is.',
+      );
+    } else {
+      final bodyClose = indexHtml.lastIndexOf('</body>');
+      if (bodyClose == -1) {
+        stdout.writeln(
+          'web/index.html has no </body> tag -- add the service worker '
+          'registration snippet from docs/pwa.md yourself.',
+        );
+      } else {
+        final patched = indexHtml.replaceRange(
+          bodyClose,
+          bodyClose,
+          _serviceWorkerRegistrationSnippet(),
+        );
+        indexHtmlFile.writeAsStringSync(patched);
+        stdout.writeln(
+          'Wrote web/service_worker.js and registered it in web/index.html '
+          '(caches the app shell + velora_db WASM assets for offline use).',
+        );
+      }
+    }
+  }
+
+  stdout.writeln(
+    "Place velora_db's sqlite3.wasm and drift_worker.dart.js in web/ so the "
+    'service worker caches them too -- see docs/packages/db.md.',
+  );
+  stdout.writeln(
+    'Customize the manifest colors/icons and bump CACHE in '
+    'service_worker.js when you want to force-refresh a deploy.',
+  );
+  stdout.writeln(
+    'Build and serve over HTTPS to test offline: flutter build web && '
+    '(serve build/web). Full guide: docs/pwa.md.',
+  );
+}
+
+String _pwaManifest({required String title, required String description}) {
+  final manifest = <String, Object?>{
+    'name': title,
+    'short_name': title,
+    'start_url': '.',
+    'display': 'standalone',
+    'orientation': 'any',
+    'background_color': '#FFFFFF',
+    'theme_color': '#111827',
+    'description': description,
+    'prefer_related_applications': false,
+    'categories': <String>['productivity'],
+    'icons': <Map<String, Object?>>[
+      <String, Object?>{
+        'src': 'icons/Icon-192.png',
+        'sizes': '192x192',
+        'type': 'image/png',
+      },
+      <String, Object?>{
+        'src': 'icons/Icon-512.png',
+        'sizes': '512x512',
+        'type': 'image/png',
+      },
+      <String, Object?>{
+        'src': 'icons/Icon-maskable-192.png',
+        'sizes': '192x192',
+        'type': 'image/png',
+        'purpose': 'maskable',
+      },
+      <String, Object?>{
+        'src': 'icons/Icon-maskable-512.png',
+        'sizes': '512x512',
+        'type': 'image/png',
+        'purpose': 'maskable',
+      },
+    ],
+  };
+  return '${const JsonEncoder.withIndent('    ').convert(manifest)}\n';
+}
+
+String _serviceWorkerRegistrationSnippet() =>
+    '''  <script>
+    // Registered by `velora make:pwa`: caches the app shell + velora_db WASM
+    // assets for offline use. See docs/pwa.md.
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('service_worker.js');
+      });
+    }
+  </script>
+''';
+
+String _serviceWorkerJs() =>
+    '''// Generated by `velora make:pwa`. Caches the Flutter app shell and velora_db's
+// WASM assets so the app works offline. Flutter no longer ships a default
+// service worker (flutter/flutter#156910), so Velora provides this one.
+//
+// Bump CACHE (e.g. v1 -> v2) to force every client to discard the old cache
+// on the next load -- useful if a deploy ever appears stale.
+const CACHE = 'velora-app-shell-v1';
+
+self.addEventListener('install', (event) => {
+  // Activate this worker as soon as it finishes installing, without waiting
+  // for existing tabs to close.
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil((async () => {
+    // Drop caches left behind by older CACHE versions of this worker.
+    const keys = await caches.keys();
+    await Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key)));
+    await self.clients.claim();
+  })());
+});
+
+self.addEventListener('fetch', (event) => {
+  const request = event.request;
+  if (request.method !== 'GET') return; // never cache writes (API calls etc.)
+
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return; // only same-origin assets
+
+  // Navigations: network-first, so a fresh deploy is served when online and
+  // the cached shell (index.html) is served when offline.
+  if (request.mode === 'navigate') {
+    event.respondWith((async () => {
+      const cache = await caches.open(CACHE);
+      try {
+        const fresh = await fetch(request);
+        cache.put(request, fresh.clone());
+        return fresh;
+      } catch (_) {
+        return (await cache.match(request)) ||
+            (await cache.match('index.html')) ||
+            Response.error();
+      }
+    })());
+    return;
+  }
+
+  // Everything else same-origin (main.dart.js, canvaskit, fonts, sqlite3.wasm,
+  // drift_worker.dart.js, ...): stale-while-revalidate -- serve from cache
+  // instantly, refresh the cache in the background.
+  event.respondWith((async () => {
+    const cache = await caches.open(CACHE);
+    const cached = await cache.match(request);
+    const network = fetch(request).then((response) => {
+      if (response && response.status === 200) cache.put(request, response.clone());
+      return response;
+    }).catch(() => cached);
+    return cached || network;
+  })());
+});
+''';
 
 void _installPush(List<String> args) {
   final fcm = args.contains('--fcm');

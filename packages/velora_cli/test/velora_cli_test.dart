@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:velora_cli/velora_cli.dart';
@@ -56,6 +57,78 @@ void main() {
     expect(File('${app.path}/docs/reminders/ios.md').existsSync(), isTrue);
     expect(File('${app.path}/docs/reminders/web.md').existsSync(), isTrue);
     expect(File('${app.path}/docs/reminders/laravel.md').existsSync(), isTrue);
+  });
+
+  test('make:pwa writes a manifest and a service worker', () async {
+    final temp = Directory.systemTemp.createTempSync('velora_cli_pwa_');
+    addTearDown(() {
+      if (temp.existsSync()) temp.deleteSync(recursive: true);
+    });
+
+    final packageRoot = Directory.current.path;
+    Future<ProcessResult> runCli(List<String> args) {
+      return Process.run(Platform.resolvedExecutable, <String>[
+        '$packageRoot/bin/velora_cli.dart',
+        ...args,
+      ], workingDirectory: Directory.current.path);
+    }
+
+    final app = Directory('${temp.path}/app')..createSync();
+    File('${app.path}/pubspec.yaml').writeAsStringSync('''name: demo_app
+dependencies:
+  flutter:
+    sdk: flutter
+''');
+    Directory('${app.path}/web').createSync();
+    File('${app.path}/web/index.html').writeAsStringSync('''<!DOCTYPE html>
+<html>
+<body>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
+''');
+
+    final original = Directory.current;
+    ProcessResult make;
+    try {
+      Directory.current = app;
+      make = await runCli(<String>['make:pwa']);
+      expect(make.exitCode, 0, reason: make.stderr.toString());
+    } finally {
+      Directory.current = original;
+    }
+
+    final manifestFile = File('${app.path}/web/manifest.json');
+    expect(manifestFile.existsSync(), isTrue);
+    final manifest =
+        jsonDecode(manifestFile.readAsStringSync()) as Map<String, dynamic>;
+    expect(manifest['display'], 'standalone');
+    expect(manifest['name'], 'Demo App');
+
+    final serviceWorkerFile = File('${app.path}/web/service_worker.js');
+    expect(serviceWorkerFile.existsSync(), isTrue);
+    final serviceWorkerContent = serviceWorkerFile.readAsStringSync();
+    expect(serviceWorkerContent, contains('velora-app-shell'));
+    expect(serviceWorkerContent, contains("addEventListener('fetch'"));
+
+    final indexHtmlFile = File('${app.path}/web/index.html');
+    expect(indexHtmlFile.readAsStringSync(), contains('service_worker.js'));
+
+    // Running make:pwa a second time must not duplicate the registration.
+    ProcessResult makeAgain;
+    try {
+      Directory.current = app;
+      makeAgain = await runCli(<String>['make:pwa']);
+      expect(makeAgain.exitCode, 0, reason: makeAgain.stderr.toString());
+    } finally {
+      Directory.current = original;
+    }
+    final indexHtmlContent = indexHtmlFile.readAsStringSync();
+    expect(
+      'service_worker.js'.allMatches(indexHtmlContent).length,
+      1,
+      reason: 'service_worker.js registration should only be injected once',
+    );
   });
 
   group('addDependencyToPubspec', () {
