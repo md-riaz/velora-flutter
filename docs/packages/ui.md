@@ -20,6 +20,8 @@ This package ships two layers today — the **token + theme foundation** (Layer 
 
 **Layer 2 — components:** a focused set of presentational widgets (`VeloraButton`, `VeloraCard`, `VeloraBadge`, `VeloraChip`, `VeloraAlert`, `VeloraEmptyState`, `VeloraSkeleton`) that each read their colors, spacing, radius, and motion from the active theme — see [Components](#components) below.
 
+**Layer 3 — form inputs:** controlled input widgets (`VeloraTextField`, `VeloraSelect`, `VeloraCheckbox`, `VeloraSwitch`, `VeloraRadioGroup`) with a `value` + `onChanged` + `errorText` API that binds to any controller — including a `VeloraFormController` field — see [Form inputs](#form-inputs) below.
+
 `velora_ui` is **not** a [Velora plugin](../plugins.md) and doesn't wire into `Velora.boot(plugins: [...])` — it's just Flutter theming, applied via your app's `theme:`/`darkTheme:` arguments (or a `VeloraApp` wrapper, if your app uses one), exactly like any other `ThemeData`.
 
 ## Install
@@ -140,13 +142,54 @@ Column(
 );
 ```
 
+## Form inputs
+
+Layer 3 adds the controlled form inputs. Each is **presentational and
+framework-agnostic** (depends only on `flutter`) but exposes the exact shape a
+form controller wants: a current `value`, an `onChanged` callback, and a
+nullable `errorText`. Because `VeloraFormController` (in `package:velora`)
+exposes per-field values and errors, wiring a field to the framework's form
+layer is just passing those through — no coupling in either direction.
+
+| Input | Notes |
+|---|---|
+| `VeloraTextField` | Single/multi-line text. `label`/`hint`/`helperText`/`errorText`, `prefixIcon`/`suffixIcon`, a built-in show/hide toggle when `obscureText` is true, plus the usual `keyboardType`/`maxLines`/`inputFormatters`. Manages its own `TextEditingController` if you don't pass one. |
+| `VeloraSelect<T>` | A dropdown over `VeloraSelectOption<T>`s, matching `VeloraTextField`'s decoration and error styling. |
+| `VeloraCheckbox` | A labeled, full-row-tappable checkbox with optional `subtitle` and `errorText`. |
+| `VeloraSwitch` | A settings-style labeled switch row. |
+| `VeloraRadioGroup<T>` | A vertical single-select group of `VeloraRadioOption<T>`s with an optional group `label` and `errorText`. |
+
+Sketch of binding a text field to a `VeloraFormController`, whose `firstError(field)` returns the first validation message for a field (or null when valid):
+
+```dart
+class SignUpController extends VeloraFormController {
+  final email = TextEditingController();
+  // ...submit() calls setErrors(...) from the server's 422 response.
+}
+
+// In the view:
+Obx(
+  () => VeloraTextField(
+    label: 'Email',
+    controller: c.email,
+    keyboardType: TextInputType.emailAddress,
+    errorText: c.firstError('email'), // reactive; null when valid
+  ),
+);
+```
+
+The inputs never reach into the framework themselves — you decide how `value`/
+`onChanged`/`errorText` map to your controller, so the same widgets work with a
+plain `setState`, a GetX controller, or `VeloraFormController`.
+
 ## What's next
 
 This package will keep growing in layers:
 
 - **Layer 1** — tokens + theme (`VeloraTokens`, `VeloraThemePreset`, `buildVeloraTheme`).
-- **Layer 2** — the core component set above (buttons, cards, badges, chips, alerts, empty states, skeletons).
-- **Layer 3 (next)** — form fields wired to `VeloraFormController` so validation/error state flows through the framework's existing form layer, plus more components (inputs, dialogs/sheets, list tiles, tabs, data tables).
+- **Layer 2** — the core component set (buttons, cards, badges, chips, alerts, empty states, skeletons).
+- **Layer 3** — the controlled form inputs above (text field, select, checkbox, switch, radio group).
+- **Layer 4 (next)** — overlays and structure: dialogs/bottom sheets, list tiles, tabs, and a data table, plus a first-class `VeloraFormController` binding helper if the manual wiring above proves worth sugaring.
 
 ---
 
