@@ -1,13 +1,35 @@
 /// Velora UI — an original, token-first design system for Velora apps.
 ///
-/// This is **Layer 1**: the token + theme foundation. It provides
-/// [VeloraTokens] (a [ThemeExtension](https://api.flutter.dev/flutter/material/ThemeExtension-class.html)
-/// carrying spacing/radius/semantic-color/elevation/motion tokens),
-/// original Velora theme presets, and [buildVeloraTheme]/[VeloraTheme] to
-/// build a Material 3 `ThemeData` that carries them. Components (buttons,
-/// inputs, cards, ...) are a future layer — not part of this package yet.
+/// **Layer 1** is the token + theme foundation: [VeloraTokens] (a
+/// [ThemeExtension](https://api.flutter.dev/flutter/material/ThemeExtension-class.html)
+/// carrying spacing/radius/semantic-color/elevation/motion tokens), original
+/// Velora theme presets, and [buildVeloraTheme]/[VeloraTheme] to build a
+/// Material 3 `ThemeData` that carries them.
+///
+/// **Layer 2** is the core component set built on those tokens — every widget
+/// reads its colors, spacing, radius, and motion from the active theme
+/// (`context.veloraTokens` + `ColorScheme`), so the kit stays visually
+/// consistent and tracks light/dark automatically:
+///
+/// - [VeloraButton] — variants (primary/secondary/outline/ghost/danger),
+///   sizes, a built-in loading state, and optional icon.
+/// - [VeloraCard] — a padded, rounded, optionally tappable surface.
+/// - [VeloraBadge] — a small status pill (solid or soft) driven by
+///   [VeloraStatus].
+/// - [VeloraChip] — an interactive, selectable/removable chip.
+/// - [VeloraAlert] — a semantic message banner (success/warning/info/error).
+/// - [VeloraEmptyState] — a centered "nothing here yet" placeholder.
+/// - [VeloraSkeleton] — a pulsing loading placeholder.
 library;
 
+export 'src/components/velora_alert.dart';
+export 'src/components/velora_badge.dart';
+export 'src/components/velora_button.dart';
+export 'src/components/velora_card.dart';
+export 'src/components/velora_chip.dart';
+export 'src/components/velora_empty_state.dart';
+export 'src/components/velora_skeleton.dart';
+export 'src/components/velora_status.dart';
 export 'src/theme/velora_theme.dart';
 export 'src/theme/velora_tokens_context.dart';
 export 'src/tokens/velora_tokens.dart';
