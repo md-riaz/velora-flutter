@@ -186,10 +186,10 @@ plain `setState`, a GetX controller, or `VeloraFormController`.
 
 This package will keep growing in layers:
 
-- **Layer 1** — tokens + theme (`VeloraTokens`, `VeloraThemePreset`, `buildVeloraTheme`).
-- **Layer 2** — the core component set (buttons, cards, badges, chips, alerts, empty states, skeletons).
-- **Layer 3** — the controlled form inputs above (text field, select, checkbox, switch, radio group).
-- **Layer 4 (next)** — overlays and structure: dialogs/bottom sheets, list tiles, tabs, and a data table, plus a first-class `VeloraFormController` binding helper if the manual wiring above proves worth sugaring.
+- **Layer 1** laid the foundation — tokens + theme (`VeloraTokens`, `VeloraThemePreset`, `buildVeloraTheme`).
+- **Layer 2** added the core component set (buttons, cards, badges, chips, alerts, empty states, skeletons).
+- **Layer 3** brought the controlled form inputs above (text field, select, checkbox, switch, radio group).
+- **Up next (Layer 4)** — overlays and structure: dialogs/bottom sheets, list tiles, tabs, and a data table, plus a first-class `VeloraFormController` binding helper if the manual wiring above proves worth sugaring.
 
 ---
 

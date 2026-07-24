@@ -124,6 +124,16 @@ class _VeloraTextFieldState extends State<VeloraTextField> {
       (_internalController ??= TextEditingController(text: widget.initialValue));
 
   @override
+  void didUpdateWidget(VeloraTextField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Resync the reveal state if the parent rebuilds with a different
+    // obscureText (the initializer only seeds it once at construction).
+    if (widget.obscureText != oldWidget.obscureText) {
+      _obscured = widget.obscureText;
+    }
+  }
+
+  @override
   void dispose() {
     _internalController?.dispose();
     super.dispose();

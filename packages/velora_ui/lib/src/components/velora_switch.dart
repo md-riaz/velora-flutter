@@ -21,6 +21,9 @@ class VeloraSwitch extends StatelessWidget {
   /// Optional secondary line below the label.
   final String? subtitle;
 
+  /// Optional per-field error text shown below the row.
+  final String? errorText;
+
   /// Creates a Velora switch row.
   const VeloraSwitch({
     super.key,
@@ -28,6 +31,7 @@ class VeloraSwitch extends StatelessWidget {
     required this.onChanged,
     required this.label,
     this.subtitle,
+    this.errorText,
   });
 
   @override
@@ -36,43 +40,60 @@ class VeloraSwitch extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final enabled = onChanged != null;
 
-    return InkWell(
-      onTap: enabled ? () => onChanged!(!value) : null,
-      borderRadius: BorderRadius.circular(tokens.radiusSm),
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: tokens.spacingXs),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    label,
-                    style: TextStyle(
-                      color: enabled
-                          ? scheme.onSurface
-                          : scheme.onSurface.withValues(alpha: 0.38),
-                      fontSize: 14,
-                    ),
-                  ),
-                  if (subtitle != null)
-                    Text(
-                      subtitle!,
-                      style: TextStyle(
-                        color: scheme.onSurfaceVariant,
-                        fontSize: 12,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        InkWell(
+          onTap: enabled ? () => onChanged!(!value) : null,
+          borderRadius: BorderRadius.circular(tokens.radiusSm),
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: tokens.spacingXs),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        label,
+                        style: TextStyle(
+                          color: enabled
+                              ? scheme.onSurface
+                              : scheme.onSurface.withValues(alpha: 0.38),
+                          fontSize: 14,
+                        ),
                       ),
-                    ),
-                ],
-              ),
+                      if (subtitle != null)
+                        Text(
+                          subtitle!,
+                          style: TextStyle(
+                            color: scheme.onSurfaceVariant,
+                            fontSize: 12,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                SizedBox(width: tokens.spacingSm),
+                Switch(value: value, onChanged: onChanged),
+              ],
             ),
-            SizedBox(width: tokens.spacingSm),
-            Switch(value: value, onChanged: onChanged),
-          ],
+          ),
         ),
-      ),
+        if (errorText != null)
+          Padding(
+            padding: EdgeInsets.only(
+              left: tokens.spacingMd,
+              top: tokens.spacingXs,
+            ),
+            child: Text(
+              errorText!,
+              style: TextStyle(color: scheme.error, fontSize: 12),
+            ),
+          ),
+      ],
     );
   }
 }

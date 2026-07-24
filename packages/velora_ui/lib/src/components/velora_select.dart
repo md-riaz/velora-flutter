@@ -67,6 +67,10 @@ class VeloraSelect<T> extends StatelessWidget {
           borderSide: BorderSide(color: color, width: width),
         );
 
+    // A null onChanged disables the dropdown; dim the fill to match
+    // VeloraTextField's disabled state (the disabledBorder alone isn't enough).
+    final enabled = onChanged != null;
+
     return DropdownButtonFormField<T>(
       initialValue: value,
       onChanged: onChanged,
@@ -85,7 +89,9 @@ class VeloraSelect<T> extends StatelessWidget {
         errorText: errorText,
         prefixIcon: prefixIcon == null ? null : Icon(prefixIcon),
         filled: true,
-        fillColor: scheme.surfaceContainerHighest.withValues(alpha: 0.4),
+        fillColor: scheme.surfaceContainerHighest.withValues(
+          alpha: enabled ? 0.4 : 0.15,
+        ),
         contentPadding: EdgeInsets.symmetric(
           horizontal: tokens.spacingMd,
           vertical: tokens.spacingMd,

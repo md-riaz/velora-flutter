@@ -97,6 +97,28 @@ void main() {
       await tester.tap(find.text('Notifications'));
       expect(next, isFalse);
     });
+
+    testWidgets('is disabled when onChanged is null', (tester) async {
+      await pumpUnderTheme(
+        tester,
+        const VeloraSwitch(value: true, label: 'Locked', onChanged: null),
+      );
+      final sw = tester.widget<Switch>(find.byType(Switch));
+      expect(sw.onChanged, isNull);
+    });
+
+    testWidgets('renders the error text', (tester) async {
+      await pumpUnderTheme(
+        tester,
+        VeloraSwitch(
+          value: false,
+          label: 'Required toggle',
+          errorText: 'You must enable this',
+          onChanged: (_) {},
+        ),
+      );
+      expect(find.text('You must enable this'), findsOneWidget);
+    });
   });
 
   group('VeloraRadioGroup', () {
@@ -123,6 +145,24 @@ void main() {
 
       await tester.tap(find.text('Pro'));
       expect(chosen, 'pro');
+    });
+
+    testWidgets('does not fire onChanged when disabled', (tester) async {
+      var fired = false;
+      await pumpUnderTheme(
+        tester,
+        VeloraRadioGroup<String>(
+          groupValue: 'free',
+          options: const [
+            VeloraRadioOption(value: 'free', label: 'Free'),
+            VeloraRadioOption(value: 'pro', label: 'Pro'),
+          ],
+          onChanged: null,
+        ),
+      );
+
+      await tester.tap(find.text('Pro'));
+      expect(fired, isFalse);
     });
 
     testWidgets('renders the error text', (tester) async {
