@@ -126,11 +126,15 @@ Column(
       message: 'Your changes were saved.',
     ),
     SizedBox(height: context.veloraTokens.spacingMd),
-    VeloraButton(
-      label: 'Continue',
-      icon: Icons.arrow_forward,
-      loading: controller.isLoading.value,
-      onPressed: controller.submit,
+    // Wrap the reactive read in Obx so the button rebuilds when the flag
+    // changes (reading `.value` outside Obx never re-subscribes).
+    Obx(
+      () => VeloraButton(
+        label: 'Continue',
+        icon: Icons.arrow_forward,
+        loading: controller.isLoading.value,
+        onPressed: controller.submit,
+      ),
     ),
   ],
 );

@@ -238,5 +238,34 @@ void main() {
       );
       expect(find.byType(VeloraSkeleton), findsOneWidget);
     });
+
+    testWidgets(
+      'survives a reduced-motion false -> true -> false toggle without '
+      'a second ticker',
+      (tester) async {
+        Widget frame(bool reduce) => MaterialApp(
+          theme: VeloraTheme.light(),
+          home: MediaQuery(
+            data: MediaQueryData(disableAnimations: reduce),
+            child: const Scaffold(
+              body: Center(child: VeloraSkeleton(width: 100, height: 20)),
+            ),
+          ),
+        );
+
+        // Animating -> stopped -> animating again. The same State (and its
+        // single ticker) is reused across pumps, so recreating a controller
+        // here would trip SingleTickerProviderStateMixin's assertion.
+        await tester.pumpWidget(frame(false));
+        expect(tester.hasRunningAnimations, isTrue);
+
+        await tester.pumpWidget(frame(true));
+        expect(tester.hasRunningAnimations, isFalse);
+
+        await tester.pumpWidget(frame(false));
+        expect(tester.hasRunningAnimations, isTrue);
+        expect(tester.takeException(), isNull);
+      },
+    );
   });
 }

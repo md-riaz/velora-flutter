@@ -182,12 +182,17 @@ class VeloraButton extends StatelessWidget {
     final Widget child;
     if (loading) {
       final spinnerSize = _fontSize + 4;
-      child = SizedBox(
-        height: spinnerSize,
-        width: spinnerSize,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          valueColor: AlwaysStoppedAnimation<Color>(foreground),
+      // Keep the button's accessible name while the spinner replaces the
+      // label text — otherwise a screen reader announces an unnamed button.
+      child = Semantics(
+        label: label,
+        child: SizedBox(
+          height: spinnerSize,
+          width: spinnerSize,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation<Color>(foreground),
+          ),
         ),
       );
     } else if (icon != null) {

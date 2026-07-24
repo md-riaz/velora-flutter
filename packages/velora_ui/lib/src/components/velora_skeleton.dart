@@ -42,8 +42,9 @@ class VeloraSkeleton extends StatefulWidget {
       radius = null,
       _circle = true;
 
-  /// A single skeleton text line. [width] defaults to a typical line width via
-  /// the parent's constraints; set it for a specific fraction.
+  /// A single skeleton text line. [width] is an explicit width in logical
+  /// pixels (passed straight to the underlying box); leave it null to size to
+  /// the parent's constraints.
   const VeloraSkeleton.text({super.key, this.width, this.height = 12})
     : radius = null,
       _circle = false;
@@ -54,24 +55,31 @@ class VeloraSkeleton extends StatefulWidget {
 
 class _VeloraSkeletonState extends State<VeloraSkeleton>
     with SingleTickerProviderStateMixin {
-  AnimationController? _controller;
+  // One controller for the whole state lifetime — SingleTickerProviderStateMixin
+  // only permits a single ticker to ever be created, so we never dispose and
+  // recreate it. Reduced-motion is handled by stopping/restarting this one
+  // controller (in didChangeDependencies), not by tearing it down.
+  late final AnimationController _controller = AnimationController(vsync: this);
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Runs on first build and whenever an inherited dependency changes —
+    // including MediaQuery, so a live reduced-motion toggle lands here.
+    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    _controller.duration = context.veloraTokens.motionSlow;
+    if (reduceMotion) {
+      if (_controller.isAnimating) _controller.stop();
+    } else if (!_controller.isAnimating) {
+      _controller.repeat(reverse: true);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.veloraTokens;
     final scheme = Theme.of(context).colorScheme;
     final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-
-    // Lazily create/tear down the controller so the reduced-motion path pays
-    // nothing and never leaves a ticker running.
-    if (reduceMotion) {
-      _controller?.dispose();
-      _controller = null;
-    } else {
-      _controller ??=
-          AnimationController(vsync: this, duration: tokens.motionSlow)
-            ..repeat(reverse: true);
-    }
 
     final baseColor = scheme.surfaceContainerHighest;
     final borderRadius = BorderRadius.circular(
@@ -87,19 +95,18 @@ class _VeloraSkeletonState extends State<VeloraSkeleton>
       ),
     );
 
-    final controller = _controller;
-    if (controller == null) return box(0.7);
+    if (reduceMotion) return box(0.7);
 
     return AnimatedBuilder(
-      animation: controller,
+      animation: _controller,
       builder: (context, _) =>
-          box(0.4 + 0.4 * controller.value), // 0.4 -> 0.8
+          box(0.4 + 0.4 * _controller.value), // 0.4 -> 0.8
     );
   }
 
   @override
   void dispose() {
-    _controller?.dispose();
+    _controller.dispose();
     super.dispose();
   }
 }

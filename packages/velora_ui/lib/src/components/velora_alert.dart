@@ -92,15 +92,19 @@ class VeloraAlert extends StatelessWidget {
             ),
           ),
           if (onClose != null)
-            InkResponse(
-              onTap: onClose,
-              radius: 18,
-              child: Padding(
-                padding: EdgeInsets.only(left: tokens.spacingSm),
-                child: Icon(
-                  Icons.close,
-                  size: 18,
-                  color: scheme.onSurfaceVariant,
+            Semantics(
+              button: true,
+              label: 'Dismiss',
+              child: InkResponse(
+                onTap: onClose,
+                radius: 18,
+                child: Padding(
+                  padding: EdgeInsets.only(left: tokens.spacingSm),
+                  child: Icon(
+                    Icons.close,
+                    size: 18,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ),
             ),

@@ -81,10 +81,14 @@ class VeloraChip extends StatelessWidget {
             SizedBox(width: tokens.spacingXs),
             // A nested InkWell so the delete affordance has its own tap
             // target independent of the chip-body tap.
-            InkResponse(
-              onTap: onDeleted,
-              radius: 14,
-              child: Icon(Icons.close, size: 16, color: foreground),
+            Semantics(
+              button: true,
+              label: 'Remove $label',
+              child: InkResponse(
+                onTap: onDeleted,
+                radius: 14,
+                child: Icon(Icons.close, size: 16, color: foreground),
+              ),
             ),
           ],
         ],
