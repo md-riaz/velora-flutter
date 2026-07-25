@@ -30,4 +30,4 @@ Velora MVP focuses on Laravel-like productivity for Flutter apps.
 
 ## Architecture anchor
 
-Controllers extend `VeloraController` / `VeloraFormController` / `VeloraPaginatedController` and own their own screen-local Rx state. Services are plain classes wired by constructor injection in each module's factory — no app-level `GetxService`, no `Bindings` subclasses.
+Controllers extend `VeloraController` / `VeloraFormController` / `VeloraPaginatedController` and own their own screen-local Rx state. Module/business services are plain classes wired by constructor injection in each module's factory — no `Bindings` subclasses. (Genuinely app-wide *session* state is the one place a `GetxService` is appropriate in app code — see [architecture › Where shared state lives](architecture.md#where-shared-state-lives).)

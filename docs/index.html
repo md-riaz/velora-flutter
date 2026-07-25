@@ -709,11 +709,12 @@
 <section class="callout" aria-labelledby="arch-heading">
   <div class="callout-inner">
     <div>
-      <h3 id="arch-heading">GetxService owns shared state. Controllers own UI state.</h3>
+      <h3 id="arch-heading">Every kind of state has a home: screen, data, or session.</h3>
       <p>
-        The hard line between framework layer and app layer is intentional.
-        Services hold cross-screen business data; controllers hold what a single
-        screen needs. Read the architecture guide before building your first module.
+        Controllers own screen state. Shared records live in the reactive data
+        layer. App-wide session state (current user, current org) lives in a
+        session service — and app business logic stays in plain, constructor-injected
+        classes. Read the architecture guide before building your first module.
       </p>
     </div>
     <a class="btn-outline" href="docs/architecture/" style="white-space:nowrap">

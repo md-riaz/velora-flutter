@@ -1,3 +1,14 @@
+> **⚠️ Superseded / historical.** This file is an early design deliberation that
+> argued for making `GetxService` the mandatory business/session/application-state
+> layer. The shipped framework only partly adopted it: *session/infrastructure*
+> services (auth, features, connectivity) are `GetxService`s, but app **business/
+> module** services are plain, constructor-injected classes — not `GetxService`.
+> The canonical, current guidance is **[`docs/architecture.md`](docs/architecture.md)**
+> (see especially *Where shared state lives*). Read that, not this. This file is
+> kept only for history.
+
+---
+
 You’re right — I overcorrected toward Clean Architecture and missed the GetX-native strength:
 
 > In a GetX-first framework, GetxService should be the business/session/application state layer, and repositories should stay as data-access abstractions.
