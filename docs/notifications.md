@@ -14,7 +14,7 @@ dart run velora_cli make:notifications
 
 This writes `lib/app/modules/notifications/` with:
 
-- `NotificationService` — GetxService owning push token registration, unread count, and notification list
+- `NotificationService` — a plain, injected class owning push token registration and the notification list + unread count as `ValueNotifier`s (bind an app-bar badge with `ValueListenableBuilder`)
 - `NotificationRepository` and `NotificationRemoteDataSource` — API layer
 - `NotificationController`, pages, and widgets
 - Noop/mock adapters so everything compiles and runs without Firebase credentials
@@ -26,7 +26,7 @@ Notification UI
   ↓
 NotificationController
   ↓
-NotificationService (GetxService)
+NotificationService (plain injected class, owns ValueNotifier<int> unreadCount)
   ↓
 NotificationRepository
   ↓
