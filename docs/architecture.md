@@ -77,7 +77,7 @@ For binding a reactive source — e.g. a `velora_db`/`velora_offline` `watch*` s
 | **Session / app-wide** value tied to login↔logout | A **session service** (a `GetxService`, or a plain class held app-wide) | Current org/tenant, current user, feature flags, locale |
 | **Derived** cross-page aggregates | A **reactive query/stream/getter over whichever owner above holds the truth** — never a hand-incremented counter duplicated per page | Unread count, cart total, an app-bar badge |
 
-The first two rows are the same idea at two durability levels: **in-memory when you don't need persistence, `velora_db` when you do.** Don't reach for a database just to share data between two screens — an in-memory service is often the right, lighter answer (see the in-memory store example below).
+> **In practice, most shared state lives in memory — start there.** The common home for shared data is an in-memory service holding reactive state: an app-wide **session service** (current user, org, settings — the kind of state nearly every app has and every screen reads; see [current-org](#example-current-org-session-state--a-session-service) below) for truly global state, or a plain feature-scoped store for a few related screens. **`velora_db` is the exception, not the default** — reach for it *only* when that state must **persist**, work **offline**, or survive a **restart**. It's a durability add-on layered under the same reactive reads, not the default home for shared data. Don't reach for a database just to share data between two screens.
 
 Two rules cut through most confusion:
 
