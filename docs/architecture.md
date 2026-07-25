@@ -79,7 +79,7 @@ For binding a reactive source — e.g. a `velora_db`/`velora_offline` `watch*` s
 
 Two rules cut through most confusion:
 
-- **Reactivity does not require `GetxService`.** `.obs` / `Rx` / `Rxn` work in any plain class — the framework's own `NotificationService` is a plain class exposing an `RxInt unreadCount`. `GetxService` buys you three specific things: an app-wide lifetime managed outside the widget tree, lifecycle hooks (`onInit`/`onClose` and **logout teardown** via `VeloraLogoutAware`), and global access without threading the instance through factories. Reach for it only when you need those.
+- **Reactivity does not require `GetxService`.** `.obs` / `Rx` / `Rxn` — or even a plain `ValueNotifier` — work in any plain class (the generated notifications module holds its `unreadCount` as a `ValueNotifier<int>`). `GetxService` buys you three specific things: an app-wide lifetime managed outside the widget tree, lifecycle hooks (`onInit`/`onClose` and **logout teardown** via `VeloraLogoutAware`), and global access without threading the instance through factories. Reach for it only when you need those.
 - **The "no app-level `GetxService`" rule is about per-module *business* services** (the `UsersService` kind — those stay plain classes). It is **not** a ban on genuinely app-wide *session* state, which is the same tier as the framework's own `AuthService` / `FeatureService` / `ConnectivityService`.
 
 ### Example: current-org (session state → a session service)
@@ -144,7 +144,7 @@ class DashboardController extends VeloraController {
 
 Because the count is derived from the single source of truth, it can never drift out of sync with the threads — every screen watching a matching query updates the instant a message is written or marked read. A **hand-maintained counter that each page increments is the anti-pattern** here: it duplicates state and drifts.
 
-For a badge whose source isn't a table — e.g. the notification bell — bind the app bar's `Obx` to a shared service's reactive field instead. That's exactly what the framework's `NotificationService` (a plain class holding `RxInt unreadCount`) is for: `Obx(() => Badge(count: notifications.unreadCount.value))`.
+For a badge whose source isn't a table — e.g. the notification bell — bind the app bar to a shared service's reactive field instead: a session service exposing an `RxInt` read inside `Obx`, or a plain injected service exposing a `ValueNotifier<int>` read inside `ValueListenableBuilder` (the shape the generated notifications module uses). Either way the badge is a reactive *view* over one owner, not a counter the app bar maintains.
 
 
 ## A concrete example: the generated `users` module

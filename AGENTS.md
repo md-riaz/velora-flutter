@@ -3,7 +3,7 @@
 ## Velora rules
 
 - Follow `velora.md` and `velora.part2.md` for historical planning context.
-- If they conflict, `velora.part2.md` wins for architecture. For logout safety, the current source of truth is the shipped implementation in `packages/velora/lib/src/auth/logout_coordinator.dart` (participant-based teardown via `VeloraLifecycleRegistry`), not either planning doc.
+- For **architecture**, the canonical source of truth is `docs/architecture.md` (the shipped, corrected layering) — not the `velora.md` / `velora.part2.md` planning docs, which are historical and may conflict with it. For logout safety, the source of truth is the shipped implementation in `packages/velora/lib/src/auth/logout_coordinator.dart` (participant-based teardown via `VeloraLifecycleRegistry`), not either planning doc.
 - Blessed architecture is **plain constructor dependency injection**: app controllers extend `VeloraController` / `VeloraFormController` / `VeloraPaginatedController` and own their own screen-local Rx state. Services are plain classes (not `GetxService`) wired by constructor injection in each module's factory (`{name}_module.dart`), exactly as `velora new` / `make:module` generate. App **business/module** services are plain classes; the one legitimate use of `GetxService` in app code is genuinely app-wide *session* state (current org, current user, feature flags), the same tier as the framework's own `AuthService`/`FeatureService`. Do not use `GetxService` for per-module business services, and do not use Bindings-based DI. See `docs/architecture.md` → *Where shared state lives*.
 - Controllers contain local UI state and screen actions only.
 - Repositories/data sources handle data access only.
