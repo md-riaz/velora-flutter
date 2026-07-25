@@ -72,10 +72,12 @@ For binding a reactive source — e.g. a `velora_db`/`velora_offline` `watch*` s
 | State | Home | Example |
 |---|---|---|
 | One screen's UI state | The **controller** (`VeloraController` Rx fields) | `loading`, `error`, the current list/page, form `errors` |
-| Shared **records** many screens read | The **reactive data layer** (`velora_db` / `velora_offline`) — the single source of truth | Chat messages shown in both a conversation list and a thread |
+| Shared **records**, **in memory** (no persistence needed) | An **app- or feature-scoped service** holding reactive collections (`RxList`/`RxMap`), fed by your source (websocket/poll/fetch) — the single source of truth | Live chat threads, or a cart, shared by a list screen and a detail screen |
+| Shared records that must **persist / work offline / survive restart** | The **reactive data layer** (`velora_db` / `velora_offline`) | Message history, a cached catalog |
 | **Session / app-wide** value tied to login↔logout | A **session service** (a `GetxService`, or a plain class held app-wide) | Current org/tenant, current user, feature flags, locale |
-| Business data shared by a **few related screens** in one feature | A **plain service**, constructed once and injected via those module factories | A feature's in-memory working set |
-| **Derived** cross-page aggregates | A **reactive query/stream over whichever layer above owns the truth** — never a hand-incremented counter duplicated per page | Unread count, "latest N", an app-bar badge |
+| **Derived** cross-page aggregates | A **reactive query/stream/getter over whichever owner above holds the truth** — never a hand-incremented counter duplicated per page | Unread count, cart total, an app-bar badge |
+
+The first two rows are the same idea at two durability levels: **in-memory when you don't need persistence, `velora_db` when you do.** Don't reach for a database just to share data between two screens — an in-memory service is often the right, lighter answer (see the in-memory store example below).
 
 Two rules cut through most confusion:
 
@@ -146,6 +148,93 @@ Because the count is derived from the single source of truth, it can never drift
 
 For a badge whose source isn't a table — e.g. the notification bell — bind the app bar to a shared service's reactive field instead: a session service exposing an `RxInt` read inside `Obx`, or a plain injected service exposing a `ValueNotifier<int>` read inside `ValueListenableBuilder` (the shape the generated notifications module uses). Either way the badge is a reactive *view* over one owner, not a counter the app bar maintains.
 
+### Example: an in-memory shared store (no database)
+
+When two screens share live data but you **don't** need persistence, offline, or restart-survival, skip `velora_db` — hold the state in memory in one shared service and let both screens read the same reactive collections. This is the same session-service tier as current-org, just holding collections instead of a single value:
+
+```dart
+class CartStore extends GetxService with VeloraLogoutAwareDefaults {
+  final items = <CartItem>[].obs;                 // every screen reads this list
+
+  void add(CartItem item) => items.add(item);
+  void remove(String id) => items.removeWhere((i) => i.id == id);
+
+  // Derived — a getter over the same list, so it can never drift.
+  double get total => items.fold(0, (sum, i) => sum + i.price * i.qty);
+  int get count => items.fold(0, (sum, i) => sum + i.qty);
+
+  @override
+  Future<void> onLogoutDispose() async => items.clear();
+}
+```
+
+Both the product list and the cart page get the **same** instance (via `Get.find`/a facade if it's a `GetxService`, or a plain instance injected into both module factories). The cart badge is `Obx(() => Badge(cart.count))`; the totals line is `Obx(() => Text('\$${cart.total}'))`. Nothing is fetched twice, and no page keeps its own copy. A live chat store is identical — swap `items` for `RxList<Message>` threads fed by your websocket. Reach for `velora_db` only when this in-memory state also needs to persist or work offline.
+
+## Reacting to state changes (triggers & effects)
+
+Sometimes changing one store should **automatically** trigger logic elsewhere — add an item to the cart and recompute shipping, sync the cart to the server, fire analytics, or re-check a "free shipping" promo. Velora offers a spectrum from explicit to fully decoupled; pick by how many reactors there are and how coupled they should be.
+
+1. **Explicit call — the default.** If the follow-up is a direct, always-happens consequence, just call it from the method that mutates the state. It's the most traceable and matches the framework's "explicit wiring, no hidden magic" bias:
+
+   ```dart
+   class CartService {
+     final CartStore store;
+     final PricingService pricing;
+     final AnalyticsService analytics;
+     CartService(this.store, this.pricing, this.analytics);
+
+     void add(CartItem item) {
+       store.add(item);
+       pricing.recompute(store.items);   // follow-up effects, right here
+       analytics.track('cart_add', item);
+     }
+   }
+   ```
+   Downside: the call site must know every reactor, so it couples them.
+
+2. **A GetX worker (`ever` / `everAll` / `debounce` / `interval` / `once`).** Register a reaction on an `Rx` inside a service's `onInit`, so it fires no matter *who* mutated the state — and the mutator doesn't know the reactor exists. Ideal for cross-cutting effects and for debounced/throttled work (autosave, sync):
+
+   ```dart
+   class CartSyncService extends GetxService {
+     final CartStore store;
+     final CartApi api;
+     CartSyncService(this.store, this.api);
+
+     Worker? _worker;
+
+     @override
+     void onInit() {
+       super.onInit();
+       // Debounce so a burst of edits produces one sync, not ten.
+       _worker = debounce(store.items, api.sync, time: const Duration(seconds: 1));
+     }
+
+     @override
+     void onClose() {
+       _worker?.dispose();   // always dispose workers
+       super.onClose();
+     }
+   }
+   ```
+
+3. **A named `onX(callback)` hook — the framework's own idiom.** When you want an intentional extension point multiple modules can opt into, expose a registration method on the store, exactly like `ConnectivityService.onOnline(...)` (`velora_offline`) or `context.onLogout(...)`. The store keeps a listener list and notifies them; reactors hook in without the store knowing who they are.
+
+4. **A typed domain-event stream + `listenStream`.** For decoupled cross-module fan-out, have the store emit typed events on a broadcast `Stream` (`ItemAdded`, `CartCleared`, ...); any controller or service subscribes with `VeloraController.listenStream(store.events, ...)` (auto-cancelled on dispose) or its own subscription. The store emits; it never knows who reacts:
+
+   ```dart
+   // In CartStore:  final _events = StreamController<CartEvent>.broadcast();
+   //                Stream<CartEvent> get events => _events.stream;
+   listenStream(cart.events, (e) {
+     if (e is ItemAdded) promoController.reevaluateFreeShipping();
+   });
+   ```
+
+**Choosing:** a single, direct consequence → **call it explicitly** (1). A cross-cutting effect that should fire regardless of the mutation site, or needs debounce/throttle → a **worker** (2). A named extension point several modules opt into → an **`onX` hook** (3). Decoupled cross-module fan-out with typed events → an **event stream** (4).
+
+Two rules keep reactions safe:
+
+- **Reactions live in services, not widgets.** Cross-module automatic actions belong in a service (often a session service) that owns the worker/subscription *and its disposal* — never in a `build()` method. A controller may react for its own screen's UI, but not to drive other modules.
+- **Always dispose, and avoid cycles.** Dispose `Worker`s in `onClose`; let `listenStream` cancel subscriptions for you. Guard against reaction loops (A updates B updates A) — prefer a one-way event flow over two stores mutating each other.
 
 ## A concrete example: the generated `users` module
 
