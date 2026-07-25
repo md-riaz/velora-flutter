@@ -84,7 +84,7 @@ Two rules cut through most confusion:
 
 ### Example: current-org (session state → a session service)
 
-A "current organization" that every page can read without re-fetching is session state: one instance, app-wide lifetime, set at login/switch, cleared at logout. That earns a `GetxService`:
+A "current organization" that every page can read without re-fetching is session state: one instance, app-wide lifetime, set at login/switch, cleared at logout. Reach for a `GetxService` when you want framework-managed lifetime, global access, or a logout-teardown hook — a plain class held app-wide works too when you don't. Here it's a `GetxService` so the logout hook comes for free:
 
 ```dart
 class CurrentOrgService extends GetxService with VeloraLogoutAwareDefaults {
@@ -109,7 +109,7 @@ class CurrentOrgPlugin extends VeloraPlugin {
   Future<void> register(VeloraContext context) async {
     final service = CurrentOrgService();
     context.put<CurrentOrgService>(service);
-    context.onBeforeLogout(service.clear);
+    context.onLogout(service);   // its onLogoutDispose() clears it at logout
   }
 }
 
