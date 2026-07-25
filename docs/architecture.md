@@ -150,25 +150,25 @@ For a badge whose source isn't a table — e.g. the notification bell — bind t
 
 ### Example: an in-memory shared store (no database)
 
-When two screens share live data but you **don't** need persistence, offline, or restart-survival, skip `velora_db` — hold the state in memory in one shared service and let both screens read the same reactive collections. This is the same session-service tier as current-org, just holding collections instead of a single value:
+When two screens share live data but you **don't** need persistence, offline, or restart-survival, skip `velora_db` — hold the state in memory in one shared service and let both screens read the same reactive collections. A cart is feature data, so this is a **plain class** — not a `GetxService` (that tier is for genuinely app-wide *session* state like current-org above). Reactivity comes from `.obs`, which needs no `GetxService`:
 
 ```dart
-class CartStore extends GetxService with VeloraLogoutAwareDefaults {
+class CartStore {
   final items = <CartItem>[].obs;                 // every screen reads this list
 
   void add(CartItem item) => items.add(item);
   void remove(String id) => items.removeWhere((i) => i.id == id);
+  void clear() => items.clear();
 
   // Derived — a getter over the same list, so it can never drift.
   double get total => items.fold(0, (sum, i) => sum + i.price * i.qty);
   int get count => items.fold(0, (sum, i) => sum + i.qty);
-
-  @override
-  Future<void> onLogoutDispose() async => items.clear();
 }
 ```
 
-Both the product list and the cart page get the **same** instance (via `Get.find`/a facade if it's a `GetxService`, or a plain instance injected into both module factories). The cart badge is `Obx(() => Badge(cart.count))`; the totals line is `Obx(() => Text('\$${cart.total}'))`. Nothing is fetched twice, and no page keeps its own copy. A live chat store is identical — swap `items` for `RxList<Message>` threads fed by your websocket. Reach for `velora_db` only when this in-memory state also needs to persist or work offline.
+Both the product list and the cart page get the **same** instance: construct one `CartStore` in the module factory that builds those screens and inject it into each — the same constructor-injection wiring every module uses. The cart badge is `Obx(() => Badge(cart.count))`; the totals line is `Obx(() => Text('\$${cart.total}'))`. Nothing is fetched twice, and no page keeps its own copy. A live chat store is identical — swap `items` for `RxList<Message>` threads fed by your websocket.
+
+Two scope calls to make explicitly: reach for `velora_db` only when this in-memory state also needs to persist or work offline; and promote the store to a **session service** (the `GetxService` + facade approach from the current-org example) only if it's genuinely app-wide — read from a global app bar on every screen and cleared on logout — rather than shared by a handful of related screens.
 
 ## Reacting to state changes (triggers & effects)
 
@@ -219,21 +219,30 @@ Sometimes changing one store should **automatically** trigger logic elsewhere �
 
 3. **A named `onX(callback)` hook — the framework's own idiom.** When you want an intentional extension point multiple modules can opt into, expose a registration method on the store, exactly like `ConnectivityService.onOnline(...)` (`velora_offline`) or `context.onLogout(...)`. The store keeps a listener list and notifies them; reactors hook in without the store knowing who they are.
 
-4. **A typed domain-event stream + `listenStream`.** For decoupled cross-module fan-out, have the store emit typed events on a broadcast `Stream` (`ItemAdded`, `CartCleared`, ...); any controller or service subscribes with `VeloraController.listenStream(store.events, ...)` (auto-cancelled on dispose) or its own subscription. The store emits; it never knows who reacts:
+4. **A typed domain-event stream.** For decoupled cross-module fan-out, have the store emit typed events on a broadcast `Stream` (`ItemAdded`, `CartCleared`, ...); a long-lived **service** subscribes and calls the relevant business service. The store emits; it never knows who reacts:
 
    ```dart
    // In CartStore:  final _events = StreamController<CartEvent>.broadcast();
    //                Stream<CartEvent> get events => _events.stream;
-   listenStream(cart.events, (e) {
-     if (e is ItemAdded) promoController.reevaluateFreeShipping();
-   });
+
+   class CheckoutEffects {                    // a plain, long-lived service
+     final PromoService promo;
+     StreamSubscription<CartEvent>? _sub;
+     CheckoutEffects(CartStore cart, this.promo) {
+       _sub = cart.events.listen((e) {
+         if (e is ItemAdded) promo.reevaluateFreeShipping();   // a business service, not a controller
+       });
+     }
+     void dispose() => _sub?.cancel();
+   }
    ```
+   A *controller* may also subscribe (via `VeloraController.listenStream`, auto-cancelled on dispose) — but only to update **its own** screen's UI, never to drive another module's controller.
 
 **Choosing:** a single, direct consequence → **call it explicitly** (1). A cross-cutting effect that should fire regardless of the mutation site, or needs debounce/throttle → a **worker** (2). A named extension point several modules opt into → an **`onX` hook** (3). Decoupled cross-module fan-out with typed events → an **event stream** (4).
 
 Two rules keep reactions safe:
 
-- **Reactions live in services, not widgets.** Cross-module automatic actions belong in a service (often a session service) that owns the worker/subscription *and its disposal* — never in a `build()` method. A controller may react for its own screen's UI, but not to drive other modules.
+- **Reactions live in services, not widgets or cross-module controllers.** Cross-module automatic actions belong in a long-lived service (a plain feature service, or a session service if it's app-wide) that owns the worker/subscription *and its disposal* — never in a `build()` method, and never in a controller reaching into another module's controller. A controller may react for its own screen's UI, but not to drive other modules.
 - **Always dispose, and avoid cycles.** Dispose `Worker`s in `onClose`; let `listenStream` cancel subscriptions for you. Guard against reaction loops (A updates B updates A) — prefer a one-way event flow over two stores mutating each other.
 
 ## A concrete example: the generated `users` module
