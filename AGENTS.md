@@ -4,7 +4,7 @@
 
 - Follow `velora.md` and `velora.part2.md` for historical planning context.
 - For **architecture**, the canonical source of truth is `docs/architecture.md` (the shipped, corrected layering) — not the `velora.md` / `velora.part2.md` planning docs, which are historical and may conflict with it. For logout safety, the source of truth is the shipped implementation in `packages/velora/lib/src/auth/logout_coordinator.dart` (participant-based teardown via `VeloraLifecycleRegistry`), not either planning doc.
-- Blessed architecture is **plain constructor dependency injection**: app controllers extend `VeloraController` / `VeloraFormController` / `VeloraPaginatedController` and own their own screen-local Rx state. Services are plain classes (not `GetxService`) wired by constructor injection in each module's factory (`{name}_module.dart`), exactly as `velora new` / `make:module` generate. App **business/module** services are plain classes; the one legitimate use of `GetxService` in app code is genuinely app-wide *session* state (current org, current user, feature flags), the same tier as the framework's own `AuthService`/`FeatureService`. Do not use `GetxService` for per-module business services, and do not use Bindings-based DI. See `docs/architecture.md` → *Where shared state lives*.
+- **Default architecture is plain constructor dependency injection.** App controllers extend `VeloraController` / `VeloraFormController` / `VeloraPaginatedController` and own their own screen-local Rx state. Per-module *business* services are plain classes (not `GetxService`), wired by constructor injection in each module's factory (`{name}_module.dart`), exactly as `velora new` / `make:module` generate — preferred over `Bindings` + `Get.find` service-location because the dependency graph stays explicit and compile-checked. The one place app code legitimately uses `GetxService` is genuinely app-wide *session* state (current org, current user, feature flags), the same tier as the framework's own `AuthService`/`FeatureService`. This is an opinion about DI **only** — Velora otherwise builds on GetX (reactivity, routing, `GetxService` for session state, and `Get.put`/`Get.find` under the hood). Default to plain classes + module factories for per-module business services and constructor injection over Bindings-based DI; see `docs/architecture.md` → *Velora and GetX* and *Where shared state lives* for the rationale.
 - Controllers contain local UI state and screen actions only.
 - Repositories/data sources handle data access only.
 - Keep MVP focused: no Supabase, GraphQL, payments, chat, or visual builders. But several capabilities beyond the original MVP ARE shipped and must not be treated as out of scope: offline support via the installable `packages/velora_offline` plugin (`velora install velora_offline`) — now an offline-first data layer (reactive local reads + optimistic writes + write outbox) over `packages/velora_db`; the reactive local database `velora_db` itself (drift; native and web WASM SQLite, with `watch*` reactive reads); push/on-device notifications via `make:notifications` / `install:push --fcm|--local` (see `docs/notifications.md`; FCM push ships as the optional `velora_fcm` adapter, so Firebase is out of scope only as a general backend, not for push); and installable, offline-capable web (PWA) via `velora make:pwa` (see `docs/pwa.md`).
@@ -26,11 +26,13 @@ Key patterns enforced in the demo (`examples/claude_clone/`):
 - Optimistic updates roll back on failure.
 - `loadEarlier` preserves scroll position via `maxScrollExtent` delta jump.
 
-## GetX reactive patterns — anti-pattern suite
+## GetX reactive patterns — traps worth knowing
 
-Velora uses GetX reactivity. The mistakes below produce **silent runtime
-breakage in release mode**: no red error widget, just blank grey areas, stale
-values, or memory leaks. Understand the model before writing any reactive UI.
+Velora uses GetX reactivity, and these are correctness traps, not style
+preferences: each one produces **silent runtime breakage in release mode** —
+no red error widget, just blank grey areas, stale values, or memory leaks.
+They're spelled out with the *why* so the model is easy to reason about; learn
+it once and reactive UI stays predictable.
 
 ### Mental model
 

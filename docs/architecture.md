@@ -1,6 +1,6 @@
 # 2 — Architecture
 
-**What you'll learn:** How a Velora feature is actually wired together — controller, service, repository, data source — and why the framework uses plain constructor injection instead of a service locator or `Bindings` subclasses.
+**What you'll learn:** How a Velora feature is actually wired together — controller, service, repository, data source — why the framework's default for assembling a feature is plain constructor injection, and how that sits alongside the GetX you already know.
 
 ---
 
@@ -22,11 +22,22 @@ RemoteDataSource (implements VeloraRemoteDataSource<T, ID>)
 Velora.api / Velora.storage
 ```
 
-The rule: **each layer only talks to the layer directly below it.** A view never calls a repository. A controller never calls `Velora.api` directly (`examples/claude_clone`'s `HomeController` is a deliberate, documented exception — see below).
+The convention: **each layer talks to the layer directly below it.** A view goes through a controller rather than calling a repository; a controller goes through a service rather than calling `Velora.api` directly (`examples/claude_clone`'s `HomeController` is a deliberate, documented exception — see below). Keeping the seams in one direction is what makes a feature easy to read, test, and swap pieces of.
 
-## Wiring: plain constructor injection, not a service locator
+## Velora and GetX
 
-Velora does not use `Get.lazyPut`, `Get.find()`, or a `Bindings` subclass to assemble a module. Every module `velora new` / `make:module` generates ships a `{name}_module.dart` factory that wires dependencies by hand:
+Velora is built **on** GetX, not against it — if you know GetX, most of what you know carries straight over. Velora keeps:
+
+- **GetX reactivity** (`.obs` / `Rx` / `Obx`, and workers like `ever` / `debounce`) as the state-binding model, everywhere.
+- **`GetxService`** for genuinely app-wide *session* state — the framework's own `AuthService`, `FeatureService`, and `ConnectivityService` are `GetxService`s, and your session services (current org, current user) belong at that same tier.
+- **GetX routing** (`GetPage` / `AppPages`, route middleware) wherever an app wants declarative routes — `examples/claude_clone` uses exactly that.
+- **`Get.put` / `Get.find`** under the hood — the plugin system registers app-wide services this way, and the session-service facade shown later reads them back with `Get.find`.
+
+Velora adds an opinion in exactly one place: **assembling a feature's dependencies**. For that one job it recommends a plain per-module factory (constructor injection) over `Bindings` + `Get.find` service-location, and it recommends keeping per-module *business* logic in plain classes rather than `GetxService`. That's a default with a rationale — explained in the next section — not a rule against GetX. Where GetX's idioms shine (reactivity, routing, app-wide singletons) they stay first-class. So when this guide says "prefer the module factory," read it as *this is the recommended default and here's why*, not *the GetX way is forbidden*.
+
+## Wiring: plain constructor injection (the default)
+
+To assemble a module, Velora's default is a hand-written factory rather than `Get.lazyPut` / `Get.find()` / a `Bindings` subclass — for the concrete reason spelled out just below. Every module `velora new` / `make:module` generates ships a `{name}_module.dart` factory that wires dependencies by hand:
 
 ```dart
 class UsersModule {
@@ -144,7 +155,7 @@ class DashboardController extends VeloraController {
 }
 ```
 
-Because the count is derived from the single source of truth, it can never drift out of sync with the threads — every screen watching a matching query updates the instant a message is written or marked read. A **hand-maintained counter that each page increments is the anti-pattern** here: it duplicates state and drifts.
+Because the count is derived from the single source of truth, it can never drift out of sync with the threads — every screen watching a matching query updates the instant a message is written or marked read. Prefer this over a hand-maintained counter that each page increments: that keeps a second copy of the same state, and second copies drift.
 
 For a badge whose source isn't a table — e.g. the notification bell — bind the app bar to a shared service's reactive field instead: a session service exposing an `RxInt` read inside `Obx`, or a plain injected service exposing a `ValueNotifier<int>` read inside `ValueListenableBuilder` (the shape the generated notifications module uses). Either way the badge is a reactive *view* over one owner, not a counter the app bar maintains.
 
@@ -166,7 +177,18 @@ class CartStore {
 }
 ```
 
-Both the product list and the cart page get the **same** instance: construct one `CartStore` in the module factory that builds those screens and inject it into each — the same constructor-injection wiring every module uses. The cart badge is `Obx(() => Badge(cart.count))`; the totals line is `Obx(() => Text('\$${cart.total}'))`. Nothing is fetched twice, and no page keeps its own copy. A live chat store is identical — swap `items` for `RxList<Message>` threads fed by your websocket.
+Both screens must read the **same** `CartStore` instance — so create it **once** at a feature-level composition root and inject that instance into each controller. Don't construct the store inside a per-route `{name}Module.controller()` factory: those are static and run again on every navigation, so each screen would get its own empty cart. Use a retained feature object that holds the store and builds both controllers from it:
+
+```dart
+class CartFeature {
+  final CartStore _store = CartStore();                    // one instance for the whole feature
+
+  ProductListController productList() => ProductListController(_store);
+  CartController cart() => CartController(_store);
+}
+```
+
+Construct `CartFeature` once and keep it for the feature's lifetime (hold it wherever the feature is composed — e.g. a parent module retained across those routes); both routes then pull their controller from that same instance, so they share one cart. The cart badge is `Obx(() => Badge(cart.count))`; the totals line is `Obx(() => Text('\$${cart.total}'))`. Nothing is fetched twice, and no page keeps its own copy. A live chat store is identical — swap `items` for `RxList<Message>` threads fed by your websocket.
 
 Two scope calls to make explicitly: reach for `velora_db` only when this in-memory state also needs to persist or work offline; and promote the store to a **session service** (the `GetxService` + facade approach from the current-org example) only if it's genuinely app-wide — read from a global app bar on every screen and cleared on logout — rather than shared by a handful of related screens.
 
@@ -192,30 +214,26 @@ Sometimes changing one store should **automatically** trigger logic elsewhere �
    ```
    Downside: the call site must know every reactor, so it couples them.
 
-2. **A GetX worker (`ever` / `everAll` / `debounce` / `interval` / `once`).** Register a reaction on an `Rx` inside a service's `onInit`, so it fires no matter *who* mutated the state — and the mutator doesn't know the reactor exists. Ideal for cross-cutting effects and for debounced/throttled work (autosave, sync):
+2. **A GetX worker (`ever` / `everAll` / `debounce` / `interval` / `once`).** Register a reaction on an `Rx` inside a plain, long-lived service so it fires no matter *who* mutated the state — and the mutator doesn't know the reactor exists. Ideal for cross-cutting effects and for debounced/throttled work (autosave, sync). Keep it a **plain injected service with an explicit `start()`/`dispose()`** — a worker registered in `GetxService.onInit()` only runs when the service is put into GetX's locator, which the module-factory wiring deliberately doesn't do, so `onInit` would never fire and the worker would never register:
 
    ```dart
-   class CartSyncService extends GetxService {
+   class CartSyncService {
      final CartStore store;
      final CartApi api;
      CartSyncService(this.store, this.api);
 
      Worker? _worker;
 
-     @override
-     void onInit() {
-       super.onInit();
+     void start() {
        // Debounce so a burst of edits produces one sync, not ten.
        _worker = debounce(store.items, api.sync, time: const Duration(seconds: 1));
      }
 
-     @override
-     void onClose() {
-       _worker?.dispose();   // always dispose workers
-       super.onClose();
-     }
+     void dispose() => _worker?.dispose();   // always dispose workers
    }
    ```
+
+   The feature composition root (the same retained object that holds the shared `CartStore`) constructs `CartSyncService`, calls `start()` once after wiring, and `dispose()` when the feature is torn down.
 
 3. **A named `onX(callback)` hook — the framework's own idiom.** When you want an intentional extension point multiple modules can opt into, expose a registration method on the store, exactly like `ConnectivityService.onOnline(...)` (`velora_offline`) or `context.onLogout(...)`. The store keeps a listener list and notifies them; reactors hook in without the store knowing who they are.
 
@@ -344,9 +362,9 @@ The generated scaffold above is the minimal shape `make:module` produces. `examp
   ),
   ```
 
-  This is different from the minimal `velora new` scaffold, which wires a `MaterialApp` to a hand-written `switch` in `AppRouter.onGenerateRoute` and constructs controllers straight from a `{name}_module.dart` factory (see [Scaffolding](scaffolding.md)). `claude_clone`'s `BindingsBuilder`/`Get.lazyPut` is a one-off consequence of that example choosing GetX's declarative routing — it is **not** an endorsed alternative for dependency injection, and app code should not adopt `Bindings`/`Get.lazyPut` as its DI mechanism.
+  This is different from the minimal `velora new` scaffold, which wires a `MaterialApp` to a hand-written `switch` in `AppRouter.onGenerateRoute` and constructs controllers straight from a `{name}_module.dart` factory (see [Scaffolding](scaffolding.md)). Here `BindingsBuilder`/`Get.lazyPut` does one narrow job — construct *this route's* controller as part of GetX's declarative routing — and that's a perfectly good use of GetX. The recommendation is simply not to *generalize* it into your app's dependency-injection strategy: keep dependency assembly in the module factory (below), where the graph is explicit and compile-checked, and let `BindingsBuilder` stay a routing detail.
 
-The blessed pattern, everywhere, is the module factory: `{ClassName}Module.controller()` constructs the full dependency chain by hand and hands the caller a ready controller, exactly as shown in the generated `users` module example above. Notice that even inside `claude_clone`'s `BindingsBuilder`, the thing actually being constructed is still `HomeController()` — a plain constructor call, not a service-locator lookup of something pre-registered elsewhere. `Get.lazyPut`/`Get.find()` as a general-purpose locator, and an app-level `Bindings` subclass that resolves dependencies implicitly across the app, remain out of scope for app code regardless of which routing style you pick.
+The recommended pattern, everywhere, is the module factory: `{ClassName}Module.controller()` constructs the full dependency chain by hand and hands the caller a ready controller, exactly as shown in the generated `users` module example above. Notice that even inside `claude_clone`'s `BindingsBuilder`, the thing actually being constructed is still `HomeController()` — a plain constructor call, not a service-locator lookup of something pre-registered elsewhere. The trade-off the default is optimizing for: reaching for `Get.lazyPut`/`Get.find()` as a general-purpose locator, or an app-level `Bindings` subclass that resolves dependencies implicitly across the app, costs you that explicit, compile-checked graph — which is why the module factory stays the recommendation whichever routing style you pick.
 
 ## Key rules
 
@@ -354,7 +372,7 @@ The blessed pattern, everywhere, is the module factory: `{ClassName}Module.contr
 - **Services**, when used, must not call `Get.back()`, push routes, or show dialogs — those are controller/navigation concerns.
 - **Data sources** are the only layer that knows whether data comes from the network, local storage, or a mock/fake.
 - **`VeloraController.run()`** (and the `reload()`/`loadMore()` it powers on `VeloraPaginatedController`/`VeloraCursorController`) is the standard wrapper for async work — use it everywhere loading/error state is needed.
-- **Wiring is explicit and constructor-based**: a per-module factory (`{name}_module.dart`) constructs and injects dependencies by hand. This — not a service locator or a `Bindings` subclass — is the blessed DI pattern for app **modules**. (Genuinely app-wide *session* state is the one exception that's registered as a singleton rather than constructor-wired — see [Where shared state lives](#where-shared-state-lives). And `claude_clone`'s per-route `BindingsBuilder` is a GetX routing convenience for constructing that route's controller, not an app-wide DI mechanism — don't copy it into your own dependency wiring.)
+- **Wiring is explicit and constructor-based**: a per-module factory (`{name}_module.dart`) constructs and injects dependencies by hand. This is the recommended DI pattern for app **modules** — preferred over a service locator or a `Bindings` subclass because the dependency graph stays explicit and compile-checked. (Genuinely app-wide *session* state is the one case registered as a singleton rather than constructor-wired — see [Where shared state lives](#where-shared-state-lives). And `claude_clone`'s per-route `BindingsBuilder` is a GetX routing convenience for constructing that route's controller — fine as routing, just keep it out of your app-wide dependency wiring.)
 
 ---
 

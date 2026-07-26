@@ -1,0 +1,73 @@
+# Velora
+
+> Velora is "the Laravel way for Flutter": a batteries-included framework built on GetX that drops auth, an API client, permissions, notifications, offline support, a reactive local database, and CRUD scaffolding into a Flutter app, structured with strong conventions. This file orients an AI assistant so it can build Velora apps that follow those conventions accurately.
+
+Velora is built **on** GetX, not against it. It keeps GetX reactivity, GetX routing, `GetxService` for app-wide session state, and `Get.put`/`Get.find` under the hood. It adds one opinion — how a feature's dependencies are assembled — and expresses it as a recommended default with rationale, never as a ban on GetX idioms. When generating code, follow the defaults below; when you deviate, do it deliberately and say why.
+
+## Core conventions (get these right)
+
+- **Vertical slice per feature:** `View → Controller → Service → Repository → RemoteDataSource → Velora.api/Velora.storage`. Each layer talks only to the layer directly below it. A view goes through a controller; a controller goes through a service (a simple screen may talk straight to a data source — see `HomeController` in `examples/claude_clone`). A controller must not call `Velora.api` directly.
+- **Dependency injection = a plain per-module factory.** Each module ships a `{name}_module.dart` with a factory like `UsersModule.controller()` that constructs the data source → repository → service → controller chain by hand and returns a ready controller. This is preferred over `Bindings` + `Get.find` service-location because the dependency graph stays explicit and compile-checked (a missing/mistyped dependency is a compile error, not a runtime "controller not found"). Do not adopt `Get.lazyPut`/`Get.find` as a general-purpose app locator, and do not use an app-level `Bindings` subclass for DI. GetX's `BindingsBuilder` on a route is fine for *constructing that route's controller* when an app uses GetX declarative routing — just don't generalize it into your DI strategy.
+- **Controllers own only their screen-local Rx state.** Extend `VeloraController` (gives `loading`/`error` + `run()`), `VeloraFormController` (adds an `errors` map), `VeloraPaginatedController<T>` (page pagination: `items`/`hasMore`/`reload()`/`loadMore()`), or `VeloraCursorController<T, C>` (cursor pagination). Wrap async work in `run()` so loading/error bookkeeping is automatic. Bind a reactive stream into state with `listenStream(stream, onData)` — it auto-cancels on dispose, so never hand-manage a `StreamSubscription`.
+- **Per-module business services are plain Dart classes, not `GetxService`.** They hold business logic and delegate to a repository. Services must not call `Get.back()`, push routes, or show dialogs (those are controller/navigation concerns).
+- **`GetxService` is for genuinely app-wide *session* state only** — current org/user, feature flags, locale — the same tier as the framework's own `AuthService`/`FeatureService`/`ConnectivityService`. Reactivity does *not* require `GetxService`: `.obs`/`Rx`/`Rxn` (or a plain `ValueNotifier`) work in any plain class.
+- **Choose a home for shared state by scope, not by "more than one widget reads it":** one screen's UI state → the controller; shared records in memory (no persistence needed) → an app- or feature-scoped service holding reactive collections (`RxList`/`RxMap`) as the single source of truth; records that must persist / work offline / survive restart → the reactive data layer (`velora_db`/`velora_offline`); app-wide session value → a session service; derived cross-page aggregates (unread count, cart total, badge) → a reactive query/getter over the owner above, never a hand-incremented counter. **Most shared state lives in memory — start there; reach for `velora_db` only when durability/offline/restart is actually required.**
+- **Data sources are the only layer that knows where data comes from** (network, local storage, mock/fake). Swap implementations by changing what the module factory constructs — no changes to controller/service.
+
+## GetX reactive traps (silent release-mode breakage)
+
+These cause blank grey areas, stale values, or leaks with no red error widget. Some are enforced by `velora_lints` (`custom_lint`).
+
+- **Read `.value` inside `Obx`, synchronously, on first build.** `Obx(() => Widget(controller.list))` registers **no** subscription because it never reads a reactive value — read something (`controller.list.isEmpty`, `.length`, `.value`) inside the builder. (`RxList<T>` extends `List<T>`, so the type checker won't catch this.)
+- **Reactive value in `build()` needs an `Obx`.** `Text(controller.title.value)` in `build` reads once and never updates; wrap it: `Obx(() => Text(controller.title.value))`.
+- **Register `ever`/`once`/`debounce`/`interval` in `onInit`, never in `build()`** (a new listener leaks on every rebuild). Dispose any `Worker` in `onClose`.
+- **Don't wrap a subtree with `Obx` when it has zero reactive reads** — remove the `Obx`.
+- **Optimistic updates must roll back on failure:** capture the previous value before the optimistic change, then after `await run(...)`, `if (error.value.isNotEmpty)` restore it (see AGENTS.md anti-pattern 5). A bare `if (error.value.isNotEmpty) return;` only *guards* a not-yet-applied post-`await` update — it does not undo an optimistic change already written to state.
+
+## Reacting to state changes
+
+Pick by coupling: (1) direct always-happens consequence → call it explicitly from the mutating method; (2) cross-cutting effect that should fire regardless of the mutation site, or needs debounce/throttle → a GetX worker (`ever`/`debounce`) in a service's `onInit`; (3) a named `onX(callback)` hook several modules opt into (like `ConnectivityService.onOnline`); (4) decoupled cross-module fan-out → a typed domain-event stream a long-lived service subscribes to. Reactions live in services (or a controller reacting to update *its own* screen only), never in `build()` and never a controller driving another module's controller. Always dispose; avoid reaction loops.
+
+## Scaffolding & boot
+
+- Boot once in `main()` before `runApp`: `await Velora.boot(config: VeloraConfig(appName: ..., apiBaseUrl: ...))`. There is no framework-level mock mode — write a mock data source and select it in the module factory.
+- Generate a full CRUD module with `dart run velora_cli make:module <name> --crud` (service, repository, data source, controller, pages, module factory). Other generators: `make:notifications`, `install:push --fcm|--local`, `make:pwa`, plus `velora install <package>` for plugins.
+- Feature flags are registered once in `main()`, not in controllers.
+
+## Framework vs app boundary
+
+Framework (`packages/velora/`) owns horizontal infrastructure with zero domain/brand knowledge: HTTP, auth, routing, storage, theme, pagination, feature flags, permissions, notifications, generic UI primitives, controller bases. The app owns domain models, data sources, controllers, pages, brand theme, route definitions, and one-app-only capabilities (YAGNI). Shortcut: if code would need rewriting for a different-domain app, or references a domain model / route name / brand token, it's app-layer.
+
+## Documentation
+
+Build-your-first-app path (read in order):
+
+- [Install & Boot](https://md-riaz.github.io/velora-flutter/docs/getting-started/): add the dependency, `Velora.boot()`, build against a mock data source.
+- [Architecture](https://md-riaz.github.io/velora-flutter/docs/architecture/): the layer stack, the "Velora and GetX" relationship, constructor-injection DI, controllers owning Rx state, where shared state lives, and reacting to state changes.
+- [Auth](https://md-riaz.github.io/velora-flutter/docs/auth/): Laravel Sanctum login, session state, and the safe logout/teardown contract.
+- [API Client](https://md-riaz.github.io/velora-flutter/docs/api-client/): calling endpoints via `Velora.api`, `ApiResponse<T>`, swapping mock data sources.
+- [Permissions](https://md-riaz.github.io/velora-flutter/docs/permissions/): gate widgets with `Can`/`RoleOnly` by server-assigned roles.
+- [Notifications](https://md-riaz.github.io/velora-flutter/docs/notifications/): FCM/APNs push, in-app center, unread badges via CLI.
+- [Scaffold a Module](https://md-riaz.github.io/velora-flutter/docs/scaffolding/): the exact file tree `make:module` produces.
+
+Reference:
+
+- [CLI Commands](https://md-riaz.github.io/velora-flutter/docs/commands/): every `velora_cli` generator and flag.
+- [Framework / App Boundary](https://md-riaz.github.io/velora-flutter/docs/framework-app-boundary/): what belongs in the framework vs the app, with gray-zone verdicts.
+- [Plugins](https://md-riaz.github.io/velora-flutter/docs/plugins/): the `VeloraPlugin` model and how packages splice into `Velora.boot()`.
+- [Web & PWA](https://md-riaz.github.io/velora-flutter/docs/pwa/): installable, offline-capable web builds.
+
+Official packages:
+
+- [velora_offline](https://md-riaz.github.io/velora-flutter/docs/packages/offline/): offline-first data layer — reactive local reads, optimistic writes, write outbox — over velora_db.
+- [velora_db](https://md-riaz.github.io/velora-flutter/docs/packages/db/): cross-platform reactive local database (drift; native + web WASM SQLite) with `watch*` reactive reads and an Eloquent-style query API.
+- [velora_env](https://md-riaz.github.io/velora-flutter/docs/packages/env/): `.env` config and dev/staging/prod flavors.
+- [velora_fcm](https://md-riaz.github.io/velora-flutter/docs/packages/fcm/): Firebase Cloud Messaging `PushAdapter`.
+- [velora_local_notifications](https://md-riaz.github.io/velora-flutter/docs/packages/local-notifications/): on-device local-notification adapter.
+- [velora_ui](https://md-riaz.github.io/velora-flutter/docs/packages/ui/): token-driven UI component set.
+
+Project:
+
+- [Contributing](https://md-riaz.github.io/velora-flutter/docs/contributing/): conventions for changing the framework.
+- [Roadmap](https://md-riaz.github.io/velora-flutter/docs/roadmap/): what's shipped and what's planned.
+- [Examples](https://md-riaz.github.io/velora-flutter/docs/examples/): `examples/claude_clone` is the richer hand-built reference app.
