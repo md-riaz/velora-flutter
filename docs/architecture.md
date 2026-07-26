@@ -177,7 +177,18 @@ class CartStore {
 }
 ```
 
-Both the product list and the cart page get the **same** instance: construct one `CartStore` in the module factory that builds those screens and inject it into each — the same constructor-injection wiring every module uses. The cart badge is `Obx(() => Badge(cart.count))`; the totals line is `Obx(() => Text('\$${cart.total}'))`. Nothing is fetched twice, and no page keeps its own copy. A live chat store is identical — swap `items` for `RxList<Message>` threads fed by your websocket.
+Both screens must read the **same** `CartStore` instance — so create it **once** at a feature-level composition root and inject that instance into each controller. Don't construct the store inside a per-route `{name}Module.controller()` factory: those are static and run again on every navigation, so each screen would get its own empty cart. Use a retained feature object that holds the store and builds both controllers from it:
+
+```dart
+class CartFeature {
+  final CartStore _store = CartStore();                    // one instance for the whole feature
+
+  ProductListController productList() => ProductListController(_store);
+  CartController cart() => CartController(_store);
+}
+```
+
+Construct `CartFeature` once and keep it for the feature's lifetime (hold it wherever the feature is composed — e.g. a parent module retained across those routes); both routes then pull their controller from that same instance, so they share one cart. The cart badge is `Obx(() => Badge(cart.count))`; the totals line is `Obx(() => Text('\$${cart.total}'))`. Nothing is fetched twice, and no page keeps its own copy. A live chat store is identical — swap `items` for `RxList<Message>` threads fed by your websocket.
 
 Two scope calls to make explicitly: reach for `velora_db` only when this in-memory state also needs to persist or work offline; and promote the store to a **session service** (the `GetxService` + facade approach from the current-org example) only if it's genuinely app-wide — read from a global app bar on every screen and cleared on logout — rather than shared by a handful of related screens.
 
@@ -203,30 +214,26 @@ Sometimes changing one store should **automatically** trigger logic elsewhere �
    ```
    Downside: the call site must know every reactor, so it couples them.
 
-2. **A GetX worker (`ever` / `everAll` / `debounce` / `interval` / `once`).** Register a reaction on an `Rx` inside a service's `onInit`, so it fires no matter *who* mutated the state — and the mutator doesn't know the reactor exists. Ideal for cross-cutting effects and for debounced/throttled work (autosave, sync):
+2. **A GetX worker (`ever` / `everAll` / `debounce` / `interval` / `once`).** Register a reaction on an `Rx` inside a plain, long-lived service so it fires no matter *who* mutated the state — and the mutator doesn't know the reactor exists. Ideal for cross-cutting effects and for debounced/throttled work (autosave, sync). Keep it a **plain injected service with an explicit `start()`/`dispose()`** — a worker registered in `GetxService.onInit()` only runs when the service is put into GetX's locator, which the module-factory wiring deliberately doesn't do, so `onInit` would never fire and the worker would never register:
 
    ```dart
-   class CartSyncService extends GetxService {
+   class CartSyncService {
      final CartStore store;
      final CartApi api;
      CartSyncService(this.store, this.api);
 
      Worker? _worker;
 
-     @override
-     void onInit() {
-       super.onInit();
+     void start() {
        // Debounce so a burst of edits produces one sync, not ten.
        _worker = debounce(store.items, api.sync, time: const Duration(seconds: 1));
      }
 
-     @override
-     void onClose() {
-       _worker?.dispose();   // always dispose workers
-       super.onClose();
-     }
+     void dispose() => _worker?.dispose();   // always dispose workers
    }
    ```
+
+   The feature composition root (the same retained object that holds the shared `CartStore`) constructs `CartSyncService`, calls `start()` once after wiring, and `dispose()` when the feature is torn down.
 
 3. **A named `onX(callback)` hook — the framework's own idiom.** When you want an intentional extension point multiple modules can opt into, expose a registration method on the store, exactly like `ConnectivityService.onOnline(...)` (`velora_offline`) or `context.onLogout(...)`. The store keeps a listener list and notifies them; reactors hook in without the store knowing who they are.
 
