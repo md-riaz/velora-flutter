@@ -22,7 +22,7 @@ These cause blank grey areas, stale values, or leaks with no red error widget. S
 - **Reactive value in `build()` needs an `Obx`.** `Text(controller.title.value)` in `build` reads once and never updates; wrap it: `Obx(() => Text(controller.title.value))`.
 - **Register `ever`/`once`/`debounce`/`interval` in `onInit`, never in `build()`** (a new listener leaks on every rebuild). Dispose any `Worker` in `onClose`.
 - **Don't wrap a subtree with `Obx` when it has zero reactive reads** — remove the `Obx`.
-- **Optimistic updates must roll back on failure:** after `await run(...)`, `if (error.value.isNotEmpty) return;` (or restore the previous value).
+- **Optimistic updates must roll back on failure:** capture the previous value before the optimistic change, then after `await run(...)`, `if (error.value.isNotEmpty)` restore it (see AGENTS.md anti-pattern 5). A bare `if (error.value.isNotEmpty) return;` only *guards* a not-yet-applied post-`await` update — it does not undo an optimistic change already written to state.
 
 ## Reacting to state changes
 
@@ -42,32 +42,32 @@ Framework (`packages/velora/`) owns horizontal infrastructure with zero domain/b
 
 Build-your-first-app path (read in order):
 
-- [Install & Boot](https://md-riaz.github.io/velora-flutter/getting-started/): add the dependency, `Velora.boot()`, build against a mock data source.
-- [Architecture](https://md-riaz.github.io/velora-flutter/architecture/): the layer stack, the "Velora and GetX" relationship, constructor-injection DI, controllers owning Rx state, where shared state lives, and reacting to state changes.
-- [Auth](https://md-riaz.github.io/velora-flutter/auth/): Laravel Sanctum login, session state, and the safe logout/teardown contract.
-- [API Client](https://md-riaz.github.io/velora-flutter/api-client/): calling endpoints via `Velora.api`, `ApiResponse<T>`, swapping mock data sources.
-- [Permissions](https://md-riaz.github.io/velora-flutter/permissions/): gate widgets with `Can`/`RoleOnly` by server-assigned roles.
-- [Notifications](https://md-riaz.github.io/velora-flutter/notifications/): FCM/APNs push, in-app center, unread badges via CLI.
-- [Scaffold a Module](https://md-riaz.github.io/velora-flutter/scaffolding/): the exact file tree `make:module` produces.
+- [Install & Boot](https://md-riaz.github.io/velora-flutter/docs/getting-started/): add the dependency, `Velora.boot()`, build against a mock data source.
+- [Architecture](https://md-riaz.github.io/velora-flutter/docs/architecture/): the layer stack, the "Velora and GetX" relationship, constructor-injection DI, controllers owning Rx state, where shared state lives, and reacting to state changes.
+- [Auth](https://md-riaz.github.io/velora-flutter/docs/auth/): Laravel Sanctum login, session state, and the safe logout/teardown contract.
+- [API Client](https://md-riaz.github.io/velora-flutter/docs/api-client/): calling endpoints via `Velora.api`, `ApiResponse<T>`, swapping mock data sources.
+- [Permissions](https://md-riaz.github.io/velora-flutter/docs/permissions/): gate widgets with `Can`/`RoleOnly` by server-assigned roles.
+- [Notifications](https://md-riaz.github.io/velora-flutter/docs/notifications/): FCM/APNs push, in-app center, unread badges via CLI.
+- [Scaffold a Module](https://md-riaz.github.io/velora-flutter/docs/scaffolding/): the exact file tree `make:module` produces.
 
 Reference:
 
-- [CLI Commands](https://md-riaz.github.io/velora-flutter/commands/): every `velora_cli` generator and flag.
-- [Framework / App Boundary](https://md-riaz.github.io/velora-flutter/framework-app-boundary/): what belongs in the framework vs the app, with gray-zone verdicts.
-- [Plugins](https://md-riaz.github.io/velora-flutter/plugins/): the `VeloraPlugin` model and how packages splice into `Velora.boot()`.
-- [Web & PWA](https://md-riaz.github.io/velora-flutter/pwa/): installable, offline-capable web builds.
+- [CLI Commands](https://md-riaz.github.io/velora-flutter/docs/commands/): every `velora_cli` generator and flag.
+- [Framework / App Boundary](https://md-riaz.github.io/velora-flutter/docs/framework-app-boundary/): what belongs in the framework vs the app, with gray-zone verdicts.
+- [Plugins](https://md-riaz.github.io/velora-flutter/docs/plugins/): the `VeloraPlugin` model and how packages splice into `Velora.boot()`.
+- [Web & PWA](https://md-riaz.github.io/velora-flutter/docs/pwa/): installable, offline-capable web builds.
 
 Official packages:
 
-- [velora_offline](https://md-riaz.github.io/velora-flutter/packages/offline/): offline-first data layer — reactive local reads, optimistic writes, write outbox — over velora_db.
-- [velora_db](https://md-riaz.github.io/velora-flutter/packages/db/): cross-platform reactive local database (drift; native + web WASM SQLite) with `watch*` reactive reads and an Eloquent-style query API.
-- [velora_env](https://md-riaz.github.io/velora-flutter/packages/env/): `.env` config and dev/staging/prod flavors.
-- [velora_fcm](https://md-riaz.github.io/velora-flutter/packages/fcm/): Firebase Cloud Messaging `PushAdapter`.
-- [velora_local_notifications](https://md-riaz.github.io/velora-flutter/packages/local-notifications/): on-device local-notification adapter.
-- [velora_ui](https://md-riaz.github.io/velora-flutter/packages/ui/): token-driven UI component set.
+- [velora_offline](https://md-riaz.github.io/velora-flutter/docs/packages/offline/): offline-first data layer — reactive local reads, optimistic writes, write outbox — over velora_db.
+- [velora_db](https://md-riaz.github.io/velora-flutter/docs/packages/db/): cross-platform reactive local database (drift; native + web WASM SQLite) with `watch*` reactive reads and an Eloquent-style query API.
+- [velora_env](https://md-riaz.github.io/velora-flutter/docs/packages/env/): `.env` config and dev/staging/prod flavors.
+- [velora_fcm](https://md-riaz.github.io/velora-flutter/docs/packages/fcm/): Firebase Cloud Messaging `PushAdapter`.
+- [velora_local_notifications](https://md-riaz.github.io/velora-flutter/docs/packages/local-notifications/): on-device local-notification adapter.
+- [velora_ui](https://md-riaz.github.io/velora-flutter/docs/packages/ui/): token-driven UI component set.
 
 Project:
 
-- [Contributing](https://md-riaz.github.io/velora-flutter/contributing/): conventions for changing the framework.
-- [Roadmap](https://md-riaz.github.io/velora-flutter/roadmap/): what's shipped and what's planned.
-- [Examples](https://md-riaz.github.io/velora-flutter/examples/): `examples/claude_clone` is the richer hand-built reference app.
+- [Contributing](https://md-riaz.github.io/velora-flutter/docs/contributing/): conventions for changing the framework.
+- [Roadmap](https://md-riaz.github.io/velora-flutter/docs/roadmap/): what's shipped and what's planned.
+- [Examples](https://md-riaz.github.io/velora-flutter/docs/examples/): `examples/claude_clone` is the richer hand-built reference app.
