@@ -30,16 +30,34 @@
 /// - [VeloraSelect] — a dropdown/select field.
 /// - [VeloraCheckbox] / [VeloraSwitch] — labeled boolean rows.
 /// - [VeloraRadioGroup] — a single-select group of options.
+///
+/// **Layer 4** rounds out the kit with layout and content-display
+/// components — the pieces that arrange other widgets rather than collect
+/// input:
+///
+/// - [VeloraAvatar] — a circular photo/initials/icon avatar.
+/// - [VeloraListTile] — a token-styled row with leading/title/subtitle/
+///   trailing slots.
+/// - [VeloraSectionHeader] — a titled header for a content section, with an
+///   optional trailing action.
+/// - [VeloraDivider] — a thin themed horizontal or vertical separator.
+/// - [VeloraProgress] — a linear or circular progress indicator, determinate
+///   or indeterminate.
 library;
 
 export 'src/components/velora_alert.dart';
+export 'src/components/velora_avatar.dart';
 export 'src/components/velora_badge.dart';
 export 'src/components/velora_button.dart';
 export 'src/components/velora_card.dart';
 export 'src/components/velora_checkbox.dart';
 export 'src/components/velora_chip.dart';
+export 'src/components/velora_divider.dart';
 export 'src/components/velora_empty_state.dart';
+export 'src/components/velora_list_tile.dart';
+export 'src/components/velora_progress.dart';
 export 'src/components/velora_radio_group.dart';
+export 'src/components/velora_section_header.dart';
 export 'src/components/velora_select.dart';
 export 'src/components/velora_skeleton.dart';
 export 'src/components/velora_status.dart';
