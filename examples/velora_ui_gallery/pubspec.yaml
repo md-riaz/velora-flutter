@@ -9,7 +9,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.8
   velora_ui:
     path: ../../packages/velora_ui
 
@@ -17,6 +16,9 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  custom_lint: ^0.6.0
+  velora_lints:
+    path: ../../packages/velora_lints
 
 flutter:
   uses-material-design: true

@@ -25,13 +25,16 @@ the radio group, and the tag chips — are wired to local widget state via
 From this directory:
 
 ```sh
+# This is a lib-only example — no platform folders are checked in.
+# On a fresh checkout, generate them first:
+flutter create .
+
 flutter pub get
 flutter run
 ```
 
-This is a lib-only Flutter example (no platform folders checked in), so it
-runs anywhere Flutter targets — web, desktop, or mobile — once the platform
-folders are generated (`flutter create .` if you need them locally).
+It runs anywhere Flutter targets — web, desktop, or mobile. If your checkout
+already has platform folders, skip the `flutter create .` step.
 
 ## Structure
 

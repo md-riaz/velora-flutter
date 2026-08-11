@@ -20,6 +20,8 @@ class _DisplaySectionState extends State<DisplaySection> {
   bool _showDismissibleAlert = true;
 
   static const _allTags = ['Design', 'Engineering', 'Product', 'Marketing'];
+  static const _initialRemovableChips = ['Removable', 'Dismiss me'];
+  final List<String> _removableChips = [..._initialRemovableChips];
 
   void _toggleTag(String tag) {
     setState(() {
@@ -196,6 +198,7 @@ class _DisplaySectionState extends State<DisplaySection> {
         Wrap(
           spacing: tokens.spacingSm,
           runSpacing: tokens.spacingSm,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             for (final tag in _allTags)
               VeloraChip(
@@ -204,7 +207,20 @@ class _DisplaySectionState extends State<DisplaySection> {
                 onTap: () => _toggleTag(tag),
                 icon: _selectedTags.contains(tag) ? Icons.check : null,
               ),
-            VeloraChip(label: 'Removable', onDeleted: () {}),
+            for (final chip in _removableChips)
+              VeloraChip(
+                label: chip,
+                onDeleted: () => setState(() => _removableChips.remove(chip)),
+              ),
+            if (_removableChips.isEmpty)
+              VeloraButton(
+                label: 'Restore chips',
+                onPressed: () => setState(
+                  () => _removableChips.addAll(_initialRemovableChips),
+                ),
+                variant: VeloraButtonVariant.ghost,
+                size: VeloraButtonSize.small,
+              ),
           ],
         ),
         SizedBox(height: tokens.spacingLg),

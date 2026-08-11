@@ -215,6 +215,10 @@ jobs:
         working-directory: examples/velora_ui_gallery
         run: flutter analyze --no-fatal-infos
 
+      - name: Lint velora_ui_gallery
+        working-directory: examples/velora_ui_gallery
+        run: dart run custom_lint --no-fatal-warnings
+
       - name: Run velora_ui_gallery tests
         working-directory: examples/velora_ui_gallery
         run: |
