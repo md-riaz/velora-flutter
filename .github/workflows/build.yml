@@ -67,6 +67,38 @@ jobs:
           path: examples/claude_clone/build/web
           retention-days: 30
 
+  build-gallery-web:
+    name: Build Gallery Web App
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      # velora_ui_gallery is a lib-only example (no platform folders checked
+      # in), so generate the web platform files before building.
+      - name: Generate web platform files
+        working-directory: examples/velora_ui_gallery
+        run: flutter create --platforms=web .
+
+      - name: Install dependencies
+        working-directory: examples/velora_ui_gallery
+        run: flutter pub get
+
+      - name: Build web
+        working-directory: examples/velora_ui_gallery
+        run: flutter build web --release --base-href /velora-ui-gallery/
+
+      - name: Upload web build
+        uses: actions/upload-artifact@v4
+        with:
+          name: velora-ui-gallery-web
+          path: examples/velora_ui_gallery/build/web
+          retention-days: 30
+
   release:
     name: Create Release
     if: github.event_name == 'workflow_dispatch'

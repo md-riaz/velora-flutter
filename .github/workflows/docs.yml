@@ -66,6 +66,21 @@ jobs:
         if: steps.demo-check.outcome == 'success'
         run: sed -i 's|<base href="/claude_clone/">|<base href="/velora-flutter/demo/">|' _site/demo/index.html
 
+      - name: Download gallery web artifacts
+        id: gallery-check
+        continue-on-error: true
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: build.yml
+          name: velora-ui-gallery-web
+          path: _site/gallery
+          search_artifacts: true
+          if_no_artifact_found: warn
+
+      - name: Fix gallery base href for Pages
+        if: steps.gallery-check.outcome == 'success'
+        run: sed -i 's|<base href="/velora-ui-gallery/">|<base href="/velora-flutter/gallery/">|' _site/gallery/index.html
+
       - name: Copy landing page
         run: cp docs/index.html _site/index.html
 

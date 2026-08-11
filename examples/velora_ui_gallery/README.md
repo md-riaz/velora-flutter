@@ -6,6 +6,8 @@ chips, alerts, empty states, skeletons, text fields, selects, checkboxes,
 switches, radio groups, avatars, list tiles, section headers, dividers, and
 progress indicators — with realistic, interactive examples.
 
+**▶ Live demo:** <https://md-riaz.github.io/velora-flutter/gallery/>
+
 The app bar has two toggles:
 
 - **Light / dark** — a sun/moon `IconButton` that flips `ThemeMode`.
