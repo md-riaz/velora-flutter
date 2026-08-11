@@ -70,8 +70,12 @@ jobs:
   build-gallery-web:
     name: Build Gallery Web App
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: subosito/flutter-action@v2
         with:
