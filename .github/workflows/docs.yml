@@ -1,16 +1,13 @@
 name: Deploy Docs
 
 on:
-  push:
+  # Run after the build workflow finishes so the demo/gallery web artifacts
+  # exist and can be pulled from that exact build run (same commit), rather
+  # than racing an independent build and grabbing the latest-available one.
+  workflow_run:
+    workflows: ["Build Example Apps"]
+    types: [completed]
     branches: [main]
-    paths:
-      - 'packages/velora/lib/**'
-      - 'packages/velora/pubspec.yaml'
-      - 'examples/*/lib/**'
-      - 'docs/**'
-      - 'mkdocs.yml'
-      - 'overrides/**'
-      - '.github/workflows/docs.yml'
   workflow_dispatch:
 
 permissions:
@@ -26,11 +23,21 @@ jobs:
   build-docs:
     name: Build & Deploy Docs
     runs-on: ubuntu-latest
+    # Deploy only when the triggering build succeeded (so every artifact is
+    # present and from the same commit), or on a manual dispatch.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Build the docs from the exact commit that was built; a
+          # workflow_run job otherwise checks out the default-branch tip.
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
 
       - uses: subosito/flutter-action@v2
         with:
@@ -59,12 +66,43 @@ jobs:
           workflow: build.yml
           name: claude-clone-web
           path: _site/demo
+          # From the exact build run on workflow_run; falls back to the latest
+          # successful build for a manual dispatch (empty run_id).
+          run_id: ${{ github.event.workflow_run.id }}
           search_artifacts: true
           if_no_artifact_found: warn
 
+      # Guard on the file actually existing: with `if_no_artifact_found: warn`
+      # the download step still succeeds when no artifact is present, so keying
+      # off its outcome would run sed against a missing file and abort the
+      # deploy. Skip gracefully instead.
       - name: Fix demo base href for Pages
-        if: steps.demo-check.outcome == 'success'
-        run: sed -i 's|<base href="/claude_clone/">|<base href="/velora-flutter/demo/">|' _site/demo/index.html
+        run: |
+          if [ -f _site/demo/index.html ]; then
+            sed -i 's|<base href="/claude_clone/">|<base href="/velora-flutter/demo/">|' _site/demo/index.html
+          else
+            echo "No demo artifact downloaded — skipping base-href rewrite."
+          fi
+
+      - name: Download gallery web artifacts
+        id: gallery-check
+        continue-on-error: true
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: build.yml
+          name: velora-ui-gallery-web
+          path: _site/gallery
+          run_id: ${{ github.event.workflow_run.id }}
+          search_artifacts: true
+          if_no_artifact_found: warn
+
+      - name: Fix gallery base href for Pages
+        run: |
+          if [ -f _site/gallery/index.html ]; then
+            sed -i 's|<base href="/velora-ui-gallery/">|<base href="/velora-flutter/gallery/">|' _site/gallery/index.html
+          else
+            echo "No gallery artifact downloaded — skipping base-href rewrite."
+          fi
 
       - name: Copy landing page
         run: cp docs/index.html _site/index.html
