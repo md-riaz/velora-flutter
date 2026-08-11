@@ -5,12 +5,16 @@ import '../theme/velora_tokens_context.dart';
 /// A padded, rounded surface — the default container for grouped content in a
 /// Velora app.
 ///
-/// It derives its radius from [VeloraTokens.radiusLg], its padding from
-/// [VeloraTokens.spacingMd], and its shadow from [VeloraTokens.shadowSm], so
-/// cards stay visually consistent across the app. Pass [onTap] to make the
-/// whole card tappable (with a ripple clipped to the rounded corners); pass
-/// [padding] to override the default inset (e.g. `EdgeInsets.zero` for a card
-/// whose child paints edge-to-edge).
+/// Velora's card is flat by design: a hairline `outlineVariant` border does
+/// the work Material's drop shadow usually does, so the surface reads as
+/// "grouped" without looking lifted off the page. It derives its radius from
+/// [VeloraTokens.radiusLg] and its padding from [VeloraTokens.spacingMd]; when
+/// [elevated] is true a soft shadow (scaled off [VeloraTokens.elevation2]) is
+/// layered on top of the border for surfaces that should read as raised (e.g.
+/// above a scrolling list). Pass [onTap] to make the whole card tappable
+/// (with a ripple clipped to the rounded corners); pass [padding] to override
+/// the default inset (e.g. `EdgeInsets.zero` for a card whose child paints
+/// edge-to-edge).
 class VeloraCard extends StatelessWidget {
   /// The card's contents.
   final Widget child;
@@ -21,11 +25,12 @@ class VeloraCard extends StatelessWidget {
   /// Called when the card is tapped. If null, the card is not interactive.
   final VoidCallback? onTap;
 
-  /// The card's fill color. Defaults to the theme's `surfaceContainerLow`.
+  /// The card's fill color. Defaults to the theme's `surface`.
   final Color? color;
 
-  /// Whether to draw the token shadow beneath the card. Defaults to true;
-  /// set to false for a flat card that relies on [color] contrast alone.
+  /// Whether to layer a soft shadow on top of the card's hairline border.
+  /// Defaults to true. The card is flat and bordered either way — this only
+  /// adds the extra lift for surfaces that should read as raised.
   final bool elevated;
 
   /// Creates a Velora card.
@@ -51,9 +56,18 @@ class VeloraCard extends StatelessWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: color ?? scheme.surfaceContainerLow,
+        color: color ?? scheme.surface,
         borderRadius: radius,
-        boxShadow: elevated ? tokens.shadowSm : null,
+        border: Border.all(color: scheme.outlineVariant),
+        boxShadow: elevated
+            ? [
+                BoxShadow(
+                  color: scheme.shadow.withValues(alpha: 0.08),
+                  blurRadius: tokens.elevation2 * 2,
+                  offset: Offset(0, tokens.elevation2 / 2),
+                ),
+              ]
+            : null,
       ),
       child: Material(
         type: MaterialType.transparency,

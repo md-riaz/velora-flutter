@@ -121,7 +121,9 @@ class _VeloraTextFieldState extends State<VeloraTextField> {
 
   TextEditingController get _controller =>
       widget.controller ??
-      (_internalController ??= TextEditingController(text: widget.initialValue));
+      (_internalController ??= TextEditingController(
+        text: widget.initialValue,
+      ));
 
   @override
   void didUpdateWidget(VeloraTextField oldWidget) {
@@ -193,7 +195,7 @@ class _VeloraTextFieldState extends State<VeloraTextField> {
         suffixIcon: suffix,
         filled: true,
         fillColor: widget.enabled
-            ? scheme.surfaceContainerHighest.withValues(alpha: 0.4)
+            ? scheme.surfaceContainerHighest.withValues(alpha: 0.5)
             : scheme.surfaceContainerHighest.withValues(alpha: 0.15),
         contentPadding: EdgeInsets.symmetric(
           horizontal: tokens.spacingMd,

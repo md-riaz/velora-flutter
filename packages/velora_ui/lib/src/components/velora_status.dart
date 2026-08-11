@@ -65,10 +65,7 @@ extension VeloraStatusResolver on VeloraStatus {
       case VeloraStatus.info:
         return VeloraStatusColors(color: tokens.info, onColor: tokens.onInfo);
       case VeloraStatus.error:
-        return VeloraStatusColors(
-          color: scheme.error,
-          onColor: scheme.onError,
-        );
+        return VeloraStatusColors(color: scheme.error, onColor: scheme.onError);
     }
   }
 

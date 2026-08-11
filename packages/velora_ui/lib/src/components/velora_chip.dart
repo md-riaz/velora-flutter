@@ -42,6 +42,7 @@ class VeloraChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.veloraTokens;
     final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final radius = BorderRadius.circular(tokens.radiusPill);
 
     final Color background;
@@ -71,11 +72,7 @@ class VeloraChip extends StatelessWidget {
           ],
           Text(
             label,
-            style: TextStyle(
-              color: foreground,
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-            ),
+            style: textTheme.labelMedium?.copyWith(color: foreground),
           ),
           if (onDeleted != null) ...[
             SizedBox(width: tokens.spacingXs),

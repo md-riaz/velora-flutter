@@ -16,12 +16,7 @@ import 'package:flutter/material.dart';
 /// here; [buildVeloraTheme] applies `ColorScheme`-driven colors so the scale
 /// tracks light/dark automatically.
 TextTheme veloraTextTheme({String? fontFamily}) {
-  TextStyle s(
-    double size,
-    FontWeight weight,
-    double tracking,
-    double height,
-  ) {
+  TextStyle s(double size, FontWeight weight, double tracking, double height) {
     return TextStyle(
       fontFamily: fontFamily,
       fontSize: size,

@@ -35,6 +35,7 @@ class VeloraEmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.veloraTokens;
     final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
 
     return Center(
       child: Padding(
@@ -51,21 +52,15 @@ class VeloraEmptyState extends StatelessWidget {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: scheme.onSurface,
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-              ),
+              style: textTheme.titleLarge?.copyWith(color: scheme.onSurface),
             ),
             if (message != null) ...[
               SizedBox(height: tokens.spacingSm),
               Text(
                 message!,
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: textTheme.bodyMedium?.copyWith(
                   color: scheme.onSurfaceVariant,
-                  fontSize: 14,
-                  height: 1.4,
                 ),
               ),
             ],

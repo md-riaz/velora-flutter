@@ -38,10 +38,7 @@ class _BrokenImageProvider extends ImageProvider<_BrokenImageProvider> {
 void main() {
   group('VeloraAvatar', () {
     testWidgets('renders initials derived from a name', (tester) async {
-      await pumpUnderTheme(
-        tester,
-        const VeloraAvatar(name: 'Ada Lovelace'),
-      );
+      await pumpUnderTheme(tester, const VeloraAvatar(name: 'Ada Lovelace'));
       expect(find.text('AL'), findsOneWidget);
     });
 
@@ -64,10 +61,7 @@ void main() {
     ) async {
       await pumpUnderTheme(
         tester,
-        const VeloraAvatar(
-          name: 'Grace Hopper',
-          image: _BrokenImageProvider(),
-        ),
+        const VeloraAvatar(name: 'Grace Hopper', image: _BrokenImageProvider()),
       );
       // Let the failed image-load future settle so the errorBuilder
       // fallback rebuild happens.
@@ -109,10 +103,7 @@ void main() {
     });
 
     testWidgets('renders no InkWell when onTap is null', (tester) async {
-      await pumpUnderTheme(
-        tester,
-        const VeloraListTile(title: 'Static row'),
-      );
+      await pumpUnderTheme(tester, const VeloraListTile(title: 'Static row'));
       expect(find.byType(InkWell), findsNothing);
     });
   });
@@ -154,10 +145,7 @@ void main() {
     ) async {
       await pumpUnderTheme(
         tester,
-        const SizedBox(
-          height: 40,
-          child: VeloraDivider(vertical: true),
-        ),
+        const SizedBox(height: 40, child: VeloraDivider(vertical: true)),
       );
       expect(find.byType(VerticalDivider), findsOneWidget);
       expect(find.byType(Divider), findsNothing);

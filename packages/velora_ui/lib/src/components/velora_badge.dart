@@ -49,6 +49,7 @@ class VeloraBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.veloraTokens;
+    final textTheme = Theme.of(context).textTheme;
     final colors = status.colors(context);
 
     final Color background;
@@ -58,7 +59,7 @@ class VeloraBadge extends StatelessWidget {
         background = colors.color;
         foreground = colors.onColor;
       case VeloraBadgeStyle.soft:
-        background = colors.color.withValues(alpha: 0.14);
+        background = colors.color.withValues(alpha: 0.15);
         foreground = colors.color;
     }
 
@@ -78,15 +79,7 @@ class VeloraBadge extends StatelessWidget {
             Icon(icon, size: 13, color: foreground),
             SizedBox(width: tokens.spacingXs),
           ],
-          Text(
-            label,
-            style: TextStyle(
-              color: foreground,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              height: 1.2,
-            ),
-          ),
+          Text(label, style: textTheme.labelSmall?.copyWith(color: foreground)),
         ],
       ),
     );

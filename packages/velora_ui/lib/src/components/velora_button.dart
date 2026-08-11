@@ -26,15 +26,15 @@ enum VeloraButtonVariant {
   danger,
 }
 
-/// The size of a [VeloraButton], controlling height, padding, and font size.
+/// The size of a [VeloraButton], controlling height and horizontal padding.
 enum VeloraButtonSize {
-  /// A compact button (36px tall) for dense layouts and toolbars.
+  /// A compact button (40px tall) for dense layouts and toolbars.
   small,
 
-  /// The default button height (44px).
+  /// The default button height (48px).
   medium,
 
-  /// A large, prominent button (52px) for primary calls to action.
+  /// A large, prominent button (56px) for primary calls to action.
   large,
 }
 
@@ -87,25 +87,16 @@ class VeloraButton extends StatelessWidget {
     this.fullWidth = false,
   });
 
+  // Flat, token-rounded heights: comfortably tappable at every size, and a
+  // full step apart so `small`/`large` read as distinct from the default.
   double get _height {
     switch (size) {
       case VeloraButtonSize.small:
-        return 36;
+        return 40;
       case VeloraButtonSize.medium:
-        return 44;
+        return 48;
       case VeloraButtonSize.large:
-        return 52;
-    }
-  }
-
-  double get _fontSize {
-    switch (size) {
-      case VeloraButtonSize.small:
-        return 13;
-      case VeloraButtonSize.medium:
-        return 14;
-      case VeloraButtonSize.large:
-        return 16;
+        return 56;
     }
   }
 
@@ -113,6 +104,12 @@ class VeloraButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.veloraTokens;
     final scheme = Theme.of(context).colorScheme;
+    // The ambient, tuned label style — semi-bold with positive tracking —
+    // rather than a hardcoded weight/size, so buttons pick up Velora's type
+    // scale (and any brand font) automatically.
+    final labelStyle =
+        Theme.of(context).textTheme.labelLarge ??
+        const TextStyle(fontSize: 14, fontWeight: FontWeight.w600);
 
     // Foreground/background per variant, pulled from the ColorScheme so the
     // button tracks light/dark and any theme override.
@@ -131,7 +128,7 @@ class VeloraButton extends StatelessWidget {
       case VeloraButtonVariant.outline:
         foreground = scheme.primary;
         background = Colors.transparent;
-        side = BorderSide(color: scheme.outline);
+        side = BorderSide(color: scheme.outlineVariant);
       case VeloraButtonVariant.ghost:
         foreground = scheme.primary;
         background = Colors.transparent;
@@ -142,9 +139,11 @@ class VeloraButton extends StatelessWidget {
         side = null;
     }
 
-    final horizontalPadding = size == VeloraButtonSize.small
-        ? tokens.spacingMd
-        : tokens.spacingLg;
+    final horizontalPadding = switch (size) {
+      VeloraButtonSize.small => tokens.spacingMd,
+      VeloraButtonSize.medium => tokens.spacingLg,
+      VeloraButtonSize.large => tokens.spacingXl,
+    };
 
     final style = ButtonStyle(
       minimumSize: WidgetStatePropertyAll(Size(0, _height)),
@@ -167,21 +166,20 @@ class VeloraButton extends StatelessWidget {
       }),
       overlayColor: WidgetStatePropertyAll(foreground.withValues(alpha: 0.1)),
       side: side == null ? null : WidgetStatePropertyAll(side),
+      // Flat — no Material elevation/shadow at any interaction state.
       elevation: const WidgetStatePropertyAll(0),
       shape: WidgetStatePropertyAll(
         RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(tokens.radiusMd),
         ),
       ),
-      textStyle: WidgetStatePropertyAll(
-        TextStyle(fontSize: _fontSize, fontWeight: FontWeight.w600),
-      ),
+      textStyle: WidgetStatePropertyAll(labelStyle),
       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
 
     final Widget child;
     if (loading) {
-      final spinnerSize = _fontSize + 4;
+      final spinnerSize = (labelStyle.fontSize ?? 14) + 4;
       // Keep the button's accessible name while the spinner replaces the
       // label text — otherwise a screen reader announces an unnamed button.
       child = Semantics(
@@ -200,7 +198,7 @@ class VeloraButton extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: _fontSize + 4),
+          Icon(icon, size: (labelStyle.fontSize ?? 14) + 4),
           SizedBox(width: tokens.spacingSm),
           Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
         ],
@@ -219,8 +217,6 @@ class VeloraButton extends StatelessWidget {
       child: child,
     );
 
-    return fullWidth
-        ? SizedBox(width: double.infinity, child: button)
-        : button;
+    return fullWidth ? SizedBox(width: double.infinity, child: button) : button;
   }
 }

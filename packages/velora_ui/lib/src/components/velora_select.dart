@@ -90,7 +90,7 @@ class VeloraSelect<T> extends StatelessWidget {
         prefixIcon: prefixIcon == null ? null : Icon(prefixIcon),
         filled: true,
         fillColor: scheme.surfaceContainerHighest.withValues(
-          alpha: enabled ? 0.4 : 0.15,
+          alpha: enabled ? 0.5 : 0.15,
         ),
         contentPadding: EdgeInsets.symmetric(
           horizontal: tokens.spacingMd,

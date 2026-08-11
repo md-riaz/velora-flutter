@@ -47,16 +47,15 @@ class VeloraAlert extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.veloraTokens;
     final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final colors = status.colors(context);
-    final radius = BorderRadius.circular(tokens.radiusMd);
+    final radius = BorderRadius.circular(tokens.radiusLg);
 
     return Container(
       decoration: BoxDecoration(
         color: colors.color.withValues(alpha: 0.10),
         borderRadius: radius,
-        border: Border(
-          left: BorderSide(color: colors.color, width: 4),
-        ),
+        border: Border(left: BorderSide(color: colors.color, width: 4)),
       ),
       padding: EdgeInsets.all(tokens.spacingMd),
       child: Row(
@@ -72,20 +71,16 @@ class VeloraAlert extends StatelessWidget {
                 if (title != null) ...[
                   Text(
                     title!,
-                    style: TextStyle(
+                    style: textTheme.titleSmall?.copyWith(
                       color: scheme.onSurface,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
                     ),
                   ),
                   SizedBox(height: tokens.spacingXs),
                 ],
                 Text(
                   message,
-                  style: TextStyle(
+                  style: textTheme.bodyMedium?.copyWith(
                     color: scheme.onSurfaceVariant,
-                    fontSize: 13,
-                    height: 1.4,
                   ),
                 ),
               ],
