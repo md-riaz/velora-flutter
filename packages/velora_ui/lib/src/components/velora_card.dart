@@ -58,7 +58,7 @@ class VeloraCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: color ?? scheme.surface,
         borderRadius: radius,
-        border: Border.all(color: scheme.outlineVariant),
+        border: Border.all(color: scheme.outlineVariant, width: 0),
         boxShadow: elevated
             ? [
                 BoxShadow(

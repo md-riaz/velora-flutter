@@ -12,9 +12,10 @@ enum VeloraButtonVariant {
   /// color. Use it for supporting actions alongside a [primary] one.
   secondary,
 
-  /// A low-emphasis outlined button (transparent fill, primary-colored
-  /// border and label). Use it for secondary actions where a solid fill
-  /// would compete with the primary button.
+  /// A low-emphasis outlined button (transparent fill, a subtle hairline
+  /// `outlineVariant` border, and a primary-colored label). Use it for
+  /// secondary actions where a solid fill would compete with the primary
+  /// button.
   outline,
 
   /// The lowest-emphasis button (no fill, no border, primary-colored label).
