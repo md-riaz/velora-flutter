@@ -62,9 +62,17 @@ jobs:
           search_artifacts: true
           if_no_artifact_found: warn
 
+      # Guard on the file actually existing: with `if_no_artifact_found: warn`
+      # the download step still succeeds when no artifact is present, so keying
+      # off its outcome would run sed against a missing file and abort the
+      # deploy. Skip gracefully instead.
       - name: Fix demo base href for Pages
-        if: steps.demo-check.outcome == 'success'
-        run: sed -i 's|<base href="/claude_clone/">|<base href="/velora-flutter/demo/">|' _site/demo/index.html
+        run: |
+          if [ -f _site/demo/index.html ]; then
+            sed -i 's|<base href="/claude_clone/">|<base href="/velora-flutter/demo/">|' _site/demo/index.html
+          else
+            echo "No demo artifact downloaded — skipping base-href rewrite."
+          fi
 
       - name: Download gallery web artifacts
         id: gallery-check
@@ -78,8 +86,12 @@ jobs:
           if_no_artifact_found: warn
 
       - name: Fix gallery base href for Pages
-        if: steps.gallery-check.outcome == 'success'
-        run: sed -i 's|<base href="/velora-ui-gallery/">|<base href="/velora-flutter/gallery/">|' _site/gallery/index.html
+        run: |
+          if [ -f _site/gallery/index.html ]; then
+            sed -i 's|<base href="/velora-ui-gallery/">|<base href="/velora-flutter/gallery/">|' _site/gallery/index.html
+          else
+            echo "No gallery artifact downloaded — skipping base-href rewrite."
+          fi
 
       - name: Copy landing page
         run: cp docs/index.html _site/index.html
