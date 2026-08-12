@@ -84,7 +84,12 @@ class VeloraThemePreset {
 ThemeData buildVeloraTheme({
   Brightness brightness = Brightness.light,
   VeloraThemePreset preset = VeloraThemePreset.aurora,
-  String? fontFamily,
+  // Default to Velora's bundled brand faces. These carry the
+  // `packages/velora_ui/` prefix Flutter requires to reference a
+  // package-provided font; pass a bare family name (or null for the platform
+  // default) to override with an app's own font.
+  String? fontFamily = 'packages/velora_ui/Inter',
+  String? displayFontFamily = 'packages/velora_ui/SpaceGrotesk',
 }) {
   final colorScheme = ColorScheme.fromSeed(
     seedColor: preset.seed,
@@ -93,10 +98,14 @@ ThemeData buildVeloraTheme({
   final tokens = preset.tokensFor(brightness);
 
   // Velora's tuned type scale, colorized for this scheme.
-  final textTheme = veloraTextTheme(fontFamily: fontFamily).apply(
-    bodyColor: colorScheme.onSurface,
-    displayColor: colorScheme.onSurface,
-  );
+  final textTheme =
+      veloraTextTheme(
+        fontFamily: fontFamily,
+        displayFontFamily: displayFontFamily,
+      ).apply(
+        bodyColor: colorScheme.onSurface,
+        displayColor: colorScheme.onSurface,
+      );
 
   final radiusMd = BorderRadius.circular(tokens.radiusMd);
   final radiusLg = BorderRadius.circular(tokens.radiusLg);
