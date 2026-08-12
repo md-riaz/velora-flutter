@@ -65,4 +65,5 @@ export 'src/components/velora_switch.dart';
 export 'src/components/velora_text_field.dart';
 export 'src/theme/velora_theme.dart';
 export 'src/theme/velora_tokens_context.dart';
+export 'src/theme/velora_typography.dart';
 export 'src/tokens/velora_tokens.dart';

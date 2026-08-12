@@ -38,6 +38,7 @@ class VeloraCheckbox extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.veloraTokens;
     final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final enabled = onChanged != null;
 
     return Column(
@@ -67,20 +68,18 @@ class VeloraCheckbox extends StatelessWidget {
                         padding: EdgeInsets.only(top: tokens.spacingXs + 2),
                         child: Text(
                           label,
-                          style: TextStyle(
+                          style: textTheme.bodyMedium?.copyWith(
                             color: enabled
                                 ? scheme.onSurface
                                 : scheme.onSurface.withValues(alpha: 0.38),
-                            fontSize: 14,
                           ),
                         ),
                       ),
                       if (subtitle != null)
                         Text(
                           subtitle!,
-                          style: TextStyle(
+                          style: textTheme.bodySmall?.copyWith(
                             color: scheme.onSurfaceVariant,
-                            fontSize: 12,
                           ),
                         ),
                     ],
@@ -92,10 +91,13 @@ class VeloraCheckbox extends StatelessWidget {
         ),
         if (errorText != null)
           Padding(
-            padding: EdgeInsets.only(left: tokens.spacingMd, top: tokens.spacingXs),
+            padding: EdgeInsets.only(
+              left: tokens.spacingMd,
+              top: tokens.spacingXs,
+            ),
             child: Text(
               errorText!,
-              style: TextStyle(color: scheme.error, fontSize: 12),
+              style: textTheme.bodySmall?.copyWith(color: scheme.error),
             ),
           ),
       ],

@@ -60,6 +60,7 @@ class VeloraRadioGroup<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.veloraTokens;
     final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final enabled = onChanged != null;
 
     return Column(
@@ -69,10 +70,8 @@ class VeloraRadioGroup<T> extends StatelessWidget {
         if (label != null) ...[
           Text(
             label!,
-            style: TextStyle(
+            style: textTheme.labelSmall?.copyWith(
               color: scheme.onSurfaceVariant,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
             ),
           ),
           SizedBox(height: tokens.spacingXs),
@@ -105,19 +104,17 @@ class VeloraRadioGroup<T> extends StatelessWidget {
                       children: [
                         Text(
                           option.label,
-                          style: TextStyle(
+                          style: textTheme.bodyMedium?.copyWith(
                             color: enabled
                                 ? scheme.onSurface
                                 : scheme.onSurface.withValues(alpha: 0.38),
-                            fontSize: 14,
                           ),
                         ),
                         if (option.subtitle != null)
                           Text(
                             option.subtitle!,
-                            style: TextStyle(
+                            style: textTheme.bodySmall?.copyWith(
                               color: scheme.onSurfaceVariant,
-                              fontSize: 12,
                             ),
                           ),
                       ],
@@ -132,7 +129,7 @@ class VeloraRadioGroup<T> extends StatelessWidget {
             padding: EdgeInsets.only(top: tokens.spacingXs),
             child: Text(
               errorText!,
-              style: TextStyle(color: scheme.error, fontSize: 12),
+              style: textTheme.bodySmall?.copyWith(color: scheme.error),
             ),
           ),
       ],

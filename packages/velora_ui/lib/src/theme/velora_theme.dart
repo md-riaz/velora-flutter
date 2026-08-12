@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../tokens/velora_tokens.dart';
+import 'velora_typography.dart';
 
 /// A named, original Velora brand: a seed [Color] fed to
 /// [ColorScheme.fromSeed] to generate the full Material 3 [ColorScheme],
@@ -83,6 +84,7 @@ class VeloraThemePreset {
 ThemeData buildVeloraTheme({
   Brightness brightness = Brightness.light,
   VeloraThemePreset preset = VeloraThemePreset.aurora,
+  String? fontFamily,
 }) {
   final colorScheme = ColorScheme.fromSeed(
     seedColor: preset.seed,
@@ -90,11 +92,143 @@ ThemeData buildVeloraTheme({
   );
   final tokens = preset.tokensFor(brightness);
 
+  // Velora's tuned type scale, colorized for this scheme.
+  final textTheme = veloraTextTheme(fontFamily: fontFamily).apply(
+    bodyColor: colorScheme.onSurface,
+    displayColor: colorScheme.onSurface,
+  );
+
+  final radiusMd = BorderRadius.circular(tokens.radiusMd);
+  final radiusLg = BorderRadius.circular(tokens.radiusLg);
+
+  // Shared button geometry: flat (no Material elevation), token-rounded,
+  // comfortably tall, wearing Velora's semi-bold tracked label.
+  ButtonStyle buttonStyle() => ButtonStyle(
+    elevation: const WidgetStatePropertyAll(0),
+    minimumSize: const WidgetStatePropertyAll(Size(0, 48)),
+    padding: WidgetStatePropertyAll(
+      EdgeInsets.symmetric(horizontal: tokens.spacingLg),
+    ),
+    shape: WidgetStatePropertyAll(
+      RoundedRectangleBorder(borderRadius: radiusMd),
+    ),
+    textStyle: WidgetStatePropertyAll(textTheme.labelLarge),
+  );
+
   return ThemeData(
     useMaterial3: true,
     brightness: brightness,
     colorScheme: colorScheme,
+    textTheme: textTheme,
+    fontFamily: fontFamily,
+    scaffoldBackgroundColor: colorScheme.surface,
     extensions: <ThemeExtension<dynamic>>[tokens],
+
+    // Flat, surface-colored app bar with the bold title style.
+    appBarTheme: AppBarTheme(
+      elevation: 0,
+      scrolledUnderElevation: tokens.elevation1,
+      backgroundColor: colorScheme.surface,
+      foregroundColor: colorScheme.onSurface,
+      surfaceTintColor: Colors.transparent,
+      centerTitle: false,
+      titleTextStyle: textTheme.titleLarge,
+    ),
+
+    // Buttons: flat, token-rounded, tracked labels.
+    filledButtonTheme: FilledButtonThemeData(style: buttonStyle()),
+    elevatedButtonTheme: ElevatedButtonThemeData(style: buttonStyle()),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: buttonStyle().copyWith(
+        side: WidgetStatePropertyAll(
+          BorderSide(color: colorScheme.outlineVariant),
+        ),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: buttonStyle().copyWith(
+        padding: WidgetStatePropertyAll(
+          EdgeInsets.symmetric(horizontal: tokens.spacingMd),
+        ),
+      ),
+    ),
+
+    // Cards: flat with a hairline outline and a large token radius.
+    cardTheme: CardThemeData(
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      color: colorScheme.surface,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: radiusLg,
+        side: BorderSide(color: colorScheme.outlineVariant),
+      ),
+    ),
+
+    // Inputs: softly filled, token-rounded, with a 2px primary focus ring.
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+      contentPadding: EdgeInsets.symmetric(
+        horizontal: tokens.spacingMd,
+        vertical: tokens.spacingSm + 4,
+      ),
+      border: OutlineInputBorder(
+        borderRadius: radiusMd,
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: radiusMd,
+        borderSide: BorderSide(color: colorScheme.outlineVariant),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: radiusMd,
+        borderSide: BorderSide(color: colorScheme.primary, width: 2),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: radiusMd,
+        borderSide: BorderSide(color: colorScheme.error),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: radiusMd,
+        borderSide: BorderSide(color: colorScheme.error, width: 2),
+      ),
+      labelStyle: textTheme.bodyMedium,
+      floatingLabelStyle: TextStyle(color: colorScheme.primary),
+    ),
+
+    // Chips: fully-pill, hairline outline.
+    chipTheme: ChipThemeData(
+      shape: const StadiumBorder(),
+      side: BorderSide(color: colorScheme.outlineVariant),
+      labelStyle: textTheme.labelMedium,
+      padding: EdgeInsets.symmetric(
+        horizontal: tokens.spacingSm,
+        vertical: tokens.spacingXs,
+      ),
+    ),
+
+    dividerTheme: DividerThemeData(
+      color: colorScheme.outlineVariant,
+      thickness: 1,
+      space: tokens.spacingMd,
+    ),
+
+    dialogTheme: DialogThemeData(
+      elevation: tokens.elevation3,
+      backgroundColor: colorScheme.surface,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: radiusLg),
+    ),
+
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: radiusMd),
+    ),
+
+    floatingActionButtonTheme: FloatingActionButtonThemeData(
+      shape: RoundedRectangleBorder(borderRadius: radiusLg),
+    ),
   );
 }
 

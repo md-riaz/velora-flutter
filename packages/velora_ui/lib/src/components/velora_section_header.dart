@@ -49,7 +49,6 @@ class VeloraSectionHeader extends StatelessWidget {
                   title,
                   style: textTheme.titleMedium?.copyWith(
                     color: scheme.onSurface,
-                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 if (subtitle != null) ...[
@@ -64,10 +63,7 @@ class VeloraSectionHeader extends StatelessWidget {
               ],
             ),
           ),
-          if (action != null) ...[
-            SizedBox(width: tokens.spacingSm),
-            action!,
-          ],
+          if (action != null) ...[SizedBox(width: tokens.spacingSm), action!],
         ],
       ),
     );

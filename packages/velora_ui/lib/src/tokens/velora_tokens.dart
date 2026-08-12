@@ -217,18 +217,10 @@ class VeloraTokens extends ThemeExtension<VeloraTokens> {
     elevation3: _elevation3,
     elevation4: _elevation4,
     shadowSm: [
-      BoxShadow(
-        color: Color(0x1F000000),
-        blurRadius: 4,
-        offset: Offset(0, 1),
-      ),
+      BoxShadow(color: Color(0x1F000000), blurRadius: 4, offset: Offset(0, 1)),
     ],
     shadowMd: [
-      BoxShadow(
-        color: Color(0x29000000),
-        blurRadius: 12,
-        offset: Offset(0, 4),
-      ),
+      BoxShadow(color: Color(0x29000000), blurRadius: 12, offset: Offset(0, 4)),
     ],
     motionFast: _motionFast,
     motionNormal: _motionNormal,
@@ -260,18 +252,10 @@ class VeloraTokens extends ThemeExtension<VeloraTokens> {
     elevation3: _elevation3,
     elevation4: _elevation4,
     shadowSm: [
-      BoxShadow(
-        color: Color(0x33000000),
-        blurRadius: 4,
-        offset: Offset(0, 1),
-      ),
+      BoxShadow(color: Color(0x33000000), blurRadius: 4, offset: Offset(0, 1)),
     ],
     shadowMd: [
-      BoxShadow(
-        color: Color(0x40000000),
-        blurRadius: 12,
-        offset: Offset(0, 4),
-      ),
+      BoxShadow(color: Color(0x40000000), blurRadius: 12, offset: Offset(0, 4)),
     ],
     motionFast: _motionFast,
     motionNormal: _motionNormal,

@@ -52,10 +52,7 @@ class VeloraListTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-          if (leading != null) ...[
-            leading!,
-            SizedBox(width: tokens.spacingSm),
-          ],
+          if (leading != null) ...[leading!, SizedBox(width: tokens.spacingSm)],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -64,7 +61,7 @@ class VeloraListTile extends StatelessWidget {
                 Text(
                   title,
                   overflow: TextOverflow.ellipsis,
-                  style: textTheme.bodyLarge?.copyWith(
+                  style: textTheme.titleSmall?.copyWith(
                     color: scheme.onSurface,
                   ),
                 ),

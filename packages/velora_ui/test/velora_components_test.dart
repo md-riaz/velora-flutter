@@ -49,11 +49,7 @@ void main() {
       var taps = 0;
       await pumpUnderTheme(
         tester,
-        VeloraButton(
-          label: 'Save',
-          loading: true,
-          onPressed: () => taps++,
-        ),
+        VeloraButton(label: 'Save', loading: true, onPressed: () => taps++),
       );
 
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
@@ -75,10 +71,7 @@ void main() {
 
   group('VeloraCard', () {
     testWidgets('renders its child', (tester) async {
-      await pumpUnderTheme(
-        tester,
-        const VeloraCard(child: Text('Card body')),
-      );
+      await pumpUnderTheme(tester, const VeloraCard(child: Text('Card body')));
       expect(find.text('Card body'), findsOneWidget);
     });
 
@@ -95,10 +88,7 @@ void main() {
     });
 
     testWidgets('renders no InkWell when not tappable', (tester) async {
-      await pumpUnderTheme(
-        tester,
-        const VeloraCard(child: Text('Static')),
-      );
+      await pumpUnderTheme(tester, const VeloraCard(child: Text('Static')));
       expect(find.byType(InkWell), findsNothing);
     });
   });
@@ -232,10 +222,7 @@ void main() {
     });
 
     testWidgets('circle constructor builds a square box', (tester) async {
-      await pumpUnderTheme(
-        tester,
-        const VeloraSkeleton.circle(diameter: 40),
-      );
+      await pumpUnderTheme(tester, const VeloraSkeleton.circle(diameter: 40));
       expect(find.byType(VeloraSkeleton), findsOneWidget);
     });
 

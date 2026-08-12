@@ -57,6 +57,7 @@ class VeloraAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.veloraTokens;
     final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final background = backgroundColor ?? scheme.primaryContainer;
     final foreground = foregroundColor ?? scheme.onPrimaryContainer;
 
@@ -68,10 +69,11 @@ class VeloraAvatar extends StatelessWidget {
           child: initials != null
               ? Text(
                   initials,
-                  style: TextStyle(
+                  // Weight/tracking come from the ambient scale; only the
+                  // size is derived from the avatar's own diameter.
+                  style: (textTheme.titleMedium ?? const TextStyle()).copyWith(
                     color: foreground,
                     fontSize: size * 0.4,
-                    fontWeight: FontWeight.w600,
                   ),
                 )
               : Icon(Icons.person, size: size * 0.55, color: foreground),

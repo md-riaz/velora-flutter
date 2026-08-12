@@ -28,12 +28,8 @@ class VeloraSkeleton extends StatefulWidget {
   final bool _circle;
 
   /// Creates a rectangular skeleton block.
-  const VeloraSkeleton({
-    super.key,
-    this.width,
-    this.height = 16,
-    this.radius,
-  }) : _circle = false;
+  const VeloraSkeleton({super.key, this.width, this.height = 16, this.radius})
+    : _circle = false;
 
   /// A circular skeleton (for avatars) of the given [diameter].
   const VeloraSkeleton.circle({super.key, required double diameter})
@@ -66,7 +62,8 @@ class _VeloraSkeletonState extends State<VeloraSkeleton>
     super.didChangeDependencies();
     // Runs on first build and whenever an inherited dependency changes —
     // including MediaQuery, so a live reduced-motion toggle lands here.
-    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     _controller.duration = context.veloraTokens.motionSlow;
     if (reduceMotion) {
       if (_controller.isAnimating) _controller.stop();
@@ -79,7 +76,8 @@ class _VeloraSkeletonState extends State<VeloraSkeleton>
   Widget build(BuildContext context) {
     final tokens = context.veloraTokens;
     final scheme = Theme.of(context).colorScheme;
-    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
 
     final baseColor = scheme.surfaceContainerHighest;
     final borderRadius = BorderRadius.circular(
@@ -99,8 +97,7 @@ class _VeloraSkeletonState extends State<VeloraSkeleton>
 
     return AnimatedBuilder(
       animation: _controller,
-      builder: (context, _) =>
-          box(0.4 + 0.4 * _controller.value), // 0.4 -> 0.8
+      builder: (context, _) => box(0.4 + 0.4 * _controller.value), // 0.4 -> 0.8
     );
   }
 

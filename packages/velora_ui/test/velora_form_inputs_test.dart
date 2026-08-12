@@ -71,11 +71,7 @@ void main() {
     testWidgets('is disabled when onChanged is null', (tester) async {
       await pumpUnderTheme(
         tester,
-        const VeloraCheckbox(
-          value: false,
-          label: 'Locked',
-          onChanged: null,
-        ),
+        const VeloraCheckbox(value: false, label: 'Locked', onChanged: null),
       );
       final checkbox = tester.widget<Checkbox>(find.byType(Checkbox));
       expect(checkbox.onChanged, isNull);
