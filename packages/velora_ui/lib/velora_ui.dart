@@ -43,6 +43,22 @@
 /// - [VeloraDivider] — a thin themed horizontal or vertical separator.
 /// - [VeloraProgress] — a linear or circular progress indicator, determinate
 ///   or indeterminate.
+///
+/// **Layer 5** adds navigation and page scaffolding — the pieces that get an
+/// app moving between screens rather than filling one in. Like Layer 3, these
+/// are all controlled (the caller owns the selected index via value +
+/// callback):
+///
+/// - [VeloraNavDestination] — the small immutable icon+label model shared by
+///   [VeloraNavBar] and [VeloraNavRail].
+/// - [VeloraNavBar] — a flat bottom navigation bar for compact/mobile
+///   layouts.
+/// - [VeloraNavRail] — the wide-screen side-navigation counterpart to
+///   [VeloraNavBar].
+/// - [VeloraTabs] — a pill segmented control for switching views within a
+///   screen (not top-level navigation).
+/// - [VeloraScaffold] — a thin convenience [Scaffold] wrapper that wires up
+///   an app bar, body, bottom nav, and FAB in one widget.
 library;
 
 export 'src/components/velora_alert.dart';
@@ -55,13 +71,18 @@ export 'src/components/velora_chip.dart';
 export 'src/components/velora_divider.dart';
 export 'src/components/velora_empty_state.dart';
 export 'src/components/velora_list_tile.dart';
+export 'src/components/velora_nav_bar.dart';
+export 'src/components/velora_nav_destination.dart';
+export 'src/components/velora_nav_rail.dart';
 export 'src/components/velora_progress.dart';
 export 'src/components/velora_radio_group.dart';
+export 'src/components/velora_scaffold.dart';
 export 'src/components/velora_section_header.dart';
 export 'src/components/velora_select.dart';
 export 'src/components/velora_skeleton.dart';
 export 'src/components/velora_status.dart';
 export 'src/components/velora_switch.dart';
+export 'src/components/velora_tabs.dart';
 export 'src/components/velora_text_field.dart';
 export 'src/theme/velora_theme.dart';
 export 'src/theme/velora_tokens_context.dart';
