@@ -105,6 +105,28 @@ void main() {
 
       handle.dispose();
     });
+
+    test('throws an AssertionError for an out-of-range selectedIndex', () {
+      expect(
+        () => VeloraNavBar(
+          destinations: destinations,
+          selectedIndex: 5,
+          onDestinationSelected: (_) {},
+        ),
+        throwsAssertionError,
+      );
+    });
+
+    test('throws an AssertionError when destinations is empty', () {
+      expect(
+        () => VeloraNavBar(
+          destinations: const [],
+          selectedIndex: 0,
+          onDestinationSelected: (_) {},
+        ),
+        throwsAssertionError,
+      );
+    });
   });
 
   group('VeloraNavRail', () {
@@ -166,6 +188,57 @@ void main() {
 
       expect(find.byIcon(Icons.bolt), findsOneWidget);
       expect(find.byIcon(Icons.more_horiz), findsOneWidget);
+    });
+
+    testWidgets('builds correctly under RTL directionality', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: VeloraTheme.light(),
+          home: Directionality(
+            textDirection: TextDirection.rtl,
+            child: Scaffold(
+              body: Center(
+                child: SizedBox(
+                  height: 600,
+                  child: VeloraNavRail(
+                    destinations: destinations,
+                    selectedIndex: 1,
+                    onDestinationSelected: (_) {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(VeloraNavRail), findsOneWidget);
+      expect(find.text('Home'), findsOneWidget);
+      expect(find.text('Search'), findsOneWidget);
+      expect(find.text('Settings'), findsOneWidget);
+    });
+
+    test('throws an AssertionError for an out-of-range selectedIndex', () {
+      expect(
+        () => VeloraNavRail(
+          destinations: destinations,
+          selectedIndex: 5,
+          onDestinationSelected: (_) {},
+        ),
+        throwsAssertionError,
+      );
+    });
+
+    test('throws an AssertionError when destinations is empty', () {
+      expect(
+        () => VeloraNavRail(
+          destinations: const [],
+          selectedIndex: 0,
+          onDestinationSelected: (_) {},
+        ),
+        throwsAssertionError,
+      );
     });
   });
 
@@ -232,6 +305,13 @@ void main() {
     testWidgets('throws an AssertionError when tabs is empty', (tester) async {
       expect(
         () => VeloraTabs(tabs: const [], selectedIndex: 0, onChanged: (_) {}),
+        throwsAssertionError,
+      );
+    });
+
+    test('throws an AssertionError for an out-of-range selectedIndex', () {
+      expect(
+        () => VeloraTabs(tabs: tabs, selectedIndex: 5, onChanged: (_) {}),
         throwsAssertionError,
       );
     });

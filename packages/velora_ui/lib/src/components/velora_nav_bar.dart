@@ -17,6 +17,9 @@ import 'velora_nav_destination.dart';
 /// [VeloraNavDestination.icon]) when selected, behind a soft
 /// `primaryContainer` pill; unselected items show `icon` in
 /// `onSurfaceVariant`. The whole item — icon and label — is one tap target.
+///
+/// [destinations] must not be empty, and [selectedIndex] must identify one of
+/// them (`0 <= selectedIndex < destinations.length`).
 class VeloraNavBar extends StatelessWidget {
   /// The destinations to show, left to right.
   final List<VeloraNavDestination> destinations;
@@ -28,12 +31,23 @@ class VeloraNavBar extends StatelessWidget {
   final ValueChanged<int> onDestinationSelected;
 
   /// Creates a Velora bottom nav bar.
-  const VeloraNavBar({
+  ///
+  /// Not a `const` constructor: [destinations] is asserted non-empty and
+  /// [selectedIndex] in range here, and those assertions can only be checked
+  /// once the (necessarily non-constant) values are known.
+  VeloraNavBar({
     super.key,
     required this.destinations,
     required this.selectedIndex,
     required this.onDestinationSelected,
-  });
+  }) : assert(
+         destinations.isNotEmpty,
+         'VeloraNavBar requires at least one destination.',
+       ),
+       assert(
+         selectedIndex >= 0 && selectedIndex < destinations.length,
+         'VeloraNavBar selectedIndex must identify a destination.',
+       );
 
   @override
   Widget build(BuildContext context) {
@@ -86,38 +100,43 @@ class _VeloraNavBarItem extends StatelessWidget {
 
     return Semantics(
       selected: selected,
-      child: InkWell(
-        onTap: onTap,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DecoratedBox(
-              decoration: BoxDecoration(
-                color: selected ? scheme.primaryContainer : Colors.transparent,
-                borderRadius: BorderRadius.circular(tokens.radiusPill),
-              ),
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: tokens.spacingMd,
-                  vertical: tokens.spacingXs,
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          onTap: onTap,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Ink(
+                decoration: BoxDecoration(
+                  color: selected
+                      ? scheme.primaryContainer
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(tokens.radiusPill),
                 ),
-                child: Icon(
-                  selected
-                      ? (destination.selectedIcon ?? destination.icon)
-                      : destination.icon,
-                  color: color,
-                  size: 22,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: tokens.spacingMd,
+                    vertical: tokens.spacingXs,
+                  ),
+                  child: Icon(
+                    selected
+                        ? (destination.selectedIcon ?? destination.icon)
+                        : destination.icon,
+                    color: color,
+                    size: 22,
+                  ),
                 ),
               ),
-            ),
-            SizedBox(height: tokens.spacingXs / 2),
-            Text(
-              destination.label,
-              overflow: TextOverflow.ellipsis,
-              style: textTheme.labelSmall?.copyWith(color: color),
-            ),
-          ],
+              SizedBox(height: tokens.spacingXs / 2),
+              Text(
+                destination.label,
+                overflow: TextOverflow.ellipsis,
+                style: textTheme.labelSmall?.copyWith(color: color),
+              ),
+            ],
+          ),
         ),
       ),
     );

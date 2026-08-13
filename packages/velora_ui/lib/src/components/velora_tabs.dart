@@ -12,7 +12,8 @@ import '../theme/velora_tokens_context.dart';
 /// between positions using [VeloraTokens.motionNormal], the same timing the
 /// rest of the kit uses for its transitions.
 ///
-/// [tabs] must not be empty.
+/// [tabs] must not be empty, and [selectedIndex] must identify one of them
+/// (`0 <= selectedIndex < tabs.length`).
 class VeloraTabs extends StatelessWidget {
   /// The segment labels, left to right.
   final List<String> tabs;
@@ -33,7 +34,11 @@ class VeloraTabs extends StatelessWidget {
     required this.tabs,
     required this.selectedIndex,
     required this.onChanged,
-  }) : assert(tabs.isNotEmpty, 'VeloraTabs requires at least one tab.');
+  }) : assert(tabs.isNotEmpty, 'VeloraTabs requires at least one tab.'),
+       assert(
+         selectedIndex >= 0 && selectedIndex < tabs.length,
+         'VeloraTabs selectedIndex must identify a tab.',
+       );
 
   @override
   Widget build(BuildContext context) {
@@ -97,6 +102,7 @@ class VeloraTabs extends StatelessWidget {
                                       ),
                               child: Text(
                                 tabs[i],
+                                maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),

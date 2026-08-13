@@ -16,6 +16,9 @@ import 'velora_nav_destination.dart';
 /// `primary`-colored label; inactive items use `onSurfaceVariant`. Optional
 /// [leading] (e.g. a logo) and [trailing] (e.g. a settings button) widgets
 /// sit above the destinations and pinned to the bottom, respectively.
+///
+/// [destinations] must not be empty, and [selectedIndex] must identify one of
+/// them (`0 <= selectedIndex < destinations.length`).
 class VeloraNavRail extends StatelessWidget {
   /// The destinations to show, top to bottom.
   final List<VeloraNavDestination> destinations;
@@ -34,14 +37,25 @@ class VeloraNavRail extends StatelessWidget {
   final Widget? trailing;
 
   /// Creates a Velora nav rail.
-  const VeloraNavRail({
+  ///
+  /// Not a `const` constructor: [destinations] is asserted non-empty and
+  /// [selectedIndex] in range here, and those assertions can only be checked
+  /// once the (necessarily non-constant) values are known.
+  VeloraNavRail({
     super.key,
     required this.destinations,
     required this.selectedIndex,
     required this.onDestinationSelected,
     this.leading,
     this.trailing,
-  });
+  }) : assert(
+         destinations.isNotEmpty,
+         'VeloraNavRail requires at least one destination.',
+       ),
+       assert(
+         selectedIndex >= 0 && selectedIndex < destinations.length,
+         'VeloraNavRail selectedIndex must identify a destination.',
+       );
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +65,9 @@ class VeloraNavRail extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: scheme.surface,
-        border: Border(right: BorderSide(color: scheme.outlineVariant)),
+        border: BorderDirectional(
+          end: BorderSide(color: scheme.outlineVariant),
+        ),
       ),
       child: SizedBox(
         width: 88,
@@ -104,42 +120,45 @@ class _VeloraNavRailItem extends StatelessWidget {
 
     return Semantics(
       selected: selected,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(tokens.radiusMd),
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: tokens.spacingSm),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: selected
-                      ? scheme.primaryContainer
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(tokens.radiusPill),
-                ),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: tokens.spacingMd,
-                    vertical: tokens.spacingXs,
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(tokens.radiusMd),
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: tokens.spacingSm),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Ink(
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? scheme.primaryContainer
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(tokens.radiusPill),
                   ),
-                  child: Icon(
-                    selected
-                        ? (destination.selectedIcon ?? destination.icon)
-                        : destination.icon,
-                    color: color,
-                    size: 22,
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: tokens.spacingMd,
+                      vertical: tokens.spacingXs,
+                    ),
+                    child: Icon(
+                      selected
+                          ? (destination.selectedIcon ?? destination.icon)
+                          : destination.icon,
+                      color: color,
+                      size: 22,
+                    ),
                   ),
                 ),
-              ),
-              SizedBox(height: tokens.spacingXs / 2),
-              Text(
-                destination.label,
-                overflow: TextOverflow.ellipsis,
-                style: textTheme.labelSmall?.copyWith(color: color),
-              ),
-            ],
+                SizedBox(height: tokens.spacingXs / 2),
+                Text(
+                  destination.label,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.labelSmall?.copyWith(color: color),
+                ),
+              ],
+            ),
           ),
         ),
       ),
