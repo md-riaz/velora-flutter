@@ -84,38 +84,41 @@ class _VeloraNavBarItem extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final color = selected ? scheme.primary : scheme.onSurfaceVariant;
 
-    return InkWell(
-      onTap: onTap,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: selected ? scheme.primaryContainer : Colors.transparent,
-              borderRadius: BorderRadius.circular(tokens.radiusPill),
-            ),
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: tokens.spacingMd,
-                vertical: tokens.spacingXs,
+    return Semantics(
+      selected: selected,
+      child: InkWell(
+        onTap: onTap,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: selected ? scheme.primaryContainer : Colors.transparent,
+                borderRadius: BorderRadius.circular(tokens.radiusPill),
               ),
-              child: Icon(
-                selected
-                    ? (destination.selectedIcon ?? destination.icon)
-                    : destination.icon,
-                color: color,
-                size: 22,
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: tokens.spacingMd,
+                  vertical: tokens.spacingXs,
+                ),
+                child: Icon(
+                  selected
+                      ? (destination.selectedIcon ?? destination.icon)
+                      : destination.icon,
+                  color: color,
+                  size: 22,
+                ),
               ),
             ),
-          ),
-          SizedBox(height: tokens.spacingXs / 2),
-          Text(
-            destination.label,
-            overflow: TextOverflow.ellipsis,
-            style: textTheme.labelSmall?.copyWith(color: color),
-          ),
-        ],
+            SizedBox(height: tokens.spacingXs / 2),
+            Text(
+              destination.label,
+              overflow: TextOverflow.ellipsis,
+              style: textTheme.labelSmall?.copyWith(color: color),
+            ),
+          ],
+        ),
       ),
     );
   }

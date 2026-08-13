@@ -79,6 +79,32 @@ void main() {
       await tester.pump();
       expect(tapped, 2);
     });
+
+    testWidgets('exposes the selected flag on the selected destination', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+
+      await pumpUnderTheme(
+        tester,
+        VeloraNavBar(
+          destinations: destinations,
+          selectedIndex: 0,
+          onDestinationSelected: (_) {},
+        ),
+      );
+
+      expect(
+        tester.getSemantics(find.text('Home')),
+        isSemantics(isSelected: true),
+      );
+      expect(
+        tester.getSemantics(find.text('Search')),
+        isSemantics(isSelected: false),
+      );
+
+      handle.dispose();
+    });
   });
 
   group('VeloraNavRail', () {
@@ -194,13 +220,74 @@ void main() {
       );
       await tester.pump(VeloraTokens.light.motionNormal);
 
-      final positioned = tester.widget<AnimatedPositioned>(
-        find.byType(AnimatedPositioned),
+      final positioned = tester.widget<AnimatedPositionedDirectional>(
+        find.byType(AnimatedPositionedDirectional),
       );
-      // 3 equal segments: the pill's left edge should sit exactly one
-      // segment-width in for selectedIndex 1, whatever the track's padded
-      // content width works out to.
-      expect(positioned.left, closeTo(positioned.width!, 0.01));
+      // 3 equal segments: the pill's directional-start edge should sit
+      // exactly one segment-width in for selectedIndex 1, whatever the
+      // track's padded content width works out to.
+      expect(positioned.start, closeTo(positioned.width!, 0.01));
+    });
+
+    testWidgets('throws an AssertionError when tabs is empty', (tester) async {
+      expect(
+        () => VeloraTabs(tabs: const [], selectedIndex: 0, onChanged: (_) {}),
+        throwsAssertionError,
+      );
+    });
+
+    testWidgets('exposes the selected flag on the selected segment', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+
+      await pumpUnderTheme(
+        tester,
+        SizedBox(
+          width: 300,
+          child: VeloraTabs(tabs: tabs, selectedIndex: 1, onChanged: (_) {}),
+        ),
+      );
+
+      expect(
+        tester.getSemantics(find.text('Week')),
+        isSemantics(isSelected: true),
+      );
+      expect(
+        tester.getSemantics(find.text('Day')),
+        isSemantics(isSelected: false),
+      );
+
+      handle.dispose();
+    });
+
+    testWidgets('builds correctly under RTL directionality', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: VeloraTheme.light(),
+          home: Directionality(
+            textDirection: TextDirection.rtl,
+            child: Scaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 300,
+                  child: VeloraTabs(
+                    tabs: tabs,
+                    selectedIndex: 1,
+                    onChanged: (_) {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump(VeloraTokens.light.motionNormal);
+
+      expect(find.byType(AnimatedPositionedDirectional), findsOneWidget);
+      expect(find.text('Day'), findsOneWidget);
+      expect(find.text('Week'), findsOneWidget);
+      expect(find.text('Month'), findsOneWidget);
     });
   });
 
