@@ -11,14 +11,25 @@ import 'package:flutter/material.dart';
 /// buttons and chips read as intentional UI rather than default text.
 ///
 /// The scale is font-agnostic — it sets only size/weight/letter-spacing/
-/// height, so it works on the platform default face and instantly adopts a
-/// brand font when one is supplied via [fontFamily]. Colors are *not* set
-/// here; [buildVeloraTheme] applies `ColorScheme`-driven colors so the scale
-/// tracks light/dark automatically.
-TextTheme veloraTextTheme({String? fontFamily}) {
-  TextStyle s(double size, FontWeight weight, double tracking, double height) {
+/// height, so it works on the platform default face and adopts brand faces
+/// when supplied. [fontFamily] is the body/label workhorse; [displayFontFamily]
+/// is the distinctive voice used on the large display/headline/title-large
+/// styles (falling back to [fontFamily] when null). [buildVeloraTheme] defaults
+/// both to Velora's bundled Inter + Space Grotesk. Colors are *not* set here;
+/// [buildVeloraTheme] applies `ColorScheme`-driven colors so the scale tracks
+/// light/dark automatically.
+TextTheme veloraTextTheme({String? fontFamily, String? displayFontFamily}) {
+  final displayFamily = displayFontFamily ?? fontFamily;
+
+  TextStyle s(
+    double size,
+    FontWeight weight,
+    double tracking,
+    double height, {
+    bool display = false,
+  }) {
     return TextStyle(
-      fontFamily: fontFamily,
+      fontFamily: display ? displayFamily : fontFamily,
       fontSize: size,
       fontWeight: weight,
       letterSpacing: tracking,
@@ -33,19 +44,20 @@ TextTheme veloraTextTheme({String? fontFamily}) {
   const regular = FontWeight.w400;
 
   return TextTheme(
-    // Display — big marketing/hero type. Tight negative tracking is the
-    // hallmark of a considered display face.
-    displayLarge: s(57, bold, -1.0, 1.12),
-    displayMedium: s(45, bold, -0.5, 1.16),
-    displaySmall: s(36, bold, -0.25, 1.22),
+    // Display — big marketing/hero type in the display voice. Tight negative
+    // tracking is the hallmark of a considered display face.
+    displayLarge: s(57, bold, -1.0, 1.12, display: true),
+    displayMedium: s(45, bold, -0.5, 1.16, display: true),
+    displaySmall: s(36, bold, -0.25, 1.22, display: true),
 
-    // Headlines — section and screen titles.
-    headlineLarge: s(32, bold, -0.5, 1.25),
-    headlineMedium: s(28, bold, -0.4, 1.29),
-    headlineSmall: s(24, bold, -0.25, 1.33),
+    // Headlines — section and screen titles, also in the display voice.
+    headlineLarge: s(32, bold, -0.5, 1.25, display: true),
+    headlineMedium: s(28, bold, -0.4, 1.29, display: true),
+    headlineSmall: s(24, bold, -0.25, 1.33, display: true),
 
-    // Titles — card headers, list headers, app-bar title.
-    titleLarge: s(22, bold, -0.2, 1.27),
+    // Titles — titleLarge stays in the display voice (app-bar/hero titles);
+    // the smaller titles switch to the body face for legibility.
+    titleLarge: s(22, bold, -0.2, 1.27, display: true),
     titleMedium: s(16, semi, 0.0, 1.5),
     titleSmall: s(14, semi, 0.1, 1.43),
 
