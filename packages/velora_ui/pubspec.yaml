@@ -17,3 +17,14 @@ dev_dependencies:
   flutter_lints: ^6.0.0
 
 flutter:
+  # Velora's brand faces (both SIL OFL 1.1 — licenses in assets/fonts/).
+  # Space Grotesk carries the distinctive display voice; Inter is the
+  # workhorse for body/label legibility. Both are variable fonts, so a
+  # single asset covers every weight the type scale asks for.
+  fonts:
+    - family: SpaceGrotesk
+      fonts:
+        - asset: assets/fonts/SpaceGrotesk-Variable.ttf
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Variable.ttf
