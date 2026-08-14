@@ -97,4 +97,29 @@ void main() {
 
     expect(after, isNot(equals(before)));
   });
+
+  testWidgets('a nav-section tab switches the selected view via setState', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const GalleryApp());
+    await tester.pump();
+
+    final listView = find.byType(ListView);
+    final monthTabFinder = find.text('Month');
+
+    await _scrollUntilFound(tester, monthTabFinder, listView);
+    expect(monthTabFinder, findsOneWidget);
+
+    await tester.ensureVisible(monthTabFinder);
+    await tester.pump();
+
+    expect(find.text('Showing: Week'), findsOneWidget);
+    expect(find.text('Showing: Month'), findsNothing);
+
+    await tester.tap(monthTabFinder);
+    await tester.pump();
+
+    expect(find.text('Showing: Month'), findsOneWidget);
+    expect(find.text('Showing: Week'), findsNothing);
+  });
 }

@@ -4,11 +4,12 @@ import 'package:velora_ui/velora_ui.dart';
 import 'sections/display_section.dart';
 import 'sections/inputs_section.dart';
 import 'sections/layout_section.dart';
+import 'sections/nav_section.dart';
 
 void main() => runApp(const GalleryApp());
 
 /// The velora_ui component gallery — a single scrollable screen showcasing
-/// every Layer 2-4 component, with a light/dark toggle and an
+/// every Layer 2-5 component, with a light/dark toggle and an
 /// aurora/meadow theme-preset toggle in the app bar.
 class GalleryApp extends StatefulWidget {
   const GalleryApp({super.key});
@@ -123,6 +124,10 @@ class GalleryHomePage extends StatelessWidget {
             const VeloraDivider(),
             SizedBox(height: tokens.spacingLg),
             const LayoutSection(),
+            SizedBox(height: tokens.spacingLg),
+            const VeloraDivider(),
+            SizedBox(height: tokens.spacingLg),
+            const NavSection(),
             SizedBox(height: tokens.spacingXl),
           ],
         ),
