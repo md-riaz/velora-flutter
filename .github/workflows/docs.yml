@@ -59,9 +59,12 @@ jobs:
         working-directory: packages/velora
         run: dart doc --output=../../_site/api
 
+      # The landing page advertises all four demos as live links, so a missing
+      # artifact must fail the deploy rather than publish a 404ing link. Each
+      # download is fail-hard (`if_no_artifact_found: fail`, no
+      # `continue-on-error`); on the normal path the triggering build succeeded
+      # and produced every artifact, so this only trips on a genuine anomaly.
       - name: Download web demo artifacts
-        id: demo-check
-        continue-on-error: true
         uses: dawidd6/action-download-artifact@v6
         with:
           workflow: build.yml
@@ -71,23 +74,12 @@ jobs:
           # successful build for a manual dispatch (empty run_id).
           run_id: ${{ github.event.workflow_run.id }}
           search_artifacts: true
-          if_no_artifact_found: warn
+          if_no_artifact_found: fail
 
-      # Guard on the file actually existing: with `if_no_artifact_found: warn`
-      # the download step still succeeds when no artifact is present, so keying
-      # off its outcome would run sed against a missing file and abort the
-      # deploy. Skip gracefully instead.
       - name: Fix demo base href for Pages
-        run: |
-          if [ -f _site/demo/index.html ]; then
-            sed -i 's|<base href="/claude_clone/">|<base href="/velora-flutter/demo/">|' _site/demo/index.html
-          else
-            echo "No demo artifact downloaded — skipping base-href rewrite."
-          fi
+        run: sed -i 's|<base href="/claude_clone/">|<base href="/velora-flutter/demo/">|' _site/demo/index.html
 
       - name: Download gallery web artifacts
-        id: gallery-check
-        continue-on-error: true
         uses: dawidd6/action-download-artifact@v6
         with:
           workflow: build.yml
@@ -95,15 +87,36 @@ jobs:
           path: _site/gallery
           run_id: ${{ github.event.workflow_run.id }}
           search_artifacts: true
-          if_no_artifact_found: warn
+          if_no_artifact_found: fail
 
       - name: Fix gallery base href for Pages
-        run: |
-          if [ -f _site/gallery/index.html ]; then
-            sed -i 's|<base href="/velora-ui-gallery/">|<base href="/velora-flutter/gallery/">|' _site/gallery/index.html
-          else
-            echo "No gallery artifact downloaded — skipping base-href rewrite."
-          fi
+        run: sed -i 's|<base href="/velora-ui-gallery/">|<base href="/velora-flutter/gallery/">|' _site/gallery/index.html
+
+      - name: Download chat web artifacts
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: build.yml
+          name: velora-chat-web
+          path: _site/chat
+          run_id: ${{ github.event.workflow_run.id }}
+          search_artifacts: true
+          if_no_artifact_found: fail
+
+      - name: Fix chat base href for Pages
+        run: sed -i 's|<base href="/velora-chat/">|<base href="/velora-flutter/chat/">|' _site/chat/index.html
+
+      - name: Download catalog web artifacts
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: build.yml
+          name: velora-catalog-web
+          path: _site/catalog
+          run_id: ${{ github.event.workflow_run.id }}
+          search_artifacts: true
+          if_no_artifact_found: fail
+
+      - name: Fix catalog base href for Pages
+        run: sed -i 's|<base href="/velora-catalog/">|<base href="/velora-flutter/catalog/">|' _site/catalog/index.html
 
       - name: Copy landing page
         run: cp docs/index.html _site/index.html
