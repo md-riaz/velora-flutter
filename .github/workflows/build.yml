@@ -126,6 +126,19 @@ jobs:
         working-directory: examples/velora_chat
         run: flutter pub get
 
+      # velora_db's web executor (drift WasmDatabase) fetches sqlite3.wasm and
+      # drift_worker.dart.js at runtime, so they must sit next to the app or the
+      # deployed demo 404s them and fails to boot. Copy both from the resolved
+      # drift package (its bundled sqlite3.wasm is byte-identical to drift's
+      # release asset, and drift_worker.js is the prebuilt compiled worker) so
+      # the build is offline and version-locked — no drift_dev/codegen needed.
+      - name: Bundle drift web assets
+        working-directory: examples/velora_chat
+        run: |
+          DRIFT_ROOT=$(python3 -c "import json; c=json.load(open('.dart_tool/package_config.json')); u=next(p['rootUri'] for p in c['packages'] if p['name']=='drift'); print(u[7:] if u.startswith('file://') else u)")
+          cp "$DRIFT_ROOT/extension/devtools/build/sqlite3.wasm" web/sqlite3.wasm
+          cp "$DRIFT_ROOT/drift_worker.js" web/drift_worker.dart.js
+
       - name: Build web
         working-directory: examples/velora_chat
         run: flutter build web --release --base-href /velora-chat/
@@ -156,6 +169,16 @@ jobs:
       - name: Install dependencies
         working-directory: examples/velora_catalog
         run: flutter pub get
+
+      # See the chat job: velora_db's web executor needs sqlite3.wasm and
+      # drift_worker.dart.js served alongside the app, copied from the resolved
+      # drift package so the build stays offline and version-locked.
+      - name: Bundle drift web assets
+        working-directory: examples/velora_catalog
+        run: |
+          DRIFT_ROOT=$(python3 -c "import json; c=json.load(open('.dart_tool/package_config.json')); u=next(p['rootUri'] for p in c['packages'] if p['name']=='drift'); print(u[7:] if u.startswith('file://') else u)")
+          cp "$DRIFT_ROOT/extension/devtools/build/sqlite3.wasm" web/sqlite3.wasm
+          cp "$DRIFT_ROOT/drift_worker.js" web/drift_worker.dart.js
 
       - name: Build web
         working-directory: examples/velora_catalog
