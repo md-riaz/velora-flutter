@@ -105,6 +105,46 @@ jobs:
             echo "No gallery artifact downloaded — skipping base-href rewrite."
           fi
 
+      - name: Download chat web artifacts
+        id: chat-check
+        continue-on-error: true
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: build.yml
+          name: velora-chat-web
+          path: _site/chat
+          run_id: ${{ github.event.workflow_run.id }}
+          search_artifacts: true
+          if_no_artifact_found: warn
+
+      - name: Fix chat base href for Pages
+        run: |
+          if [ -f _site/chat/index.html ]; then
+            sed -i 's|<base href="/velora-chat/">|<base href="/velora-flutter/chat/">|' _site/chat/index.html
+          else
+            echo "No chat artifact downloaded — skipping base-href rewrite."
+          fi
+
+      - name: Download catalog web artifacts
+        id: catalog-check
+        continue-on-error: true
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: build.yml
+          name: velora-catalog-web
+          path: _site/catalog
+          run_id: ${{ github.event.workflow_run.id }}
+          search_artifacts: true
+          if_no_artifact_found: warn
+
+      - name: Fix catalog base href for Pages
+        run: |
+          if [ -f _site/catalog/index.html ]; then
+            sed -i 's|<base href="/velora-catalog/">|<base href="/velora-flutter/catalog/">|' _site/catalog/index.html
+          else
+            echo "No catalog artifact downloaded — skipping base-href rewrite."
+          fi
+
       - name: Copy landing page
         run: cp docs/index.html _site/index.html
 

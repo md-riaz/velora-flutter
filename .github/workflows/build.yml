@@ -106,6 +106,68 @@ jobs:
           path: examples/velora_ui_gallery/build/web
           retention-days: 30
 
+  build-chat-web:
+    name: Build Chat Web App
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.9
+          cache: true
+
+      - name: Install dependencies
+        working-directory: examples/velora_chat
+        run: flutter pub get
+
+      - name: Build web
+        working-directory: examples/velora_chat
+        run: flutter build web --release --base-href /velora-chat/
+
+      - name: Upload web build
+        uses: actions/upload-artifact@v4
+        with:
+          name: velora-chat-web
+          path: examples/velora_chat/build/web
+          retention-days: 30
+
+  build-catalog-web:
+    name: Build Catalog Web App
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.9
+          cache: true
+
+      - name: Install dependencies
+        working-directory: examples/velora_catalog
+        run: flutter pub get
+
+      - name: Build web
+        working-directory: examples/velora_catalog
+        run: flutter build web --release --base-href /velora-catalog/
+
+      - name: Upload web build
+        uses: actions/upload-artifact@v4
+        with:
+          name: velora-catalog-web
+          path: examples/velora_catalog/build/web
+          retention-days: 30
+
   release:
     name: Create Release
     if: github.event_name == 'workflow_dispatch'
