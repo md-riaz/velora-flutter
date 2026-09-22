@@ -122,4 +122,30 @@ void main() {
     expect(find.text('Showing: Month'), findsOneWidget);
     expect(find.text('Showing: Week'), findsNothing);
   });
+
+  testWidgets('a feedback-section toast button shows its toast message', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const GalleryApp());
+    await tester.pump();
+
+    final listView = find.byType(ListView);
+    final successToastButtonFinder = find.text('Show success');
+
+    await _scrollUntilFound(tester, successToastButtonFinder, listView);
+    expect(successToastButtonFinder, findsOneWidget);
+
+    await tester.ensureVisible(successToastButtonFinder);
+    await tester.pump();
+
+    await tester.tap(successToastButtonFinder);
+    // A couple of fixed pumps let the snack bar's enter animation build
+    // without waiting for "no more frames" — the toast auto-dismisses after
+    // its duration, so asserting must happen right after pumping, not after
+    // settling.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(find.text('Saved successfully'), findsOneWidget);
+  });
 }
