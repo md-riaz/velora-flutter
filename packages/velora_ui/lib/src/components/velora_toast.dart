@@ -18,9 +18,10 @@ abstract final class VeloraToast {
   /// When [status] is given, a leading icon (its default status icon, or
   /// [icon] to override it) is tinted with the status's color; with no
   /// [status], [icon] (if given) renders in the theme's neutral content
-  /// color. Pass [actionLabel]/[onAction] to add a trailing
-  /// [SnackBarAction]. [duration] controls how long the toast stays visible
-  /// before auto-dismissing (default 4 seconds).
+  /// color. Pass **both** [actionLabel] and [onAction] to add a trailing
+  /// [SnackBarAction] — an action with a label but no handler is omitted
+  /// rather than shown as a no-op. [duration] controls how long the toast
+  /// stays visible before auto-dismissing (default 4 seconds).
   static ScaffoldFeatureController<SnackBar, SnackBarClosedReason> show(
     BuildContext context, {
     required String message,
@@ -51,9 +52,11 @@ abstract final class VeloraToast {
             Flexible(child: Text(message)),
           ],
         ),
-        action: actionLabel == null
-            ? null
-            : SnackBarAction(label: actionLabel, onPressed: onAction ?? () {}),
+        // An action needs a callback to mean anything — only render one when
+        // both the label and handler are given, rather than a no-op button.
+        action: (actionLabel != null && onAction != null)
+            ? SnackBarAction(label: actionLabel, onPressed: onAction)
+            : null,
       ),
     );
   }

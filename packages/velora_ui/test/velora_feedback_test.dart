@@ -308,6 +308,21 @@ void main() {
 
       expect(tapped, isTrue);
     });
+
+    testWidgets('omits the action when actionLabel has no onAction', (
+      tester,
+    ) async {
+      final context = await pumpWithContext(tester);
+
+      VeloraToast.show(context, message: 'No handler', actionLabel: 'Retry');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('No handler'), findsOneWidget);
+      // A label with no handler would be a no-op button, so no action renders.
+      expect(find.byType(SnackBarAction), findsNothing);
+      expect(find.text('Retry'), findsNothing);
+    });
   });
 
   group('VeloraTooltip', () {
