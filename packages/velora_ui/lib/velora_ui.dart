@@ -59,15 +59,33 @@
 ///   screen (not top-level navigation).
 /// - [VeloraScaffold] — a thin convenience [Scaffold] wrapper that wires up
 ///   an app bar, body, bottom nav, and FAB in one widget.
+///
+/// **Layer 6** rounds out the kit with feedback and overlays — the pieces
+/// that interrupt or float above the current screen rather than sit inline
+/// in it. Like the dialog theme Layer 1 already set up, these lean heavily
+/// on `buildVeloraTheme`'s sub-themes (`dialogTheme`, `snackBarTheme`, and
+/// the new `tooltipTheme`/`bottomSheetTheme`) so the chrome stays token-driven
+/// rather than re-styled per call site:
+///
+/// - [VeloraDialog] — a token-styled modal surface, with [VeloraDialog.show]
+///   and [VeloraDialog.confirm] helpers for the common cases.
+/// - [VeloraBottomSheet] — static helpers for a token-styled modal bottom
+///   sheet with an optional drag handle and title header.
+/// - [VeloraToast] — static helpers for transient [ScaffoldMessenger]
+///   feedback, with an optional semantic [VeloraStatus] icon and action.
+/// - [VeloraTooltip] — a thin wrapper around Material's `Tooltip`, styled by
+///   the theme's `tooltipTheme`.
 library;
 
 export 'src/components/velora_alert.dart';
 export 'src/components/velora_avatar.dart';
 export 'src/components/velora_badge.dart';
+export 'src/components/velora_bottom_sheet.dart';
 export 'src/components/velora_button.dart';
 export 'src/components/velora_card.dart';
 export 'src/components/velora_checkbox.dart';
 export 'src/components/velora_chip.dart';
+export 'src/components/velora_dialog.dart';
 export 'src/components/velora_divider.dart';
 export 'src/components/velora_empty_state.dart';
 export 'src/components/velora_list_tile.dart';
@@ -84,6 +102,8 @@ export 'src/components/velora_status.dart';
 export 'src/components/velora_switch.dart';
 export 'src/components/velora_tabs.dart';
 export 'src/components/velora_text_field.dart';
+export 'src/components/velora_toast.dart';
+export 'src/components/velora_tooltip.dart';
 export 'src/theme/velora_theme.dart';
 export 'src/theme/velora_tokens_context.dart';
 export 'src/theme/velora_typography.dart';
