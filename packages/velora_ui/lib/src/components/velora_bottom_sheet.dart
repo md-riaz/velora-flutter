@@ -86,7 +86,12 @@ abstract final class VeloraBottomSheet {
                     Divider(height: 1, color: scheme.outlineVariant),
                     SizedBox(height: tokens.spacingMd),
                   ],
-                  Builder(builder: builder),
+                  // A loose Flexible slot bounds the content's height to the
+                  // sheet, so a scrollable builder (e.g. a ListView, the point
+                  // of isScrollControlled) gets bounded constraints instead of
+                  // asserting on unbounded height, while small content still
+                  // sizes to itself under mainAxisSize.min.
+                  Flexible(child: Builder(builder: builder)),
                 ],
               ),
             ),

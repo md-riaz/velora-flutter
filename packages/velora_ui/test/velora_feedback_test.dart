@@ -214,6 +214,30 @@ void main() {
 
       expect(closed, isTrue);
     });
+
+    testWidgets('hosts a scrollable ListView builder without overflow', (
+      tester,
+    ) async {
+      final context = await pumpWithContext(tester);
+
+      unawaited(
+        VeloraBottomSheet.show<void>(
+          context,
+          isScrollControlled: true,
+          builder: (_) => ListView(
+            shrinkWrap: false,
+            children: [for (var i = 0; i < 40; i++) Text('Row $i')],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // The Flexible slot bounds the ListView's height to the sheet, so it
+      // lays out (and its first rows build) instead of asserting on unbounded
+      // height. No exception is the assertion here.
+      expect(tester.takeException(), isNull);
+      expect(find.text('Row 0'), findsOneWidget);
+    });
   });
 
   group('VeloraToast.show', () {
@@ -243,6 +267,25 @@ void main() {
 
       expect(find.text('Upload failed'), findsOneWidget);
       expect(find.byIcon(VeloraStatus.error.icon), findsOneWidget);
+    });
+
+    testWidgets('an explicit icon overrides the status default glyph', (
+      tester,
+    ) async {
+      final context = await pumpWithContext(tester);
+
+      VeloraToast.show(
+        context,
+        message: 'Synced',
+        status: VeloraStatus.success,
+        icon: Icons.cloud_done_outlined,
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // The explicit icon wins; the status's default glyph is not shown.
+      expect(find.byIcon(Icons.cloud_done_outlined), findsOneWidget);
+      expect(find.byIcon(VeloraStatus.success.icon), findsNothing);
     });
 
     testWidgets('shows an action and fires onAction when tapped', (

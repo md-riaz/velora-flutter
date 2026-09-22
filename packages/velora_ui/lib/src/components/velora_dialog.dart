@@ -104,18 +104,28 @@ class VeloraDialog extends StatelessWidget {
       title: title,
       message: message,
       status: destructive ? VeloraStatus.error : null,
+      // Build the buttons through a Builder so they pop via the dialog
+      // route's own context, not the caller's. `showDialog` presents on the
+      // root navigator, so popping `Navigator.of(context)` (the caller's
+      // nearest navigator) could dismiss an inner route — or nothing — while
+      // leaving the dialog up; the Builder's context resolves to the
+      // navigator that actually pushed the dialog.
       actions: [
-        VeloraButton(
-          label: cancelLabel,
-          variant: VeloraButtonVariant.ghost,
-          onPressed: () => Navigator.of(context).pop(false),
+        Builder(
+          builder: (dialogContext) => VeloraButton(
+            label: cancelLabel,
+            variant: VeloraButtonVariant.ghost,
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+          ),
         ),
-        VeloraButton(
-          label: confirmLabel,
-          variant: destructive
-              ? VeloraButtonVariant.danger
-              : VeloraButtonVariant.primary,
-          onPressed: () => Navigator.of(context).pop(true),
+        Builder(
+          builder: (dialogContext) => VeloraButton(
+            label: confirmLabel,
+            variant: destructive
+                ? VeloraButtonVariant.danger
+                : VeloraButtonVariant.primary,
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+          ),
         ),
       ],
     );

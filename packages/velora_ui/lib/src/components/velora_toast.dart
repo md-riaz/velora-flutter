@@ -31,7 +31,10 @@ abstract final class VeloraToast {
     Duration duration = const Duration(seconds: 4),
   }) {
     final tokens = context.veloraTokens;
-    final leadingIcon = status?.icon ?? icon;
+    // `icon` is documented as an override, so it wins over the status's
+    // default glyph (matching VeloraAlert); the tint still comes from
+    // `status` either way.
+    final leadingIcon = icon ?? status?.icon;
     final iconColor = status?.colors(context).color;
 
     final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
