@@ -1,6 +1,9 @@
 ---
 name: ponytail
-description: Lazy-senior-dev code-minimization ruleset. Before writing code, climb a ladder — YAGNI, reuse what's already in the codebase, stdlib, native platform features, an already-installed dependency, one line, then minimal new code. Prefer deletion over addition, fix bugs at the root (the shared function, not each caller), and leave one runnable check behind non-trivial logic. Invoke before implementing any feature, fix, or refactor to keep the diff to the shortest thing that works. Vendored from github.com/DietrichGebert/ponytail (AGENTS.md, applied as a repo skill).
+description: Lazy-senior-dev code-minimization ruleset. Before writing code, climb a ladder — YAGNI, reuse what's already in the codebase, stdlib, native platform features, an already-installed dependency, one line, then minimal new code. Prefer deletion over addition, fix bugs at the root (the shared function, not each caller), and leave one runnable check behind non-trivial logic. Invoke with /ponytail before implementing any feature, fix, or refactor to keep the diff to the shortest thing that works. Vendored from github.com/DietrichGebert/ponytail (AGENTS.md, applied as a repo skill).
+# Opt-in: /ponytail invokes it, but the model never auto-loads it (that would
+# make it always-on rather than deliberate). Remove this to let Claude pick it up.
+disable-model-invocation: true
 ---
 
 # Ponytail — lazy senior dev mode
