@@ -125,9 +125,17 @@ The core (`package:velora`) stays deliberately small — auth, API client, permi
 
     [→ velora_local_notifications](packages/local-notifications.md)
 
+-   :material-palette-outline:{ .lg } **velora_ui**
+
+    ---
+
+    A token-first design system: theme and tokens plus components for display, forms, layout, navigation, and feedback.
+
+    [→ velora_ui](packages/ui.md)
+
 </div>
 
-`velora_offline`, `velora_db`, and `velora_env` are `VeloraPlugin`s, spliced automatically into `Velora.boot(plugins: [...])`; `velora_fcm` and `velora_local_notifications` wire via named `pushAdapter:`/`localAdapter:` boot arguments instead — see [Plugins →](plugins.md) for why. Either way, adding one to your app starts the same way:
+`velora_offline`, `velora_db`, and `velora_env` are `VeloraPlugin`s, spliced automatically into `Velora.boot(plugins: [...])`; `velora_fcm` and `velora_local_notifications` wire via named `pushAdapter:`/`localAdapter:` boot arguments instead — see [Plugins →](plugins.md) for why. `velora_ui` is applied through your app's `theme:`. Either way, adding one to your app starts the same way:
 
 ```bash
 velora install <package>

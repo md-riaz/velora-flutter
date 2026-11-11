@@ -24,6 +24,7 @@ flutter upgrade            # or install Flutter >=3.47.0 from flutter.dev
 flutter --version          # Flutter 3.47.x • Dart 3.13.x
 tool/check_baseline.sh     # verifies the SDKs and every pubspec.yaml
 tool/pub_get_all.sh        # resolves every package and example
+tool/check_docs.sh         # verifies docs against shipped code
 ```
 
 `tool/check_baseline.sh` checks three things: the active Flutter/Dart versions, that every tracked `pubspec.yaml` declares the constraints above (the list comes from `git ls-files`, so new packages are covered automatically), and that no file imports a deprecated desktop `legacy.dart` library (`window_manager`, `tray_manager`, `screen_retriever`).

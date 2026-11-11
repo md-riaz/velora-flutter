@@ -152,6 +152,22 @@ analyzer:
 
 Run `flutter analyze` — violations surface as warnings/errors at the call site.
 
+## Documentation is part of the change
+
+Docs must match shipped code; `tool/check_docs.sh` enforces it in CI. A PR that changes a public contract updates the matching registry and docs in the same change:
+
+| Change | Update |
+|---|---|
+| New, renamed, or removed `velora_ui` export | `packages/velora_ui/components.json` and `docs/packages/ui.md` |
+| New CLI command or flag | `veloraCommands` in `packages/velora_cli/lib/velora_cli.dart` |
+| New installable package | `veloraPackageCatalog`, a `docs/packages/` page, the `mkdocs.yml` nav, a package `README.md` |
+| New generated file or `.ai/` template | `docs/scaffolding.md` / `docs/ai-ready.md` |
+| Constructor, enum, or behavior change in a documented API | the page that documents it |
+| Architecture change | `docs/architecture.md` (link to it; do not restate it elsewhere) |
+| Deprecation or removal | the docs above, plus `CHANGELOG.md` |
+
+Then run `tool/check_docs.sh --write` and commit the regenerated tables. Blocks between `<!-- generated:… -->` markers are never edited by hand. Describe what ships, not what is planned; put plans in `docs/roadmap.md` under *Later*.
+
 ## Verification
 
 Run focused checks for touched packages when code changes. Docs-only changes do not require analyze/test commands unless specifically requested.
@@ -160,6 +176,7 @@ The workspace baseline is Flutter >=3.47.0 / Dart >=3.13.0 (see `docs/toolchain.
 
 ```sh
 tool/check_baseline.sh
+tool/check_docs.sh
 flutter analyze packages/velora
 flutter analyze examples/claude_clone
 dart analyze packages/velora_cli

@@ -24,7 +24,20 @@ Requires Flutter 3.47.0+ / Dart 3.13.0+ — see [Toolchain baseline](docs/toolch
 - CRUD module scaffolding and conventions for controller -> service -> repository -> data source.
 - Notification module scaffolding with remote push, local notification, in-app notification center, and noop/mock adapter conventions.
 - AI-ready generated app context in `.ai/`.
-- Official installable packages via `velora install <package>`: `velora_offline` (offline-first data layer), `velora_db` (reactive local database), `velora_env` (env config/flavors), plus `velora_fcm` / `velora_local_notifications` for push and on-device notifications.
+- Official installable packages via `velora install <package>` — see [Installable packages](#installable-packages).
+
+## Installable packages
+
+<!-- generated:installable-packages source=packages/velora_cli/lib/velora_cli.dart — do not edit; run tool/check_docs.sh --write -->
+| Package | What it is | Wiring | Docs |
+|---|---|---|---|
+| `velora_offline` | Offline-first data layer: connectivity, write outbox, optimistic repository over velora_db. | `plugins: [VeloraOfflinePlugin()]` (automatic) | [offline](docs/packages/offline.md) |
+| `velora_db` | Reactive local database on drift (native and web WASM SQLite). | `plugins: [VeloraDbPlugin()]` (automatic) | [db](docs/packages/db.md) |
+| `velora_env` | `.env` config and dev/staging/prod flavors. | `plugins: [VeloraEnvPlugin()]` (automatic) | [env](docs/packages/env.md) |
+| `velora_fcm` | Firebase Cloud Messaging push adapter. | `pushAdapter: VeloraFcmAdapter()` (manual) | [fcm](docs/packages/fcm.md) |
+| `velora_local_notifications` | On-device local notifications adapter. | `localAdapter: VeloraLocalNotificationsAdapter()` (manual) | [local-notifications](docs/packages/local-notifications.md) |
+| `velora_ui` | Token-first design system: theme, tokens, and components. | `theme: VeloraTheme.light()` on your app (manual) | [ui](docs/packages/ui.md) |
+<!-- /generated:installable-packages -->
 
 ## Architecture rule
 
@@ -44,11 +57,13 @@ Run CLI commands from `packages/velora_cli` during local development:
 cd packages/velora_cli
 dart run velora_cli doctor
 dart run velora_cli new admin_panel
-dart run velora_cli make:auth
+dart run velora_cli make:auth --sanctum
 dart run velora_cli make:module users --crud
 dart run velora_cli make:notifications
+dart run velora_cli make:pwa
 dart run velora_cli install:push --fcm
 dart run velora_cli install:push --local
+dart run velora_cli install velora_db
 ```
 
 ## Docs

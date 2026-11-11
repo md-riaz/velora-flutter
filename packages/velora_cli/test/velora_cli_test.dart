@@ -923,6 +923,42 @@ Future<void> main() async {
     expect(File('${app.path}/lib/main.dart').readAsStringSync(), originalMain);
   });
 
+  group('registries', () {
+    test('help lists every registered command and installable package', () {
+      final help = veloraHelpText();
+      for (final command in veloraCommands) {
+        expect(help, contains(command.usage));
+        expect(help, contains(command.summary));
+      }
+      for (final name in veloraPackageCatalog.keys) {
+        expect(help, contains(name));
+      }
+    });
+
+    test('`velora help` prints the registry-driven help', () async {
+      final result = await Process.run(Platform.resolvedExecutable, <String>[
+        'bin/velora_cli.dart',
+        'help',
+      ]);
+      expect(result.exitCode, 0, reason: result.stderr.toString());
+      expect(result.stdout.toString(), veloraHelpText());
+    });
+
+    test('every installable package carries docs metadata', () {
+      for (final package in veloraPackageCatalog.values) {
+        expect(package.summary, isNotEmpty, reason: package.name);
+        expect(package.wiring, isNotEmpty, reason: package.name);
+        expect(package.docs, startsWith('docs/packages/'));
+      }
+    });
+
+    test('velora_ui notes do not claim components are unshipped', () {
+      final notes = veloraPackageCatalog['velora_ui']!.notes.join('\n');
+      expect(notes, isNot(contains('not shipped')));
+      expect(notes, contains('docs/packages/ui.md'));
+    });
+  });
+
   group('toolchain baseline', () {
     test('parseDartVersion reads Platform.version', () {
       expect(

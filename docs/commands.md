@@ -2,6 +2,23 @@
 
 Run commands from the package or generated app directory they target. No project-wide command is required for MVP setup.
 
+## CLI commands
+
+`dart run velora_cli help` prints the same list.
+
+<!-- generated:cli-commands source=packages/velora_cli/lib/velora_cli.dart — do not edit; run tool/check_docs.sh --write -->
+| Command | What it does |
+|---|---|
+| `velora new <name>` | Create a new Velora app skeleton. |
+| `velora make:module <name> [--crud]` | Generate a module: factory, routes, model, data source, repository, service, controller, and pages. |
+| `velora make:auth --sanctum` | Scaffold the login and auth flow. |
+| `velora make:notifications` | Generate the in-app notification center module. |
+| `velora make:pwa` | Write a production web manifest and an offline service worker. |
+| `velora install:push --fcm \| --local` | Write FCM or local-notification setup placeholders and reminders. |
+| `velora install <package> [--no-pub-get] [--no-wire]` | Add an official Velora package and wire it into Velora.boot() when it can be. |
+| `velora doctor` | Check the velora dependency, Velora.boot() wiring, unwired plugins, and the Flutter/Dart baseline. |
+<!-- /generated:cli-commands -->
+
 ## Runtime package
 
 ```bash
@@ -63,7 +80,7 @@ flutter test
 `install <package>` is the Laravel-style "install a package and it's wired for you" step for the Velora plugin ecosystem:
 
 1. Adds the package as a dependency in `pubspec.yaml` (idempotent — running it again does not duplicate the entry).
-2. Wires the plugin into `lib/main.dart` by adding the package import and inserting the plugin expression into the `plugins: [...]` list passed to `Velora.boot(...)` (creating the list if `Velora.boot` has no `plugins:` argument yet). Also idempotent.
+2. For `VeloraPlugin` packages, wires the plugin into `lib/main.dart` by adding the package import and inserting the plugin expression into the `plugins: [...]` list passed to `Velora.boot(...)` (creating the list if `Velora.boot` has no `plugins:` argument yet). Also idempotent. Other packages are not wired; their manual steps are printed instead.
 3. Runs `flutter pub get` (falling back to `dart pub get`) to fetch the new dependency, unless `--no-pub-get` is passed.
 
 Flags:
@@ -71,7 +88,20 @@ Flags:
 - `--no-wire` — only add the pubspec dependency; skip editing `lib/main.dart`.
 - `--no-pub-get` — skip running `pub get` (useful in CI or when offline).
 
-Currently available packages: `velora_offline` (see `packages/velora_offline`). Until it is published to pub.dev, override it with a git or path dependency after installing.
+Installable packages:
+
+<!-- generated:installable-packages source=packages/velora_cli/lib/velora_cli.dart — do not edit; run tool/check_docs.sh --write -->
+| Package | What it is | Wiring | Docs |
+|---|---|---|---|
+| `velora_offline` | Offline-first data layer: connectivity, write outbox, optimistic repository over velora_db. | `plugins: [VeloraOfflinePlugin()]` (automatic) | [offline](packages/offline.md) |
+| `velora_db` | Reactive local database on drift (native and web WASM SQLite). | `plugins: [VeloraDbPlugin()]` (automatic) | [db](packages/db.md) |
+| `velora_env` | `.env` config and dev/staging/prod flavors. | `plugins: [VeloraEnvPlugin()]` (automatic) | [env](packages/env.md) |
+| `velora_fcm` | Firebase Cloud Messaging push adapter. | `pushAdapter: VeloraFcmAdapter()` (manual) | [fcm](packages/fcm.md) |
+| `velora_local_notifications` | On-device local notifications adapter. | `localAdapter: VeloraLocalNotificationsAdapter()` (manual) | [local-notifications](packages/local-notifications.md) |
+| `velora_ui` | Token-first design system: theme, tokens, and components. | `theme: VeloraTheme.light()` on your app (manual) | [ui](packages/ui.md) |
+<!-- /generated:installable-packages -->
+
+Packages marked *automatic* are `VeloraPlugin`s and get spliced into `plugins: [...]`. Packages marked *manual* only get the pubspec dependency; the command prints the remaining wiring steps. None of these are published to pub.dev yet, so override each with a git or path dependency after installing.
 
 ```bash
 dart run velora_cli install velora_offline

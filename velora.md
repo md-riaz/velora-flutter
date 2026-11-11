@@ -1,3 +1,10 @@
+> **⚠️ Historical planning document.** This is the original implementation
+> blueprint, kept only for history. It predates the shipped framework and
+> conflicts with it in places (DI, package layout, scope). Do not treat it as
+> a current contract. Current sources of truth: [`docs/architecture.md`](docs/architecture.md),
+> [`docs/framework-app-boundary.md`](docs/framework-app-boundary.md), and the
+> rest of [`docs/`](docs/README.md).
+
 Velora Framework — AI Agent Implementation Blueprint
 
 0. Mission

@@ -13,6 +13,12 @@
 - `velora new` generates apps with the baseline `environment` constraints.
 - CI pins Flutter 3.47.9, rejects older toolchains, checks formatting, resolves every package from a clean checkout with enforced lockfiles, and now also tests `velora_cli` and `velora_lints`.
 
+### Docs
+
+- Documentation synced with shipped code: `velora_ui` Layers 4–6, all six installable packages, CLI commands, the `.ai/` files, and package READMEs. `velora.md` is marked historical.
+- `tool/check_docs.sh` fails CI when docs drift from the CLI command registry, the installable-package registry, `packages/velora_ui/components.json`, the SDK baseline, or when a local link or documented path is broken.
+- `velora help` now prints each command's summary and the installable packages.
+
 ### Fixed
 
 - `VeloraMediaService.pickMultiImage` awaits inside its `try`, so a failure while reading a picked file's size honours `rethrowErrors` instead of escaping the handler.

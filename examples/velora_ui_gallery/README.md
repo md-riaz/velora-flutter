@@ -1,10 +1,10 @@
 # velora_ui_gallery
 
 A single-screen, scrollable gallery/showcase app for the `velora_ui` design
-system. It renders every component from Layers 2-4 — buttons, cards, badges,
-chips, alerts, empty states, skeletons, text fields, selects, checkboxes,
-switches, radio groups, avatars, list tiles, section headers, dividers, and
-progress indicators — with realistic, interactive examples.
+system. It renders every component layer the package ships — display
+components, form inputs, layout, navigation, and feedback/overlays — with
+realistic, interactive examples. The component list lives in
+[`docs/packages/ui.md`](../../docs/packages/ui.md).
 
 **▶ Live demo:** <https://md-riaz.github.io/velora-flutter/gallery/>
 
@@ -48,6 +48,10 @@ already has platform folders, skip the `flutter create .` step.
   checkbox, switch, radio group.
 - `lib/sections/layout_section.dart` — Layer 4: avatars, list tiles, section
   header, dividers, progress.
+- `lib/sections/nav_section.dart` — Layer 5: nav bar, nav rail, tabs,
+  scaffold.
+- `lib/sections/feedback_section.dart` — Layer 6: dialogs, bottom sheets,
+  toasts, tooltips.
 - `test/gallery_smoke_test.dart` — a widget-test smoke suite covering
   rendering, the brightness toggle, the preset toggle, and one deep
   interactive control.

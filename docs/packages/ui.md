@@ -8,7 +8,20 @@
 
 `velora_ui` is Velora's own, original design system — **token-first theming**, expressed the Flutter way. It's informed by (not copied from) the architecture surveyed in the internal `velora-ui-design-reference` planning note, but the palette, token taxonomy, and API are entirely Velora's: no external branding, no borrowed theme names.
 
-This package ships two layers today — the **token + theme foundation** (Layer 1) and a **core component set** (Layer 2) built on top of it. What you get:
+The package ships six layers, all exported from `package:velora_ui/velora_ui.dart`:
+
+<!-- generated:ui-layers source=packages/velora_ui/components.json — do not edit; run tool/check_docs.sh --write -->
+| Layer | Focus | Exports |
+|---|---|---|
+| 1 | Tokens & theme | `VeloraTokens`, `VeloraThemePreset`, `buildVeloraTheme`, `VeloraTheme`, `veloraTextTheme`, `VeloraTokensContext` |
+| 2 | Core components | `VeloraButton`, `VeloraButtonVariant`, `VeloraButtonSize`, `VeloraCard`, `VeloraBadge`, `VeloraBadgeStyle`, `VeloraChip`, `VeloraAlert`, `VeloraEmptyState`, `VeloraSkeleton`, `VeloraStatus`, `VeloraStatusColors`, `VeloraStatusResolver` |
+| 3 | Form inputs | `VeloraTextField`, `VeloraSelect`, `VeloraSelectOption`, `VeloraCheckbox`, `VeloraSwitch`, `VeloraRadioGroup`, `VeloraRadioOption` |
+| 4 | Layout & content display | `VeloraAvatar`, `VeloraListTile`, `VeloraSectionHeader`, `VeloraDivider`, `VeloraProgress` |
+| 5 | Navigation & scaffolding | `VeloraNavDestination`, `VeloraNavBar`, `VeloraNavRail`, `VeloraTabs`, `VeloraScaffold` |
+| 6 | Feedback & overlays | `VeloraDialog`, `VeloraBottomSheet`, `VeloraToast`, `VeloraTooltip` |
+<!-- /generated:ui-layers -->
+
+Every component reads its colors, spacing, radius, and motion from the active theme, and depends only on `flutter`. What you get:
 
 **Layer 1 — tokens & theme:**
 
@@ -16,11 +29,18 @@ This package ships two layers today — the **token + theme foundation** (Layer 
 - **`VeloraThemePreset`** — a named Velora brand (a seed color + light/dark `VeloraTokens`), used to build a full Material 3 `ColorScheme` via `ColorScheme.fromSeed`.
 - **`buildVeloraTheme(...)`** — builds a `ThemeData` (Material 3, `useMaterial3: true`) from a preset and a `Brightness`, with the matching `VeloraTokens` attached via `ThemeData.extensions`.
 - **`VeloraTheme.light()` / `VeloraTheme.dark()`** — convenience helpers for the default preset, mirroring the `ClaudeTheme.light()`/`.dark()` shape already used in `examples/claude_clone`.
-- **`context.veloraTokens`** — a `BuildContext` extension getter that reads the `VeloraTokens` off the current `Theme`.
+- **`context.veloraTokens`** — a `BuildContext` extension getter (`VeloraTokensContext`) that reads the `VeloraTokens` off the current `Theme`.
+- **`veloraTextTheme(...)`** — the type scale `buildVeloraTheme` applies; call it directly to build a `TextTheme` with your own `fontFamily`.
 
 **Layer 2 — components:** a focused set of presentational widgets (`VeloraButton`, `VeloraCard`, `VeloraBadge`, `VeloraChip`, `VeloraAlert`, `VeloraEmptyState`, `VeloraSkeleton`) that each read their colors, spacing, radius, and motion from the active theme — see [Components](#components) below.
 
 **Layer 3 — form inputs:** controlled input widgets (`VeloraTextField`, `VeloraSelect`, `VeloraCheckbox`, `VeloraSwitch`, `VeloraRadioGroup`) with a `value` + `onChanged` + `errorText` API that binds to any controller — including a `VeloraFormController` field — see [Form inputs](#form-inputs) below.
+
+**Layer 4 — layout & content display:** `VeloraAvatar`, `VeloraListTile`, `VeloraSectionHeader`, `VeloraDivider`, `VeloraProgress` — see [Layout and content display](#layout-and-content-display).
+
+**Layer 5 — navigation & scaffolding:** `VeloraNavBar`, `VeloraNavRail`, `VeloraTabs`, `VeloraScaffold`, sharing the `VeloraNavDestination` model — see [Navigation and scaffolding](#navigation-and-scaffolding).
+
+**Layer 6 — feedback & overlays:** `VeloraDialog`, `VeloraBottomSheet`, `VeloraToast`, `VeloraTooltip` — see [Feedback and overlays](#feedback-and-overlays).
 
 `velora_ui` is **not** a [Velora plugin](../plugins.md) and doesn't wire into `Velora.boot(plugins: [...])` — it's just Flutter theming, applied via your app's `theme:`/`darkTheme:` arguments (or a `VeloraApp` wrapper, if your app uses one), exactly like any other `ThemeData`.
 
@@ -116,7 +136,7 @@ Every Layer 2 widget is a pure presentational widget that reads its colors, spac
 | `VeloraEmptyState` | A centered "nothing here yet" placeholder. | Muted `icon`, `title`, optional `message`, optional `action` (typically a `VeloraButton`). |
 | `VeloraSkeleton` | A loading placeholder. | Gentle opacity pulse (`motionSlow`); auto-static under `MediaQuery.disableAnimations`; `.circle(...)` and `.text(...)` constructors. |
 
-`VeloraStatus` (`success` / `warning` / `info` / `error`) is the shared enum behind the status-driven components; it resolves to concrete colors from `VeloraTokens` (success/warning/info) or the `ColorScheme` (error) via `status.colors(context)`.
+`VeloraStatus` (`success` / `warning` / `info` / `error`) is the shared enum behind the status-driven components; it resolves to a `VeloraStatusColors` from `VeloraTokens` (success/warning/info) or the `ColorScheme` (error) via `status.colors(context)` (the `VeloraStatusResolver` extension). The button and badge options are the `VeloraButtonVariant`, `VeloraButtonSize`, and `VeloraBadgeStyle` enums.
 
 ```dart
 Column(
@@ -182,14 +202,61 @@ The inputs never reach into the framework themselves — you decide how `value`/
 `onChanged`/`errorText` map to your controller, so the same widgets work with a
 plain `setState`, a GetX controller, or `VeloraFormController`.
 
-## What's next
+## Layout and content display
 
-This package will keep growing in layers:
+Layer 4 arranges other widgets rather than collecting input.
 
-- **Layer 1** laid the foundation — tokens + theme (`VeloraTokens`, `VeloraThemePreset`, `buildVeloraTheme`).
-- **Layer 2** added the core component set (buttons, cards, badges, chips, alerts, empty states, skeletons).
-- **Layer 3** brought the controlled form inputs above (text field, select, checkbox, switch, radio group).
-- **Up next (Layer 4)** — overlays and structure: dialogs/bottom sheets, list tiles, tabs, and a data table, plus a first-class `VeloraFormController` binding helper if the manual wiring above proves worth sugaring.
+| Component | What it's for | Parameters |
+|---|---|---|
+| `VeloraAvatar` | A circular photo, initials, or icon avatar. | `image`, `name` (initials fallback), `size`, `backgroundColor`, `foregroundColor`. |
+| `VeloraListTile` | A token-styled row. | `leading`, `title`, `subtitle`, `trailing`, `onTap`. |
+| `VeloraSectionHeader` | A titled header for a content section. | `title`, `subtitle`, `action` (trailing widget). |
+| `VeloraDivider` | A thin themed separator. | `vertical`, `indent`, `endIndent`, `color`. |
+| `VeloraProgress` | A progress indicator. | `VeloraProgress.linear(value:)` and `VeloraProgress.circular(value:, size:)`; a null `value` is indeterminate. |
+
+## Navigation and scaffolding
+
+Layer 5 is controlled, like the form inputs: the caller owns the selected index and passes it back in. The widgets hold no navigation state and know nothing about routes.
+
+| Component | What it's for | Parameters |
+|---|---|---|
+| `VeloraNavDestination` | Immutable icon + label model shared by the bar and rail. | `icon`, `selectedIcon`, `label`. |
+| `VeloraNavBar` | Bottom navigation for compact layouts. | `destinations`, `selectedIndex`, `onDestinationSelected`. |
+| `VeloraNavRail` | Side navigation for wide layouts. | Same three, plus `leading` and `trailing`. |
+| `VeloraTabs` | A pill segmented control for switching views within a screen. | `tabs`, `selectedIndex`, `onChanged`. |
+| `VeloraScaffold` | A thin `Scaffold` wrapper. | `title`, `actions`, `leading`, `body`, `bottomNavigationBar`, `floatingActionButton`. |
+
+```dart
+VeloraScaffold(
+  title: 'Inbox',
+  body: pages[index],
+  bottomNavigationBar: VeloraNavBar(
+    destinations: const [
+      VeloraNavDestination(icon: Icons.inbox_outlined, label: 'Inbox'),
+      VeloraNavDestination(icon: Icons.settings_outlined, label: 'Settings'),
+    ],
+    selectedIndex: index,
+    onDestinationSelected: (i) => setState(() => index = i),
+  ),
+);
+```
+
+## Feedback and overlays
+
+Layer 6 covers what interrupts or floats above the current screen. The chrome comes from `buildVeloraTheme`'s `dialogTheme`, `snackBarTheme`, `tooltipTheme`, and `bottomSheetTheme`, so apply a Velora theme for these to look right.
+
+| Component | What it's for | API |
+|---|---|---|
+| `VeloraDialog` | A token-styled modal. | Widget with `title`, `message`, `content`, `actions`, `icon`, `status`; `VeloraDialog.show(context, ...)`; `VeloraDialog.confirm(context, ...)` with `confirmLabel`, `cancelLabel`, `destructive`. |
+| `VeloraBottomSheet` | A modal bottom sheet. | `VeloraBottomSheet.show(context, builder:, title:, showDragHandle:, isScrollControlled:, isDismissible:)`. |
+| `VeloraToast` | Transient `ScaffoldMessenger` feedback. | `VeloraToast.show(context, ...)` with an optional `VeloraStatus` icon and action. |
+| `VeloraTooltip` | A themed wrapper around Material's `Tooltip`. | `message`, `child`. |
+
+`VeloraToast` needs a `ScaffoldMessenger` above it and a `BuildContext`. `Velora.toast` in `package:velora` is the separate, context-free facade for controllers; `velora_ui` does not depend on it.
+
+## Not included
+
+No data table, stepper/wizard, or adaptive app shell ships yet. There is also no dedicated `VeloraFormController` binding helper; wire fields by hand as shown under [Form inputs](#form-inputs).
 
 ---
 

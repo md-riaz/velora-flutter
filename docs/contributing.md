@@ -11,3 +11,4 @@ The workspace requires Flutter >=3.47.0 / Dart >=3.13.0. Run `tool/check_baselin
 - Velora builds on GetX; the framework's opinions (constructor injection for feature DI, plain classes for business services) are defaults with rationale, not bans on GetX idioms. See [Velora and GetX](architecture.md#velora-and-getx). Frame guidance the same way — the reason first, the rule second.
 - Keep controllers small and UI-focused.
 - Avoid broad docs or package splits unless requested.
+- Docs ship with the code. A change to a public contract — a `velora_ui` export, a CLI command or flag, an installable package, a generated file, a documented constructor or enum, the architecture, a deprecation — updates the matching registry and page in the same PR. Run `tool/check_docs.sh --write`, commit the regenerated tables, and never hand-edit a `<!-- generated:… -->` block. The full mapping is in `AGENTS.md` under *Documentation is part of the change*.

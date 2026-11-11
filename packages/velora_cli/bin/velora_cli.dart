@@ -45,19 +45,7 @@ void main(List<String> arguments) {
 }
 
 void _printHelp() {
-  stdout.writeln('Velora CLI');
-  stdout.writeln('  velora new <name>');
-  stdout.writeln('  velora make:module <name> [--crud]');
-  stdout.writeln('  velora make:auth --sanctum');
-  stdout.writeln('  velora make:notifications');
-  stdout.writeln('  velora make:pwa');
-  stdout.writeln('  velora install:push --fcm');
-  stdout.writeln('  velora install:push --local');
-  stdout.writeln(
-    '  velora install <package> [--no-pub-get] [--no-wire]  '
-    '(e.g. velora install velora_offline)',
-  );
-  stdout.writeln('  velora doctor');
+  stdout.write(veloraHelpText());
 }
 
 void _new(List<String> args) {

@@ -1,5 +1,18 @@
 # AI Ready
 
-Generated apps include `.ai/project-context.md`, `.ai/architecture.md`, `.ai/conventions.md`, `.ai/api-contract.md`, `.ai/module-map.json`, `.ai/agent-rules.md`, `.ai/tasks.md`, and `.ai/notifications.md`.
+`velora new` writes an `.ai/` directory into the generated app. The files give an AI assistant the app's contract in a few short files:
 
-These files summarize the app contract for AI assistants: Laravel Sanctum REST API, GetX service architecture, module map, notification architecture, conventions, and next tasks. Keep them short and update them when generated modules, API endpoints, permissions, notification adapters, or architecture decisions change. Notification guidance must mention mock/noop mode and keep Firebase/local notification plugins out of views/controllers.
+| File | Written by | Contents |
+|---|---|---|
+| `.ai/project-context.md` | `velora new` | Entry points: `lib/main.dart`, `lib/app/routes`, `lib/app/modules`. |
+| `.ai/architecture.md` | `velora new` | The `Page -> Controller -> Service -> Repository -> RemoteDataSource -> Velora.api` flow and what each layer may do. |
+| `.ai/conventions.md` | `velora new` | Module directory layout and file naming. |
+| `.ai/api-contract.md` | `velora new` | Default auth and RESTful CRUD endpoint shapes. |
+| `.ai/module-map.json` | `velora new` | Modules and their routes. |
+| `.ai/agent-rules.md` | `velora new` | Rules an assistant must follow when editing the app. |
+| `.ai/tasks.md` | `velora new` | Suggested next tasks. |
+| `.ai/notifications.md` | `velora new`, rewritten by `make:notifications` | Notification architecture, mock/noop mode, and the rule that Firebase/local-notification plugins stay out of views and controllers. |
+
+The templates live in `packages/velora_cli/bin/velora_cli.dart`. They describe the generated app, not the framework: the architecture they summarize is the one in [Architecture](architecture.md), with plain constructor-injected services.
+
+Keep the files short, and update them when you add modules, API endpoints, permissions, or notification adapters. For framework-level context aimed at assistants, see `docs/llms.txt`.
