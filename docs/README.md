@@ -28,5 +28,6 @@ Guides for Velora. The published site navigation is defined in `mkdocs.yml`.
 **Project**
 
 - [Example apps](examples.md), [Contributing](contributing.md), [Roadmap](roadmap.md), [MVP Scope](mvp.md).
+- [ADR 0001 — Package graph](adr/0001-package-graph.md): proposed split of `packages/velora` (not yet approved).
 
 Root `velora.md` and `velora.part2.md` are historical planning documents. They conflict with the shipped framework in places and are not a source of truth.

@@ -87,4 +87,5 @@ nav:
   - Project:
     - Contributing: contributing.md
     - Toolchain Baseline: toolchain.md
+    - ADR 0001 — Package Graph: adr/0001-package-graph.md
     - Roadmap: roadmap.md

@@ -9,6 +9,8 @@
 //   Installable packages  veloraPackageCatalog  (lib/velora_cli.dart)
 //   UI components         packages/velora_ui/components.json
 //   SDK baseline          veloraMin*Version     (lib/velora_cli.dart)
+//   Core inventory        packages/velora/lib   (imports and exports)
+//   Package graph         packages/*/pubspec.yaml
 import 'dart:convert';
 import 'dart:io';
 
@@ -48,6 +50,7 @@ void main(List<String> args) {
   _checkStaleClaims(ui);
   _checkLinksAndPaths(markdown);
   _checkBaselineAndHistory();
+  _checkPackageGraph();
 
   if (_problems.isEmpty) {
     stdout.writeln(
@@ -174,6 +177,13 @@ void _checkGeneratedBlocks(_UiRegistry ui, {required bool write}) {
       _packagesTable(fromDir: '.'),
     ),
     ('docs/packages/ui.md', 'ui-layers', _UiRegistry.path, _uiLayersTable(ui)),
+    (
+      _adr,
+      'core-inventory',
+      'packages/velora/lib',
+      _CoreInventory.scan().toMarkdown(),
+    ),
+    (_adr, 'package-graph', 'packages/*/pubspec.yaml', _packageGraphTable()),
   ];
 
   for (final (file, id, source, body) in blocks) {
@@ -482,6 +492,216 @@ void _checkBaselineAndHistory() {
     final head = LineSplitter.split(_read(file)).take(12).join('\n');
     if (!head.toLowerCase().contains('historical')) {
       _fail('$file: must open with a "historical planning document" banner.');
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Package graph and core inventory (docs/adr/0001-package-graph.md)
+// ---------------------------------------------------------------------------
+
+const _adr = 'docs/adr/0001-package-graph.md';
+
+/// Pub packages that ship native code or need per-platform setup. Pulling
+/// one in costs every app that depends on the owning package.
+const _nativePackages = {
+  'flutter_secure_storage',
+  'shared_preferences',
+  'file_picker',
+  'image_picker',
+};
+
+List<String> _dartFiles(String dir) {
+  final result = Process.runSync('git', [
+    'ls-files',
+    '$dir/*.dart',
+  ], workingDirectory: _root);
+  return LineSplitter.split(result.stdout.toString())
+      .where((f) => f.isNotEmpty)
+      .toList();
+}
+
+/// What `packages/velora` exports and how its capability folders depend on
+/// each other and on pub packages.
+class _CoreInventory {
+  final exports = <String, int>{};
+  final files = <String, int>{};
+  final external = <String, Set<String>>{};
+  final internal = <String, Set<String>>{};
+
+  static _CoreInventory scan() {
+    const lib = 'packages/velora/lib';
+    final inventory = _CoreInventory();
+    final directive = RegExp(r"^(?:import|export) '([^']+)'", multiLine: true);
+
+    for (final match in directive.allMatches(_read('$lib/velora.dart'))) {
+      final target = match.group(1)!;
+      if (!target.startsWith('src/')) continue;
+      final folder = target.split('/')[1];
+      inventory.exports.update(folder, (n) => n + 1, ifAbsent: () => 1);
+    }
+
+    for (final file in _dartFiles('$lib/src')) {
+      final parts = p.posix.relative(file, from: '$lib/src').split('/');
+      final folder = parts.first;
+      inventory.files.update(folder, (n) => n + 1, ifAbsent: () => 1);
+      inventory.external.putIfAbsent(folder, () => {});
+      inventory.internal.putIfAbsent(folder, () => {});
+      for (final match in directive.allMatches(_read(file))) {
+        final target = match.group(1)!;
+        if (target.startsWith('dart:')) continue;
+        String? other;
+        if (target.startsWith('package:velora/src/')) {
+          other = target.split('/')[2];
+        } else if (target.startsWith('package:')) {
+          inventory.external[folder]!.add(target.substring(8).split('/').first);
+        } else {
+          final resolved = p.posix.normalize(
+            p.posix.join(p.posix.dirname(file), target),
+          );
+          final relative = p.posix.relative(resolved, from: '$lib/src');
+          if (!relative.startsWith('..')) other = relative.split('/').first;
+        }
+        if (other != null && other != folder) {
+          inventory.internal[folder]!.add(other);
+        }
+      }
+    }
+    return inventory;
+  }
+
+  /// Folder pairs that import each other, each listed once.
+  List<String> get cycles {
+    final found = <String>{};
+    for (final a in internal.keys) {
+      for (final b in internal[a]!) {
+        if (internal[b]?.contains(a) ?? false) {
+          found.add(([a, b]..sort()).join(' ↔ '));
+        }
+      }
+    }
+    return found.toList()..sort();
+  }
+
+  String toMarkdown() {
+    String list(Iterable<String> items) =>
+        items.isEmpty ? '—' : (items.toList()..sort()).join(', ');
+    final rows = [
+      '| Folder | Files | Exported files | Pub packages | '
+          'Imports from other folders |',
+      '|---|---|---|---|---|',
+      for (final folder in files.keys.toList()..sort())
+        '| `$folder` | ${files[folder]} | ${exports[folder] ?? 0} | '
+            '${list(external[folder]!.map((e) => _nativePackages.contains(e) ? '**$e**' : e))} | '
+            '${list(internal[folder]!)} |',
+      '',
+      'Bold pub packages ship native code. '
+          'Folder pairs that import each other (${cycles.length}): '
+          '${cycles.isEmpty ? 'none' : cycles.join('; ')}.',
+    ];
+    return rows.join('\n');
+  }
+}
+
+/// Local package name → the local packages and pub packages it depends on.
+Map<String, ({List<String> local, List<String> pub})> _packageGraph() {
+  final pubspecs = Process.runSync('git', [
+    'ls-files',
+    'packages/*/pubspec.yaml',
+  ], workingDirectory: _root);
+  final names = <String, String>{};
+  for (final file in LineSplitter.split(pubspecs.stdout.toString())) {
+    if (file.isEmpty) continue;
+    names[p.posix.basename(p.posix.dirname(file))] = file;
+  }
+  final graph = <String, ({List<String> local, List<String> pub})>{};
+  for (final entry in names.entries) {
+    final content = _read(entry.value);
+    final block = RegExp(
+      r'^dependencies:\n((?:(?:  .*|\s*)\n)*)',
+      multiLine: true,
+    ).firstMatch(content)?.group(1);
+    final deps = RegExp(r'^  ([a-z_0-9]+):', multiLine: true)
+        .allMatches(block ?? '')
+        .map((m) => m.group(1)!)
+        .where((d) => d != 'flutter')
+        .toList();
+    graph[entry.key] = (
+      local: deps.where(names.containsKey).toList()..sort(),
+      pub: deps.where((d) => !names.containsKey(d)).toList()..sort(),
+    );
+  }
+  return graph;
+}
+
+String _packageGraphTable() {
+  final graph = _packageGraph();
+  String list(List<String> items) =>
+      items.isEmpty ? '—' : items.map((i) => '`$i`').join(', ');
+  return [
+    '| Package | Depends on (local) | Depends on (pub) |',
+    '|---|---|---|',
+    for (final name in graph.keys.toList()..sort())
+      '| `$name` | ${list(graph[name]!.local)} | ${list(graph[name]!.pub)} |',
+  ].join('\n');
+}
+
+/// Rules that already hold and must keep holding while packages are split.
+void _checkPackageGraph() {
+  final graph = _packageGraph();
+
+  // 1. Local package dependencies are acyclic.
+  final state = <String, int>{};
+  bool hasCycle(String node, List<String> trail) {
+    if (state[node] == 2) return false;
+    if (state[node] == 1) {
+      _fail('Package dependency cycle: ${[...trail, node].join(' → ')}.');
+      return true;
+    }
+    state[node] = 1;
+    for (final next in graph[node]?.local ?? const <String>[]) {
+      if (hasCycle(next, [...trail, node])) return true;
+    }
+    state[node] = 2;
+    return false;
+  }
+
+  for (final name in graph.keys) {
+    if (hasCycle(name, const [])) break;
+  }
+
+  // 2. velora_ui stays usable without any runtime package.
+  final ui = graph['velora_ui'];
+  if (ui != null && (ui.local.isNotEmpty || ui.pub.isNotEmpty)) {
+    _fail(
+      'velora_ui must depend only on flutter, found: '
+      '${[...ui.local, ...ui.pub].join(', ')}.',
+    );
+  }
+  for (final file in _dartFiles('packages/velora_ui/lib')) {
+    if (RegExp(r"import 'package:(velora|get)/").hasMatch(_read(file))) {
+      _fail('$file: velora_ui must not import velora or get.');
+    }
+  }
+
+  // 3. The umbrella package depends on no other local package, so nothing
+  //    it re-exports can pull a capability package back into a cycle.
+  final umbrella = graph['velora'];
+  if (umbrella != null && umbrella.local.isNotEmpty) {
+    _fail('velora must not depend on ${umbrella.local.join(', ')}.');
+  }
+
+  // 4. Every declared pub dependency of velora is actually imported.
+  if (umbrella != null) {
+    final imported = <String>{
+      for (final file in _dartFiles('packages/velora/lib'))
+        ...RegExp(
+          r"^(?:import|export) 'package:([a-z_0-9]+)/",
+          multiLine: true,
+        ).allMatches(_read(file)).map((m) => m.group(1)!),
+    };
+    for (final dep in umbrella.pub.where((d) => !imported.contains(d))) {
+      _fail('packages/velora/pubspec.yaml: `$dep` is declared but unused.');
     }
   }
 }
