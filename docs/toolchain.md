@@ -54,7 +54,6 @@ Refreshed on Flutter 3.47.9 / Dart 3.13.7 with `flutter pub outdated` / `dart pu
 |---|---|---|---|
 | `velora` | `file_picker` | ^8.0.0 | ^13.3.3 |
 | `velora` | `flutter_secure_storage` | ^10.3.1 | ^11.2.0 |
-| `velora` | `equatable` | ^2.0.7 | ^3.0.0 |
 | `velora_offline` | `connectivity_plus` | ^6.0.0 | ^7.3.2 |
 | `velora_offline` | `flutter_secure_storage` | ^10.3.1 | ^11.2.0 |
 | `velora_fcm` | `firebase_core` | ^3.6.0 | ^5.1.0 |
