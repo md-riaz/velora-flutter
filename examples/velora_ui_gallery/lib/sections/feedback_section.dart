@@ -70,9 +70,8 @@ class FeedbackSection extends StatelessWidget {
             Text(
               'A modal bottom sheet with a drag handle, a titled header, '
               'and arbitrary content below.',
-              style: Theme.of(
-                sheetContext,
-              ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+              style: Theme.of(sheetContext).textTheme.bodyMedium
+                  ?.copyWith(color: scheme.onSurfaceVariant),
             ),
             SizedBox(height: tokens.spacingLg),
             VeloraButton(

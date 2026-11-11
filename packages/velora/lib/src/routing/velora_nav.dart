@@ -26,8 +26,9 @@ class VeloraNav extends GetxService {
   ///   middlewares: Velora.nav.guard([VeloraAuthGuard()]),
   /// )
   /// ```
-  List<GetMiddleware> guard(List<VeloraRouteGuard> guards) =>
-      [VeloraMiddleware(guards: guards)];
+  List<GetMiddleware> guard(List<VeloraRouteGuard> guards) => [
+    VeloraMiddleware(guards: guards),
+  ];
 
   /// Shorthand: require the user to be authenticated.
   List<GetMiddleware> get authOnly => guard(const [VeloraAuthGuard()]);

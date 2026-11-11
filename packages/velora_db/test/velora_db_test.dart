@@ -109,53 +109,53 @@ void main() {
       },
     );
 
-    test(
-      "drift's onUpgrade also fires for downgrades: reopening a persisted "
-      'database at a lower version than its stored version does not throw '
-      'and the database remains usable',
-      () async {
-        final dir = await Directory.systemTemp.createTemp(
-          'velora_db_downgrade_test',
-        );
-        final path = p.join(dir.path, 'downgrade_test.db');
-        addTearDown(() => dir.delete(recursive: true));
+    test("drift's onUpgrade also fires for downgrades: reopening a persisted "
+        'database at a lower version than its stored version does not throw '
+        'and the database remains usable', () async {
+      final dir = await Directory.systemTemp.createTemp(
+        'velora_db_downgrade_test',
+      );
+      final path = p.join(dir.path, 'downgrade_test.db');
+      addTearDown(() => dir.delete(recursive: true));
 
-        final migrations = [_CreateTodosTable(), _AddArchivedColumn(onApplied: [])];
+      final migrations = [
+        _CreateTodosTable(),
+        _AddArchivedColumn(onApplied: []),
+      ];
 
-        // Open at version 2: both migrations run via onCreate.
-        var db = await VeloraDatabase(
-          databaseName: path,
-          version: 2,
-          migrations: migrations,
-          executor: NativeDatabase(File(path)),
-        ).open();
-        expect(await _userVersion(db.db), 2);
-        await db.db.customStatement(
-          'INSERT INTO todos (title, done) VALUES (?, ?)',
-          ['seed', 0],
-        );
-        await db.close();
+      // Open at version 2: both migrations run via onCreate.
+      var db = await VeloraDatabase(
+        databaseName: path,
+        version: 2,
+        migrations: migrations,
+        executor: NativeDatabase(File(path)),
+      ).open();
+      expect(await _userVersion(db.db), 2);
+      await db.db.customStatement(
+        'INSERT INTO todos (title, done) VALUES (?, ?)',
+        ['seed', 0],
+      );
+      await db.close();
 
-        // Reopen at version 1 with the same migrations list. The persisted
-        // PRAGMA user_version (2) is now higher than the requested version
-        // (1), so drift's onUpgrade fires with from=2, to=1 -- routed to
-        // VeloraMigrationRunner.onDowngrade.
-        db = await VeloraDatabase(
-          databaseName: path,
-          version: 1,
-          migrations: migrations,
-          executor: NativeDatabase(File(path)),
-        ).open();
+      // Reopen at version 1 with the same migrations list. The persisted
+      // PRAGMA user_version (2) is now higher than the requested version
+      // (1), so drift's onUpgrade fires with from=2, to=1 -- routed to
+      // VeloraMigrationRunner.onDowngrade.
+      db = await VeloraDatabase(
+        databaseName: path,
+        version: 1,
+        migrations: migrations,
+        executor: NativeDatabase(File(path)),
+      ).open();
 
-        expect(await _userVersion(db.db), 1);
-        // The database is still usable after the downgrade -- the
-        // pre-existing row survived and the table can still be queried.
-        final rows = await _select(db.db, 'SELECT * FROM todos');
-        expect(rows, hasLength(1));
-        expect(rows.single['title'], 'seed');
-        await db.close();
-      },
-    );
+      expect(await _userVersion(db.db), 1);
+      // The database is still usable after the downgrade -- the
+      // pre-existing row survived and the table can still be queried.
+      final rows = await _select(db.db, 'SELECT * FROM todos');
+      expect(rows, hasLength(1));
+      expect(rows.single['title'], 'seed');
+      await db.close();
+    });
   });
 
   group('QueryBuilder', () {
@@ -180,14 +180,17 @@ void main() {
     tearDown(() => db.close());
 
     test('where filters by equality', () async {
-      final rows = await QueryBuilder('todos').where('title', 'beta').get(db.db);
+      final rows = await QueryBuilder('todos')
+          .where('title', 'beta')
+          .get(db.db);
       expect(rows, hasLength(1));
       expect(rows.single['title'], 'beta');
     });
 
     test('whereOp supports comparison operators', () async {
-      final rows =
-          await QueryBuilder('todos').whereOp('done', '!=', 0).get(db.db);
+      final rows = await QueryBuilder('todos')
+          .whereOp('done', '!=', 0)
+          .get(db.db);
       expect(rows, hasLength(1));
       expect(rows.single['title'], 'beta');
     });
@@ -210,8 +213,9 @@ void main() {
       final asc = await QueryBuilder('todos').orderBy('title').get(db.db);
       expect(asc.map((r) => r['title']), ['alpha', 'beta', 'gamma']);
 
-      final desc =
-          await QueryBuilder('todos').orderBy('title', desc: true).get(db.db);
+      final desc = await QueryBuilder('todos')
+          .orderBy('title', desc: true)
+          .get(db.db);
       expect(desc.map((r) => r['title']), ['gamma', 'beta', 'alpha']);
     });
 
@@ -225,24 +229,24 @@ void main() {
       expect(page.single['title'], 'beta');
     });
 
-    test(
-      'offset without limit still returns valid SQL and skips the first n '
-      'rows (no limit applied)',
-      () async {
-        final rows = await QueryBuilder('todos')
-            .orderBy('title')
-            .offset(1)
-            .get(db.db);
-        expect(rows.map((r) => r['title']), ['beta', 'gamma']);
-      },
-    );
+    test('offset without limit still returns valid SQL and skips the first n '
+        'rows (no limit applied)', () async {
+      final rows = await QueryBuilder('todos')
+          .orderBy('title')
+          .offset(1)
+          .get(db.db);
+      expect(rows.map((r) => r['title']), ['beta', 'gamma']);
+    });
 
     test('first returns the first matching row or null', () async {
-      final found = await QueryBuilder('todos').where('title', 'alpha').first(db.db);
+      final found = await QueryBuilder('todos')
+          .where('title', 'alpha')
+          .first(db.db);
       expect(found?['title'], 'alpha');
 
-      final missing =
-          await QueryBuilder('todos').where('title', 'nope').first(db.db);
+      final missing = await QueryBuilder('todos')
+          .where('title', 'nope')
+          .first(db.db);
       expect(missing, isNull);
     });
 
@@ -260,8 +264,9 @@ void main() {
           [dangerous, 0],
         );
 
-        final rows =
-            await QueryBuilder('todos').where('title', dangerous).get(db.db);
+        final rows = await QueryBuilder('todos')
+            .where('title', dangerous)
+            .get(db.db);
         expect(rows, hasLength(1));
         expect(rows.single['title'], dangerous);
 
@@ -284,58 +289,46 @@ void main() {
         executor: NativeDatabase.memory(),
       ).open();
       // deleted_at is left unset (NULL) on the two "active" rows.
-      await db.db.customStatement(
-        'INSERT INTO entries (name) VALUES (?)',
-        ['active-1'],
-      );
+      await db.db.customStatement('INSERT INTO entries (name) VALUES (?)', [
+        'active-1',
+      ]);
       await db.db.customStatement(
         'INSERT INTO entries (name, deleted_at) VALUES (?, ?)',
         ['deleted', '2024-01-01'],
       );
-      await db.db.customStatement(
-        'INSERT INTO entries (name) VALUES (?)',
-        ['active-2'],
-      );
+      await db.db.customStatement('INSERT INTO entries (name) VALUES (?)', [
+        'active-2',
+      ]);
     });
 
     tearDown(() => db.close());
 
-    test(
-      "where('col', null) compiles to 'col IS NULL' and matches only rows "
-      'whose column is NULL, excluding non-null rows',
-      () async {
-        final rows =
-            await QueryBuilder('entries').where('deleted_at', null).get(db.db);
-        expect(rows, hasLength(2));
-        expect(
-          rows.map((r) => r['name']),
-          containsAll(['active-1', 'active-2']),
-        );
-      },
-    );
+    test("where('col', null) compiles to 'col IS NULL' and matches only rows "
+        'whose column is NULL, excluding non-null rows', () async {
+      final rows = await QueryBuilder('entries')
+          .where('deleted_at', null)
+          .get(db.db);
+      expect(rows, hasLength(2));
+      expect(rows.map((r) => r['name']), containsAll(['active-1', 'active-2']));
+    });
 
-    test(
-      "whereOp('col', '!=', null) compiles to 'col IS NOT NULL' and matches "
-      'only rows whose column is non-null',
-      () async {
-        final rows = await QueryBuilder('entries')
-            .whereOp('deleted_at', '!=', null)
-            .get(db.db);
-        expect(rows, hasLength(1));
-        expect(rows.single['name'], 'deleted');
-      },
-    );
+    test("whereOp('col', '!=', null) compiles to 'col IS NOT NULL' and matches "
+        'only rows whose column is non-null', () async {
+      final rows = await QueryBuilder('entries')
+          .whereOp('deleted_at', '!=', null)
+          .get(db.db);
+      expect(rows, hasLength(1));
+      expect(rows.single['name'], 'deleted');
+    });
 
-    test(
-      'a normal equality comparison against a non-null value is unaffected '
-      'by the null-to-IS rewrite',
-      () async {
-        final rows =
-            await QueryBuilder('entries').where('name', 'deleted').get(db.db);
-        expect(rows, hasLength(1));
-        expect(rows.single['deleted_at'], '2024-01-01');
-      },
-    );
+    test('a normal equality comparison against a non-null value is unaffected '
+        'by the null-to-IS rewrite', () async {
+      final rows = await QueryBuilder('entries')
+          .where('name', 'deleted')
+          .get(db.db);
+      expect(rows, hasLength(1));
+      expect(rows.single['deleted_at'], '2024-01-01');
+    });
   });
 
   group('VeloraTable', () {
@@ -355,24 +348,25 @@ void main() {
     tearDown(() => db.close());
 
     test('insert then find round-trips a model', () async {
-      final id = await table.insert(const TodoModel(title: 'Buy milk').toJson());
+      final id = await table.insert(
+        const TodoModel(title: 'Buy milk').toJson(),
+      );
       final found = await table.find(id);
       expect(found, isNotNull);
       expect(found!.title, 'Buy milk');
       expect(found.done, isFalse);
     });
 
-    test(
-      'insert on an int-pk table with no id supplied returns the int rowid '
-      'directly (the "rowId is ID" fast path)',
-      () async {
-        final id = await table.insert(const TodoModel(title: 'x').toJson());
-        expect(id, isA<int>());
-      },
-    );
+    test('insert on an int-pk table with no id supplied returns the int rowid '
+        'directly (the "rowId is ID" fast path)', () async {
+      final id = await table.insert(const TodoModel(title: 'x').toJson());
+      expect(id, isA<int>());
+    });
 
     test('create inserts and returns the hydrated model', () async {
-      final created = await table.create(const TodoModel(title: 'Walk dog').toJson());
+      final created = await table.create(
+        const TodoModel(title: 'Walk dog').toJson(),
+      );
       expect(created.id, isNotNull);
       expect(created.title, 'Walk dog');
     });
@@ -385,15 +379,21 @@ void main() {
     });
 
     test('where returns matching rows as models', () async {
-      await table.create(const TodoModel(title: 'done-one', done: true).toJson());
-      await table.create(const TodoModel(title: 'not-done', done: false).toJson());
+      await table.create(
+        const TodoModel(title: 'done-one', done: true).toJson(),
+      );
+      await table.create(
+        const TodoModel(title: 'not-done', done: false).toJson(),
+      );
       final done = await table.where('done', 1);
       expect(done, hasLength(1));
       expect(done.single.title, 'done-one');
     });
 
     test('update mutates the row', () async {
-      final created = await table.create(const TodoModel(title: 'original').toJson());
+      final created = await table.create(
+        const TodoModel(title: 'original').toJson(),
+      );
       final affected = await table.update(created.id!, {'title': 'renamed'});
       expect(affected, 1);
       final reloaded = await table.find(created.id!);
@@ -401,7 +401,9 @@ void main() {
     });
 
     test('delete removes the row', () async {
-      final created = await table.create(const TodoModel(title: 'temp').toJson());
+      final created = await table.create(
+        const TodoModel(title: 'temp').toJson(),
+      );
       final affected = await table.delete(created.id!);
       expect(affected, 1);
       expect(await table.find(created.id!), isNull);
@@ -414,43 +416,35 @@ void main() {
       expect(await table.count(), 2);
     });
 
-    test(
-      'insert rejects a malicious data key instead of splicing it into the '
-      'column list',
-      () async {
-        expect(
-          () => table.insert(const {
-            'title': 'x',
-            'x); DROP TABLE todos;--': 'y',
-          }),
-          throwsArgumentError,
-        );
+    test('insert rejects a malicious data key instead of splicing it into the '
+        'column list', () async {
+      expect(
+        () =>
+            table.insert(const {'title': 'x', 'x); DROP TABLE todos;--': 'y'}),
+        throwsArgumentError,
+      );
 
-        // The table must still exist and be untouched -- if the key had been
-        // interpolated instead of validated, the DROP TABLE would have
-        // executed.
-        expect(await table.count(), 0);
-      },
-    );
+      // The table must still exist and be untouched -- if the key had been
+      // interpolated instead of validated, the DROP TABLE would have
+      // executed.
+      expect(await table.count(), 0);
+    });
 
-    test(
-      'update rejects a malicious data key instead of splicing it into the '
-      'SET clause',
-      () async {
-        final created = await table.create(const TodoModel(title: 'original').toJson());
+    test('update rejects a malicious data key instead of splicing it into the '
+        'SET clause', () async {
+      final created = await table.create(
+        const TodoModel(title: 'original').toJson(),
+      );
 
-        expect(
-          () => table.update(created.id!, const {
-            'x); DROP TABLE todos;--': 'y',
-          }),
-          throwsArgumentError,
-        );
+      expect(
+        () => table.update(created.id!, const {'x); DROP TABLE todos;--': 'y'}),
+        throwsArgumentError,
+      );
 
-        // The row must still exist, untouched.
-        final reloaded = await table.find(created.id!);
-        expect(reloaded!.title, 'original');
-      },
-    );
+      // The row must still exist, untouched.
+      final reloaded = await table.find(created.id!);
+      expect(reloaded!.title, 'original');
+    });
   });
 
   group('VeloraTable with a String primary key', () {
@@ -475,17 +469,14 @@ void main() {
 
     tearDown(() => db.close());
 
-    test(
-      'create returns the hydrated model when the primary key is supplied '
-      'by the caller (providedId path)',
-      () async {
-        final created = await table.create(
-          const UuidItemModel(uuid: 'abc-123', name: 'explicit').toJson(),
-        );
-        expect(created.uuid, 'abc-123');
-        expect(created.name, 'explicit');
-      },
-    );
+    test('create returns the hydrated model when the primary key is supplied '
+        'by the caller (providedId path)', () async {
+      final created = await table.create(
+        const UuidItemModel(uuid: 'abc-123', name: 'explicit').toJson(),
+      );
+      expect(created.uuid, 'abc-123');
+      expect(created.name, 'explicit');
+    });
 
     test(
       'create resolves a DB-generated String primary key by reading the row '
@@ -553,7 +544,9 @@ void main() {
     tearDown(() => db.close());
 
     test('store returns the created model with an id', () async {
-      final created = await repository.store(const TodoModel(title: 'first').toJson());
+      final created = await repository.store(
+        const TodoModel(title: 'first').toJson(),
+      );
       expect(created.id, isNotNull);
       expect(created.title, 'first');
     });
@@ -566,7 +559,9 @@ void main() {
     });
 
     test('show returns the model by id', () async {
-      final created = await repository.store(const TodoModel(title: 'findme').toJson());
+      final created = await repository.store(
+        const TodoModel(title: 'findme').toJson(),
+      );
       final shown = await repository.show(created.id!);
       expect(shown.title, 'findme');
     });
@@ -576,63 +571,72 @@ void main() {
     });
 
     test('update mutates and returns the model', () async {
-      final created = await repository.store(const TodoModel(title: 'old').toJson());
+      final created = await repository.store(
+        const TodoModel(title: 'old').toJson(),
+      );
       final updated = await repository.update(created.id!, {'title': 'new'});
       expect(updated.title, 'new');
     });
 
     test('destroy removes the model', () async {
-      final created = await repository.store(const TodoModel(title: 'bye').toJson());
+      final created = await repository.store(
+        const TodoModel(title: 'bye').toJson(),
+      );
       await repository.destroy(created.id!);
       expect(() => repository.show(created.id!), throwsA(isA<StateError>()));
     });
   });
 
   group('VeloraDbPlugin', () {
-    test(
-      'a bare VeloraDbPlugin(executor: ...) — all other params defaulted — '
-      'registers and opens a working empty database',
-      () async {
-        // This mirrors exactly what `velora install velora_db` wires into
-        // `Velora.boot(plugins: [VeloraDbPlugin()])` — no databaseName,
-        // version, or migrations supplied — except an in-memory executor is
-        // injected here so the test runs headless and never touches disk.
-        const config = VeloraConfig(appName: 'Test', apiBaseUrl: 'https://example.test');
-        final context = VeloraContext(config);
-        Get.put<VeloraLifecycleRegistry>(VeloraLifecycleRegistry());
+    test('a bare VeloraDbPlugin(executor: ...) — all other params defaulted — '
+        'registers and opens a working empty database', () async {
+      // This mirrors exactly what `velora install velora_db` wires into
+      // `Velora.boot(plugins: [VeloraDbPlugin()])` — no databaseName,
+      // version, or migrations supplied — except an in-memory executor is
+      // injected here so the test runs headless and never touches disk.
+      const config = VeloraConfig(
+        appName: 'Test',
+        apiBaseUrl: 'https://example.test',
+      );
+      final context = VeloraContext(config);
+      Get.put<VeloraLifecycleRegistry>(VeloraLifecycleRegistry());
 
-        final plugin = VeloraDbPlugin(executor: NativeDatabase.memory());
-        await plugin.register(context);
+      final plugin = VeloraDbPlugin(executor: NativeDatabase.memory());
+      await plugin.register(context);
 
-        expect(plugin.databaseName, 'app.db');
-        expect(plugin.version, 1);
-        expect(plugin.migrations, isEmpty);
-        expect(VeloraDb.instance, isA<VeloraDatabase>());
+      expect(plugin.databaseName, 'app.db');
+      expect(plugin.version, 1);
+      expect(plugin.migrations, isEmpty);
+      expect(VeloraDb.instance, isA<VeloraDatabase>());
 
-        // The empty database is still usable: create a table by hand and
-        // query it through the facade, proving the connection is live.
-        await VeloraDb.db.customStatement('''
+      // The empty database is still usable: create a table by hand and
+      // query it through the facade, proving the connection is live.
+      await VeloraDb.db.customStatement('''
           CREATE TABLE todos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
             done INTEGER NOT NULL DEFAULT 0
           )
         ''');
-        final table = VeloraDb.table<TodoModel, int>(
-          table: 'todos',
-          fromMap: TodoModel.fromJson,
-          toMap: (todo) => todo.toJson(),
-        );
-        final created = await table.create(const TodoModel(title: 'default-ctor').toJson());
-        expect(created.title, 'default-ctor');
-        expect(await table.count(), 1);
+      final table = VeloraDb.table<TodoModel, int>(
+        table: 'todos',
+        fromMap: TodoModel.fromJson,
+        toMap: (todo) => todo.toJson(),
+      );
+      final created = await table.create(
+        const TodoModel(title: 'default-ctor').toJson(),
+      );
+      expect(created.title, 'default-ctor');
+      expect(await table.count(), 1);
 
-        await VeloraDb.instance.close();
-      },
-    );
+      await VeloraDb.instance.close();
+    });
 
     test('register opens a working, queryable database', () async {
-      const config = VeloraConfig(appName: 'Test', apiBaseUrl: 'https://example.test');
+      const config = VeloraConfig(
+        appName: 'Test',
+        apiBaseUrl: 'https://example.test',
+      );
       final context = VeloraContext(config);
       Get.put<VeloraLifecycleRegistry>(VeloraLifecycleRegistry());
 
@@ -650,59 +654,63 @@ void main() {
         fromMap: TodoModel.fromJson,
         toMap: (todo) => todo.toJson(),
       );
-      final created = await table.create(const TodoModel(title: 'via facade').toJson());
+      final created = await table.create(
+        const TodoModel(title: 'via facade').toJson(),
+      );
       expect(created.title, 'via facade');
       expect(await table.count(), 1);
 
       await VeloraDb.instance.close();
     });
 
-    test(
-      'clearOnLogout wipes only the listed table, keeps others and the '
-      'connection intact',
-      () async {
-        const config = VeloraConfig(appName: 'Test', apiBaseUrl: 'https://example.test');
-        final context = VeloraContext(config);
-        final lifecycle = VeloraLifecycleRegistry();
-        Get.put<VeloraLifecycleRegistry>(lifecycle);
+    test('clearOnLogout wipes only the listed table, keeps others and the '
+        'connection intact', () async {
+      const config = VeloraConfig(
+        appName: 'Test',
+        apiBaseUrl: 'https://example.test',
+      );
+      final context = VeloraContext(config);
+      final lifecycle = VeloraLifecycleRegistry();
+      Get.put<VeloraLifecycleRegistry>(lifecycle);
 
-        final plugin = VeloraDbPlugin(
-          databaseName: ':memory:',
-          version: 2,
-          migrations: [_CreateTodosTable(), _CreateNotesTable()],
-          executor: NativeDatabase.memory(),
-          clearOnLogout: ['todos'],
-        );
-        await plugin.register(context);
+      final plugin = VeloraDbPlugin(
+        databaseName: ':memory:',
+        version: 2,
+        migrations: [_CreateTodosTable(), _CreateNotesTable()],
+        executor: NativeDatabase.memory(),
+        clearOnLogout: ['todos'],
+      );
+      await plugin.register(context);
 
-        final db = VeloraDb.instance;
-        await db.db.customStatement(
-          'INSERT INTO todos (title, done) VALUES (?, ?)',
-          ['secret todo', 0],
-        );
-        await db.db.customStatement(
-          'INSERT INTO notes (body) VALUES (?)',
-          ['keep me'],
-        );
+      final db = VeloraDb.instance;
+      await db.db.customStatement(
+        'INSERT INTO todos (title, done) VALUES (?, ?)',
+        ['secret todo', 0],
+      );
+      await db.db.customStatement('INSERT INTO notes (body) VALUES (?)', [
+        'keep me',
+      ]);
 
-        await lifecycle.beforeLogout();
+      await lifecycle.beforeLogout();
 
-        final todos = await _select(db.db, 'SELECT * FROM todos');
-        expect(todos, isEmpty);
+      final todos = await _select(db.db, 'SELECT * FROM todos');
+      expect(todos, isEmpty);
 
-        // Non-listed table is untouched and the connection is still open.
-        final notes = await _select(db.db, 'SELECT * FROM notes');
-        expect(notes, hasLength(1));
-        expect(notes.single['body'], 'keep me');
+      // Non-listed table is untouched and the connection is still open.
+      final notes = await _select(db.db, 'SELECT * FROM notes');
+      expect(notes, hasLength(1));
+      expect(notes.single['body'], 'keep me');
 
-        await db.close();
-      },
-    );
+      await db.close();
+    });
 
     test(
       'onLogout callback runs a custom delete against the live db',
       () async {
-        const config = VeloraConfig(appName: 'Test', apiBaseUrl: 'https://example.test');
+        const config = VeloraConfig(
+          appName: 'Test',
+          apiBaseUrl: 'https://example.test',
+        );
         final context = VeloraContext(config);
         final lifecycle = VeloraLifecycleRegistry();
         Get.put<VeloraLifecycleRegistry>(lifecycle);
@@ -715,17 +723,20 @@ void main() {
           executor: NativeDatabase.memory(),
           onLogout: (db) async {
             onLogoutCalled = true;
-            await db.customStatement(
-              'DELETE FROM notes WHERE body = ?',
-              ['secret'],
-            );
+            await db.customStatement('DELETE FROM notes WHERE body = ?', [
+              'secret',
+            ]);
           },
         );
         await plugin.register(context);
 
         final db = VeloraDb.instance;
-        await db.db.customStatement('INSERT INTO notes (body) VALUES (?)', ['secret']);
-        await db.db.customStatement('INSERT INTO notes (body) VALUES (?)', ['public']);
+        await db.db.customStatement('INSERT INTO notes (body) VALUES (?)', [
+          'secret',
+        ]);
+        await db.db.customStatement('INSERT INTO notes (body) VALUES (?)', [
+          'public',
+        ]);
 
         await lifecycle.beforeLogout();
 
@@ -741,7 +752,10 @@ void main() {
     test(
       'registers no logout hook when neither clearOnLogout nor onLogout is set',
       () async {
-        const config = VeloraConfig(appName: 'Test', apiBaseUrl: 'https://example.test');
+        const config = VeloraConfig(
+          appName: 'Test',
+          apiBaseUrl: 'https://example.test',
+        );
         final context = VeloraContext(config);
         final lifecycle = VeloraLifecycleRegistry();
         Get.put<VeloraLifecycleRegistry>(lifecycle);
@@ -809,7 +823,10 @@ Future<List<Map<String, dynamic>>> _select(
   List<Object?> args = const [],
 ]) async {
   final rows = await db
-      .customSelect(sql, variables: args.map((v) => Variable<Object>(v)).toList())
+      .customSelect(
+        sql,
+        variables: args.map((v) => Variable<Object>(v)).toList(),
+      )
       .get();
   return rows.map((row) => row.data).toList();
 }
@@ -930,11 +947,7 @@ class TodoModel {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      if (id != null) 'id': id,
-      'title': title,
-      'done': done ? 1 : 0,
-    };
+    return {if (id != null) 'id': id, 'title': title, 'done': done ? 1 : 0};
   }
 
   static int? _toInt(Object? value) {
@@ -960,9 +973,6 @@ class UuidItemModel {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      if (uuid != null) 'uuid': uuid,
-      'name': name,
-    };
+    return {if (uuid != null) 'uuid': uuid, 'name': name};
   }
 }

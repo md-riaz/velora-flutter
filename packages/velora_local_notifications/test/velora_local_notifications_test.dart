@@ -60,23 +60,20 @@ void main() {
       expect(ids[1], greaterThan(ids[0]));
     });
 
-    test(
-      'ids stay positive and distinct across many calls '
-      '(the 32-bit-overflow wraparound itself is covered by inspection of '
-      'the show-id counter, since seeding the private counter near '
-      'Int32.maxValue is not reachable from outside the adapter)',
-      () async {
-        const callCount = 500;
-        for (var i = 0; i < callCount; i++) {
-          await adapter.show(title: 'n$i', body: 'n$i');
-        }
+    test('ids stay positive and distinct across many calls '
+        '(the 32-bit-overflow wraparound itself is covered by inspection of '
+        'the show-id counter, since seeding the private counter near '
+        'Int32.maxValue is not reachable from outside the adapter)', () async {
+      const callCount = 500;
+      for (var i = 0; i < callCount; i++) {
+        await adapter.show(title: 'n$i', body: 'n$i');
+      }
 
-        final ids = client.shown.map((c) => c.id).toList();
-        expect(ids, hasLength(callCount));
-        expect(ids.every((id) => id > 0), isTrue, reason: 'ids must be positive');
-        expect(ids.toSet(), hasLength(callCount), reason: 'ids must be unique');
-      },
-    );
+      final ids = client.shown.map((c) => c.id).toList();
+      expect(ids, hasLength(callCount));
+      expect(ids.every((id) => id > 0), isTrue, reason: 'ids must be positive');
+      expect(ids.toSet(), hasLength(callCount), reason: 'ids must be unique');
+    });
   });
 
   group('schedule', () {
@@ -100,82 +97,72 @@ void main() {
       expect(call.payload, '{"kind":"reminder"}');
     });
 
-    test(
-      'scheduling the same string id twice reuses the same (hashed) int id '
-      '(overwrite semantics), not a new one',
-      () async {
+    test('scheduling the same string id twice reuses the same (hashed) int id '
+        '(overwrite semantics), not a new one', () async {
+      await adapter.schedule(
+        id: 'daily-reminder',
+        title: 'Reminder v1',
+        body: 'first',
+        dateTime: DateTime(2030, 1, 1),
+      );
+      await adapter.schedule(
+        id: 'daily-reminder',
+        title: 'Reminder v2',
+        body: 'second',
+        dateTime: DateTime(2030, 2, 1),
+      );
+
+      expect(client.scheduled, hasLength(2));
+      expect(client.scheduled[0].id, client.scheduled[1].id);
+      expect(client.scheduled[0].id, _expectedHash('daily-reminder'));
+    });
+
+    test('different string ids are mapped to different int ids', () async {
+      await adapter.schedule(
+        id: 'a',
+        title: 'a',
+        body: 'a',
+        dateTime: DateTime(2030),
+      );
+      await adapter.schedule(
+        id: 'b',
+        title: 'b',
+        body: 'b',
+        dateTime: DateTime(2030),
+      );
+
+      expect(client.scheduled[0].id, isNot(client.scheduled[1].id));
+    });
+
+    test('the int id mapping is stable/deterministic for the same string id '
+        'across repeated schedule calls, and across separate adapter '
+        'instances (i.e. survives an app restart)', () async {
+      final seenIds = <int>{};
+      for (var i = 0; i < 5; i++) {
         await adapter.schedule(
-          id: 'daily-reminder',
-          title: 'Reminder v1',
-          body: 'first',
-          dateTime: DateTime(2030, 1, 1),
-        );
-        await adapter.schedule(
-          id: 'daily-reminder',
-          title: 'Reminder v2',
-          body: 'second',
-          dateTime: DateTime(2030, 2, 1),
-        );
-
-        expect(client.scheduled, hasLength(2));
-        expect(client.scheduled[0].id, client.scheduled[1].id);
-        expect(client.scheduled[0].id, _expectedHash('daily-reminder'));
-      },
-    );
-
-    test(
-      'different string ids are mapped to different int ids',
-      () async {
-        await adapter.schedule(
-          id: 'a',
-          title: 'a',
-          body: 'a',
-          dateTime: DateTime(2030),
-        );
-        await adapter.schedule(
-          id: 'b',
-          title: 'b',
-          body: 'b',
-          dateTime: DateTime(2030),
-        );
-
-        expect(client.scheduled[0].id, isNot(client.scheduled[1].id));
-      },
-    );
-
-    test(
-      'the int id mapping is stable/deterministic for the same string id '
-      'across repeated schedule calls, and across separate adapter '
-      'instances (i.e. survives an app restart)',
-      () async {
-        final seenIds = <int>{};
-        for (var i = 0; i < 5; i++) {
-          await adapter.schedule(
-            id: 'stable-id',
-            title: 'x',
-            body: 'x',
-            dateTime: DateTime(2030),
-          );
-          seenIds.add(client.scheduled.last.id);
-        }
-        expect(seenIds, hasLength(1));
-        expect(seenIds.single, _expectedHash('stable-id'));
-
-        // A brand-new adapter (simulating a fresh process/app restart, with
-        // no in-memory state carried over) must hash the same string id to
-        // the same int.
-        final freshClient = _FakeLocalNotificationsClient();
-        final freshAdapter =
-            VeloraLocalNotificationsAdapter(client: freshClient);
-        await freshAdapter.schedule(
           id: 'stable-id',
           title: 'x',
           body: 'x',
           dateTime: DateTime(2030),
         );
-        expect(freshClient.scheduled.single.id, seenIds.single);
-      },
-    );
+        seenIds.add(client.scheduled.last.id);
+      }
+      expect(seenIds, hasLength(1));
+      expect(seenIds.single, _expectedHash('stable-id'));
+
+      // A brand-new adapter (simulating a fresh process/app restart, with
+      // no in-memory state carried over) must hash the same string id to
+      // the same int.
+      final freshClient = _FakeLocalNotificationsClient();
+      final freshAdapter = VeloraLocalNotificationsAdapter(client: freshClient);
+      await freshAdapter.schedule(
+        id: 'stable-id',
+        title: 'x',
+        body: 'x',
+        dateTime: DateTime(2030),
+      );
+      expect(freshClient.scheduled.single.id, seenIds.single);
+    });
   });
 
   group('cancel', () {
@@ -202,31 +189,28 @@ void main() {
       },
     );
 
-    test(
-      'canceling then re-scheduling the same string id reuses the same '
-      'hashed int id (no map to have removed it from)',
-      () async {
-        await adapter.schedule(
-          id: 'reused',
-          title: 'x',
-          body: 'x',
-          dateTime: DateTime(2030),
-        );
-        final firstId = client.scheduled.single.id;
-        await adapter.cancel('reused');
+    test('canceling then re-scheduling the same string id reuses the same '
+        'hashed int id (no map to have removed it from)', () async {
+      await adapter.schedule(
+        id: 'reused',
+        title: 'x',
+        body: 'x',
+        dateTime: DateTime(2030),
+      );
+      final firstId = client.scheduled.single.id;
+      await adapter.cancel('reused');
 
-        await adapter.schedule(
-          id: 'reused',
-          title: 'x',
-          body: 'x',
-          dateTime: DateTime(2030),
-        );
-        final secondId = client.scheduled.last.id;
+      await adapter.schedule(
+        id: 'reused',
+        title: 'x',
+        body: 'x',
+        dateTime: DateTime(2030),
+      );
+      final secondId = client.scheduled.last.id;
 
-        expect(secondId, firstId);
-        expect(secondId, _expectedHash('reused'));
-      },
-    );
+      expect(secondId, firstId);
+      expect(secondId, _expectedHash('reused'));
+    });
   });
 
   group('cancelAll', () {
@@ -261,17 +245,14 @@ void main() {
     // exercises construction -- proving the androidScheduleMode parameter
     // exists and accepts a non-default value -- and never invokes any
     // method that would touch a platform channel.
-    test(
-      'constructs with a non-default androidScheduleMode without error',
-      () {
-        expect(
-          () => FlutterLocalNotificationsClient(
-            androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-          ),
-          returnsNormally,
-        );
-      },
-    );
+    test('constructs with a non-default androidScheduleMode without error', () {
+      expect(
+        () => FlutterLocalNotificationsClient(
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        ),
+        returnsNormally,
+      );
+    });
 
     test('defaults androidScheduleMode to the safe, inexact mode', () {
       // No platform call is made; this only checks that constructing with

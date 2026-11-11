@@ -58,7 +58,7 @@ class VeloraFcmAdapter implements PushAdapter {
   StreamSubscription<Object?>? _onMessageOpenedAppSub;
 
   VeloraFcmAdapter({FcmClient? client})
-      : _client = client ?? FirebaseMessagingClient();
+    : _client = client ?? FirebaseMessagingClient();
 
   @override
   String get provider => 'fcm';
@@ -79,8 +79,9 @@ class VeloraFcmAdapter implements PushAdapter {
           _onMessageController.add(pushMessageFromRemoteMessage(message)),
     );
     _onMessageOpenedAppSub = _client.onMessageOpenedApp.listen(
-      (message) => _onMessageOpenedAppController
-          .add(pushMessageFromRemoteMessage(message)),
+      (message) => _onMessageOpenedAppController.add(
+        pushMessageFromRemoteMessage(message),
+      ),
     );
 
     // `onMessageOpenedApp` never fires for a notification tap that launches

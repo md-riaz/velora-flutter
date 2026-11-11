@@ -141,9 +141,10 @@ mixin VeloraAttachmentsMixin {
   /// Throws [StateError] if any attachment ends in [AttachmentStatus.error] so
   /// callers cannot silently submit with missing files.
   Future<void> uploadAll() async {
-    for (final a in attachments
-        .where((a) => a.status == AttachmentStatus.pending)
-        .toList()) {
+    for (final a
+        in attachments
+            .where((a) => a.status == AttachmentStatus.pending)
+            .toList()) {
       await uploadAttachment(a.id);
     }
     final failed = attachments
@@ -163,10 +164,9 @@ mixin VeloraAttachmentsMixin {
       attachments.any((a) => a.status == AttachmentStatus.uploading);
 
   bool get allSettled => attachments.every(
-        (a) =>
-            a.status == AttachmentStatus.done ||
-            a.status == AttachmentStatus.error,
-      );
+    (a) =>
+        a.status == AttachmentStatus.done || a.status == AttachmentStatus.error,
+  );
 
   /// Remote URLs for all successfully uploaded attachments.
   List<String> get uploadedUrls => attachments

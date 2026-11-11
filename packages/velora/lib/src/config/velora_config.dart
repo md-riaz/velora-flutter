@@ -116,13 +116,13 @@ class VeloraAuthConfig {
   /// ```
   /// Defaults to reading the `user` key, falling back to the whole payload.
   final Map<String, dynamic>? Function(Map<String, dynamic> payload)?
-      userExtractor;
+  userExtractor;
 
   /// Extracts the user map from the /me endpoint response payload.
   ///
   /// Defaults to reading the `user` key, falling back to the whole payload.
   final Map<String, dynamic>? Function(Map<String, dynamic> payload)?
-      meUserExtractor;
+  meUserExtractor;
 
   /// Converts the extracted user map into your [VeloraUser] model.
   ///

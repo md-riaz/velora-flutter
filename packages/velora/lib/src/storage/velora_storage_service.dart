@@ -34,8 +34,8 @@ class VeloraStorageService extends GetxService {
     FlutterSecureStorage? secureStorage,
     String tokenKey = _defaultTokenKey,
     this.allowInsecureFallback = false,
-  })  : _secureStorage = secureStorage ?? _defaultSecureStorage,
-        _tokenKey = tokenKey;
+  }) : _secureStorage = secureStorage ?? _defaultSecureStorage,
+       _tokenKey = tokenKey;
 
   /// Hardened platform defaults: keys are AES-GCM encrypted on Android
   /// (the v10 default) and, on Apple platforms, are marked

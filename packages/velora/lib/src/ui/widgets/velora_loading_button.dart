@@ -37,14 +37,16 @@ class VeloraLoadingButton extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         child: loading
             ? loadingChild ??
-                SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator.adaptive(
-                    strokeWidth: 2.5,
-                    valueColor: AlwaysStoppedAnimation<Color>(scheme.onPrimary),
-                  ),
-                )
+                  SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator.adaptive(
+                      strokeWidth: 2.5,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        scheme.onPrimary,
+                      ),
+                    ),
+                  )
             : child,
       ),
     );
@@ -77,11 +79,11 @@ class VeloraLoadingOutlinedButton extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         child: loading
             ? loadingChild ??
-                const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator.adaptive(strokeWidth: 2.5),
-                )
+                  const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator.adaptive(strokeWidth: 2.5),
+                  )
             : child,
       ),
     );

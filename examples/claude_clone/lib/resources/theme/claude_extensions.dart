@@ -62,7 +62,11 @@ class ClaudeTokens extends ThemeExtension<ClaudeTokens> {
       assistantBubble: Color.lerp(assistantBubble, other.assistantBubble, t)!,
       inputBackground: Color.lerp(inputBackground, other.inputBackground, t)!,
       codeBlock: Color.lerp(codeBlock, other.codeBlock, t)!,
-      avatarBackground: Color.lerp(avatarBackground, other.avatarBackground, t)!,
+      avatarBackground: Color.lerp(
+        avatarBackground,
+        other.avatarBackground,
+        t,
+      )!,
     );
   }
 }

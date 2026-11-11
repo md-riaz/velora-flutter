@@ -210,9 +210,8 @@ class VeloraApiService extends GetxService {
     final isConnectionError = _connectionErrorTypes.contains(error.type);
     if (data is Map<String, dynamic>) {
       return ApiException(
-        message: data[r.messageKey]?.toString() ??
-            error.message ??
-            'Request failed',
+        message:
+            data[r.messageKey]?.toString() ?? error.message ?? 'Request failed',
         statusCode: response?.statusCode,
         errors: ApiResponse<Object?>.fromJson(
           data,

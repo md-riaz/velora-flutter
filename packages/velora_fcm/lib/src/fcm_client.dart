@@ -47,7 +47,7 @@ class FirebaseMessagingClient implements FcmClient {
   final FirebaseMessaging _messaging;
 
   FirebaseMessagingClient({FirebaseMessaging? messaging})
-      : _messaging = messaging ?? FirebaseMessaging.instance;
+    : _messaging = messaging ?? FirebaseMessaging.instance;
 
   @override
   Future<bool> requestPermission() async {
@@ -70,6 +70,5 @@ class FirebaseMessagingClient implements FcmClient {
       FirebaseMessaging.onMessageOpenedApp;
 
   @override
-  Future<RemoteMessage?> getInitialMessage() =>
-      _messaging.getInitialMessage();
+  Future<RemoteMessage?> getInitialMessage() => _messaging.getInitialMessage();
 }

@@ -66,7 +66,8 @@ class VeloraMockUploadAdapter implements VeloraUploadAdapter {
       onProgress?.call(i / steps);
     }
     return VeloraUploadResult(
-      url: 'https://mock.velora.dev/uploads/${attachment.id}/${attachment.name}',
+      url:
+          'https://mock.velora.dev/uploads/${attachment.id}/${attachment.name}',
       mediaId: _fakeId(),
       mediaUuid: attachment.id,
     );
@@ -122,10 +123,8 @@ class LaravelMediaAdapter implements VeloraUploadAdapter {
   final String endpoint;
   final Dio? _customDio;
 
-  LaravelMediaAdapter({
-    this.endpoint = '/api/media',
-    Dio? dio,
-  }) : _customDio = dio;
+  LaravelMediaAdapter({this.endpoint = '/api/media', Dio? dio})
+    : _customDio = dio;
 
   @override
   Future<VeloraUploadResult> upload(

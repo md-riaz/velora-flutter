@@ -26,7 +26,11 @@ class SettingsPage extends GetView<SettingsController> {
           // Appearance
           // ----------------------------------------------------------------
           _SectionHeader(label: 'Appearance', textTheme: textTheme),
-          _AppearanceSection(controller: controller, scheme: scheme, textTheme: textTheme),
+          _AppearanceSection(
+            controller: controller,
+            scheme: scheme,
+            textTheme: textTheme,
+          ),
 
           // ----------------------------------------------------------------
           // Features
@@ -193,22 +197,23 @@ class _AboutSection extends StatelessWidget {
           title: Text('Demo app', style: textTheme.bodyMedium),
           trailing: Text(
             'v1.0.0',
-            style: textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+            style: textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
           ),
         ),
         ListTile(
           title: Text('Velora Flutter SDK', style: textTheme.bodyMedium),
           trailing: Text(
             '1.0.0',
-            style: textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+            style: textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
           ),
         ),
         ListTile(
           title: Text('Open source licenses', style: textTheme.bodyMedium),
-          trailing: Icon(
-            Icons.chevron_right,
-            color: scheme.onSurfaceVariant,
-          ),
+          trailing: Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
           onTap: () => showLicensePage(context: context),
         ),
       ],

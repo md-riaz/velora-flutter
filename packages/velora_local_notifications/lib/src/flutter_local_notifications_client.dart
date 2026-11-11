@@ -24,12 +24,12 @@ class FlutterLocalNotificationsClient implements LocalNotificationsClient {
     String channelDescription = 'Default notification channel for this app.',
     AndroidScheduleMode androidScheduleMode =
         AndroidScheduleMode.inexactAllowWhileIdle,
-  })  : _plugin = plugin ?? FlutterLocalNotificationsPlugin(),
-        _androidDefaultIcon = androidDefaultIcon,
-        _channelId = channelId,
-        _channelName = channelName,
-        _channelDescription = channelDescription,
-        _androidScheduleMode = androidScheduleMode;
+  }) : _plugin = plugin ?? FlutterLocalNotificationsPlugin(),
+       _androidDefaultIcon = androidDefaultIcon,
+       _channelId = channelId,
+       _channelName = channelName,
+       _channelDescription = channelDescription,
+       _androidScheduleMode = androidScheduleMode;
 
   final FlutterLocalNotificationsPlugin _plugin;
   final String _androidDefaultIcon;
@@ -94,7 +94,8 @@ class FlutterLocalNotificationsClient implements LocalNotificationsClient {
     try {
       await _plugin
           .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>()
+            AndroidFlutterLocalNotificationsPlugin
+          >()
           ?.requestNotificationsPermission();
     } catch (_) {
       // Platform doesn't support (or doesn't need) this permission request.
@@ -103,7 +104,8 @@ class FlutterLocalNotificationsClient implements LocalNotificationsClient {
     try {
       await _plugin
           .resolvePlatformSpecificImplementation<
-              IOSFlutterLocalNotificationsPlugin>()
+            IOSFlutterLocalNotificationsPlugin
+          >()
           ?.requestPermissions(alert: true, badge: true, sound: true);
     } catch (_) {
       // Platform doesn't support (or doesn't need) this permission request.
@@ -112,7 +114,8 @@ class FlutterLocalNotificationsClient implements LocalNotificationsClient {
     try {
       await _plugin
           .resolvePlatformSpecificImplementation<
-              MacOSFlutterLocalNotificationsPlugin>()
+            MacOSFlutterLocalNotificationsPlugin
+          >()
           ?.requestPermissions(alert: true, badge: true, sound: true);
     } catch (_) {
       // Platform doesn't support (or doesn't need) this permission request.
@@ -120,12 +123,7 @@ class FlutterLocalNotificationsClient implements LocalNotificationsClient {
   }
 
   @override
-  Future<void> show(
-    int id,
-    String? title,
-    String? body, {
-    String? payload,
-  }) {
+  Future<void> show(int id, String? title, String? body, {String? payload}) {
     return _plugin.show(
       id: id,
       title: title,

@@ -72,8 +72,7 @@ class ObxMissingReactiveRead extends DartLintRule {
       if (expr is! InstanceCreationExpression) return;
 
       for (final arg in expr.argumentList.arguments) {
-        final valueExpr =
-            arg is NamedExpression ? arg.expression : arg;
+        final valueExpr = arg is NamedExpression ? arg.expression : arg;
         final type = valueExpr.staticType;
         if (type != null && _isGetxRxType(type)) {
           reporter.reportErrorForNode(_code, valueExpr);

@@ -28,16 +28,27 @@ class ChatPage extends GetView<ChatController> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
                 children: [
-                  Icon(Icons.error_outline, size: 16, color: scheme.onErrorContainer),
+                  Icon(
+                    Icons.error_outline,
+                    size: 16,
+                    color: scheme.onErrorContainer,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       err,
-                      style: TextStyle(color: scheme.onErrorContainer, fontSize: 13),
+                      style: TextStyle(
+                        color: scheme.onErrorContainer,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                   IconButton(
-                    icon: Icon(Icons.close, size: 16, color: scheme.onErrorContainer),
+                    icon: Icon(
+                      Icons.close,
+                      size: 16,
+                      color: scheme.onErrorContainer,
+                    ),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                     onPressed: controller.clearError,
@@ -50,7 +61,9 @@ class ChatPage extends GetView<ChatController> {
           Expanded(
             child: Obx(() {
               if (controller.loading.value && controller.messages.isEmpty) {
-                return const Center(child: CircularProgressIndicator.adaptive());
+                return const Center(
+                  child: CircularProgressIndicator.adaptive(),
+                );
               }
               final msgs = controller.messages;
               if (msgs.isEmpty) {
@@ -89,10 +102,7 @@ class ChatPage extends GetView<ChatController> {
               );
             }),
           ),
-          _InputBar(
-            controller: controller,
-            tokens: tokens,
-          ),
+          _InputBar(controller: controller, tokens: tokens),
         ],
       ),
     );
@@ -126,7 +136,11 @@ class _LoadEarlierButton extends StatelessWidget {
           }
           return TextButton.icon(
             onPressed: controller.loadEarlier,
-            icon: Icon(Icons.keyboard_arrow_up, size: 18, color: scheme.onSurfaceVariant),
+            icon: Icon(
+              Icons.keyboard_arrow_up,
+              size: 18,
+              color: scheme.onSurfaceVariant,
+            ),
             label: Text(
               'Load earlier messages',
               style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13),
@@ -134,7 +148,9 @@ class _LoadEarlierButton extends StatelessWidget {
             style: TextButton.styleFrom(
               backgroundColor: scheme.surfaceContainerHighest,
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
             ),
           );
         }),
@@ -164,31 +180,35 @@ class _ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
         icon: const Icon(Icons.arrow_back_ios_new, size: 20),
         onPressed: () => Velora.nav.back(),
       ),
-      title: Obx(() => Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                controller.conversation.value.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+      title: Obx(
+        () => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              controller.conversation.value.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                decoration: BoxDecoration(
-                  color: ClaudeColors.primary.withAlpha(26),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  'claude-opus-4',
-                  style: textTheme.labelSmall?.copyWith(
-                    color: ClaudeColors.primary,
-                    fontWeight: FontWeight.w600,
-                  ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              decoration: BoxDecoration(
+                color: ClaudeColors.primary.withAlpha(26),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                'claude-opus-4',
+                style: textTheme.labelSmall?.copyWith(
+                  color: ClaudeColors.primary,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-            ],
-          )),
+            ),
+          ],
+        ),
+      ),
       actions: [
         IconButton(
           icon: const Icon(Icons.more_horiz),
@@ -224,10 +244,15 @@ class _ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
               ),
               const SizedBox(height: 8),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 child: Text(
                   controller.conversation.value.title,
-                  style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                  style: textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -295,10 +320,7 @@ class _MenuAction extends StatelessWidget {
 
     return ListTile(
       leading: Icon(icon, size: 22, color: effectiveColor),
-      title: Text(
-        label,
-        style: TextStyle(color: effectiveColor, fontSize: 15),
-      ),
+      title: Text(label, style: TextStyle(color: effectiveColor, fontSize: 15)),
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20),
       dense: true,
@@ -350,10 +372,7 @@ class _UserMessage extends StatelessWidget {
             bottomRight: Radius.circular(4),
           ),
         ),
-        child: Text(
-          message.content,
-          style: textTheme.bodyMedium,
-        ),
+        child: Text(message.content, style: textTheme.bodyMedium),
       ),
     );
   }
@@ -434,7 +453,11 @@ class _RichMessageContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: parts.map((part) {
         if (part.isCode) {
-          return _CodeBlock(code: part.text, tokens: tokens, textTheme: textTheme);
+          return _CodeBlock(
+            code: part.text,
+            tokens: tokens,
+            textTheme: textTheme,
+          );
         }
         return Padding(
           padding: const EdgeInsets.only(bottom: 4),
@@ -450,7 +473,9 @@ class _RichMessageContent extends StatelessWidget {
     int lastEnd = 0;
     for (final match in regex.allMatches(text)) {
       if (match.start > lastEnd) {
-        result.add(_ContentPart(text.substring(lastEnd, match.start).trim(), false));
+        result.add(
+          _ContentPart(text.substring(lastEnd, match.start).trim(), false),
+        );
       }
       result.add(_ContentPart(match.group(1) ?? '', true));
       lastEnd = match.end;
@@ -652,7 +677,10 @@ class _WelcomePrompts extends StatelessWidget {
                     controller.inputController.text = p.$1;
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
                     decoration: BoxDecoration(
                       color: scheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(12),
@@ -749,8 +777,7 @@ class _InputBar extends StatelessWidget {
                             border: InputBorder.none,
                             enabledBorder: InputBorder.none,
                             focusedBorder: InputBorder.none,
-                            contentPadding:
-                                EdgeInsets.symmetric(vertical: 10),
+                            contentPadding: EdgeInsets.symmetric(vertical: 10),
                             filled: false,
                           ),
                         ),

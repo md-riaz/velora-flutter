@@ -42,29 +42,20 @@ BAZ=qux
       expect(result['FOO'], 'bar');
     });
 
-    test(
-      'does not strip a "#" that is part of a quoted value',
-      () {
-        final result = parseEnv('FOO="bar # not a comment"');
-        expect(result['FOO'], 'bar # not a comment');
-      },
-    );
+    test('does not strip a "#" that is part of a quoted value', () {
+      final result = parseEnv('FOO="bar # not a comment"');
+      expect(result['FOO'], 'bar # not a comment');
+    });
 
-    test(
-      'strips an inline comment that follows a closing double quote',
-      () {
-        final result = parseEnv('FOO="bar" # comment');
-        expect(result['FOO'], 'bar');
-      },
-    );
+    test('strips an inline comment that follows a closing double quote', () {
+      final result = parseEnv('FOO="bar" # comment');
+      expect(result['FOO'], 'bar');
+    });
 
-    test(
-      'strips an inline comment that follows a closing single quote',
-      () {
-        final result = parseEnv("FOO='baz' # c");
-        expect(result['FOO'], 'baz');
-      },
-    );
+    test('strips an inline comment that follows a closing single quote', () {
+      final result = parseEnv("FOO='baz' # c");
+      expect(result['FOO'], 'baz');
+    });
 
     test('strips a trailing inline comment on an unquoted value (X=y # c)', () {
       final result = parseEnv('X=y # c');
@@ -240,31 +231,25 @@ FOO=bar
     test('recognizes canonical names and aliases case-insensitively', () {
       expect(VeloraEnvironment.parse('dev'), VeloraEnvironment.dev);
       expect(VeloraEnvironment.parse('DEV'), VeloraEnvironment.dev);
-      expect(
-        VeloraEnvironment.parse('development'),
-        VeloraEnvironment.dev,
-      );
+      expect(VeloraEnvironment.parse('development'), VeloraEnvironment.dev);
       expect(VeloraEnvironment.parse('staging'), VeloraEnvironment.staging);
       expect(VeloraEnvironment.parse('Stag'), VeloraEnvironment.staging);
       expect(VeloraEnvironment.parse('prod'), VeloraEnvironment.prod);
-      expect(
-        VeloraEnvironment.parse('PRODUCTION'),
-        VeloraEnvironment.prod,
-      );
+      expect(VeloraEnvironment.parse('PRODUCTION'), VeloraEnvironment.prod);
     });
 
-    test('falls back to the given fallback (default dev) for unknown input', () {
-      expect(VeloraEnvironment.parse(null), VeloraEnvironment.dev);
-      expect(VeloraEnvironment.parse(''), VeloraEnvironment.dev);
-      expect(VeloraEnvironment.parse('nonsense'), VeloraEnvironment.dev);
-      expect(
-        VeloraEnvironment.parse(
-          'nonsense',
-          fallback: VeloraEnvironment.prod,
-        ),
-        VeloraEnvironment.prod,
-      );
-    });
+    test(
+      'falls back to the given fallback (default dev) for unknown input',
+      () {
+        expect(VeloraEnvironment.parse(null), VeloraEnvironment.dev);
+        expect(VeloraEnvironment.parse(''), VeloraEnvironment.dev);
+        expect(VeloraEnvironment.parse('nonsense'), VeloraEnvironment.dev);
+        expect(
+          VeloraEnvironment.parse('nonsense', fallback: VeloraEnvironment.prod),
+          VeloraEnvironment.prod,
+        );
+      },
+    );
   });
 
   group('VeloraEnv.load', () {
@@ -288,14 +273,9 @@ FOO=bar
     });
 
     test('a missing flavor asset is tolerated', () async {
-      final bundle = _FakeAssetBundle({
-        'assets/env/.env': 'SHARED=base',
-      });
+      final bundle = _FakeAssetBundle({'assets/env/.env': 'SHARED=base'});
 
-      await VeloraEnv.load(
-        environment: VeloraEnvironment.prod,
-        bundle: bundle,
-      );
+      await VeloraEnv.load(environment: VeloraEnvironment.prod, bundle: bundle);
 
       expect(VeloraEnv.get('SHARED'), 'base');
       expect(VeloraEnv.isLoaded, isTrue);
@@ -312,9 +292,7 @@ FOO=bar
     });
 
     test('an explicit asset path is loaded exactly as given', () async {
-      final bundle = _FakeAssetBundle({
-        'assets/custom.env': 'CUSTOM=1',
-      });
+      final bundle = _FakeAssetBundle({'assets/custom.env': 'CUSTOM=1'});
 
       await VeloraEnv.load(asset: 'assets/custom.env', bundle: bundle);
 
@@ -364,53 +342,38 @@ FOO=bar
       },
     );
 
-    test(
-      'still accepts the short-form flavor filename (.env.prod)',
-      () async {
-        final bundle = _FakeAssetBundle({
-          'assets/env/.env.prod': 'API_URL=https://prod-short.example.test',
-        });
+    test('still accepts the short-form flavor filename (.env.prod)', () async {
+      final bundle = _FakeAssetBundle({
+        'assets/env/.env.prod': 'API_URL=https://prod-short.example.test',
+      });
 
-        await VeloraEnv.load(
-          environment: VeloraEnvironment.prod,
-          bundle: bundle,
-        );
+      await VeloraEnv.load(environment: VeloraEnvironment.prod, bundle: bundle);
 
-        expect(VeloraEnv.get('API_URL'), 'https://prod-short.example.test');
-      },
-    );
+      expect(VeloraEnv.get('API_URL'), 'https://prod-short.example.test');
+    });
 
-    test(
-      'loads only the first matching flavor candidate, not both '
-      '(short form wins over long form when both exist)',
-      () async {
-        final bundle = _FakeAssetBundle({
-          'assets/env/.env.prod': 'API_URL=https://short.example.test',
-          'assets/env/.env.production': 'API_URL=https://long.example.test',
-        });
+    test('loads only the first matching flavor candidate, not both '
+        '(short form wins over long form when both exist)', () async {
+      final bundle = _FakeAssetBundle({
+        'assets/env/.env.prod': 'API_URL=https://short.example.test',
+        'assets/env/.env.production': 'API_URL=https://long.example.test',
+      });
 
-        await VeloraEnv.load(
-          environment: VeloraEnvironment.prod,
-          bundle: bundle,
-        );
+      await VeloraEnv.load(environment: VeloraEnvironment.prod, bundle: bundle);
 
-        expect(VeloraEnv.get('API_URL'), 'https://short.example.test');
-      },
-    );
+      expect(VeloraEnv.get('API_URL'), 'https://short.example.test');
+    });
   });
 
   group('VeloraEnv.current', () {
     tearDown(VeloraEnv.reset);
 
-    test(
-      'current is directly settable (mockable) without a compile-time '
-      'define',
-      () {
-        VeloraEnv.current = VeloraEnvironment.prod;
-        expect(VeloraEnv.current, VeloraEnvironment.prod);
-        expect(VeloraEnv.isProd, isTrue);
-      },
-    );
+    test('current is directly settable (mockable) without a compile-time '
+        'define', () {
+      VeloraEnv.current = VeloraEnvironment.prod;
+      expect(VeloraEnv.current, VeloraEnvironment.prod);
+      expect(VeloraEnv.isProd, isTrue);
+    });
 
     test('load(environment: ...) updates current to match', () async {
       final bundle = _FakeAssetBundle({
@@ -430,39 +393,33 @@ FOO=bar
       );
     });
 
-    test(
-      'loadFromString(..., environment: ...) updates current to match',
-      () {
-        VeloraEnv.loadFromString(
-          'FOO=bar',
-          environment: VeloraEnvironment.staging,
-        );
+    test('loadFromString(..., environment: ...) updates current to match', () {
+      VeloraEnv.loadFromString(
+        'FOO=bar',
+        environment: VeloraEnvironment.staging,
+      );
 
-        expect(VeloraEnv.current, VeloraEnvironment.staging);
-        expect(VeloraEnv.isStaging, isTrue);
-        expect(
-          VeloraEnv.pick(dev: 'dev-value', staging: 'staging-value'),
-          'staging-value',
-        );
-      },
-    );
+      expect(VeloraEnv.current, VeloraEnvironment.staging);
+      expect(VeloraEnv.isStaging, isTrue);
+      expect(
+        VeloraEnv.pick(dev: 'dev-value', staging: 'staging-value'),
+        'staging-value',
+      );
+    });
 
-    test(
-      'reset() clears the current override so it re-resolves to the '
-      'compile-time default',
-      () {
-        VeloraEnv.current = VeloraEnvironment.staging;
-        expect(VeloraEnv.current, VeloraEnvironment.staging);
+    test('reset() clears the current override so it re-resolves to the '
+        'compile-time default', () {
+      VeloraEnv.current = VeloraEnvironment.staging;
+      expect(VeloraEnv.current, VeloraEnvironment.staging);
 
-        VeloraEnv.reset();
+      VeloraEnv.reset();
 
-        // No VELORA_ENV compile-time define is set for this test run, so
-        // the compile-time default (dev) is what current re-resolves to --
-        // it must not still be stuck on staging.
-        expect(VeloraEnv.current, isNot(VeloraEnvironment.staging));
-        expect(VeloraEnv.current, VeloraEnvironment.dev);
-      },
-    );
+      // No VELORA_ENV compile-time define is set for this test run, so
+      // the compile-time default (dev) is what current re-resolves to --
+      // it must not still be stuck on staging.
+      expect(VeloraEnv.current, isNot(VeloraEnvironment.staging));
+      expect(VeloraEnv.current, VeloraEnvironment.dev);
+    });
   });
 
   group('VeloraEnvPlugin', () {
@@ -472,92 +429,76 @@ FOO=bar
       VeloraEnv.reset();
     });
 
-    test(
-      'register() loads env via the injected bundle/environment and puts a '
-      'resolvable VeloraEnvService',
-      () async {
-        final bundle = _FakeAssetBundle({
-          'assets/env/.env.staging': 'API_URL=https://staging.example.test',
-        });
+    test('register() loads env via the injected bundle/environment and puts a '
+        'resolvable VeloraEnvService', () async {
+      final bundle = _FakeAssetBundle({
+        'assets/env/.env.staging': 'API_URL=https://staging.example.test',
+      });
 
-        const config = VeloraConfig(
-          appName: 'Test',
-          apiBaseUrl: 'https://example.test',
-        );
-        final context = VeloraContext(config);
+      const config = VeloraConfig(
+        appName: 'Test',
+        apiBaseUrl: 'https://example.test',
+      );
+      final context = VeloraContext(config);
 
-        final plugin = VeloraEnvPlugin(
-          environment: VeloraEnvironment.staging,
-          bundle: bundle,
-        );
-        await plugin.register(context);
+      final plugin = VeloraEnvPlugin(
+        environment: VeloraEnvironment.staging,
+        bundle: bundle,
+      );
+      await plugin.register(context);
 
-        expect(VeloraEnv.get('API_URL'), 'https://staging.example.test');
-        final service = Get.find<VeloraEnvService>();
-        expect(service.environment, VeloraEnvironment.staging);
-        expect(service.get('API_URL'), 'https://staging.example.test');
-      },
-    );
+      expect(VeloraEnv.get('API_URL'), 'https://staging.example.test');
+      final service = Get.find<VeloraEnvService>();
+      expect(service.environment, VeloraEnvironment.staging);
+      expect(service.get('API_URL'), 'https://staging.example.test');
+    });
 
-    test(
-      'register() does not throw when loadIfNeeded is true and no assets '
-      'exist -- boot continues without crashing',
-      () async {
-        const config = VeloraConfig(
-          appName: 'Test',
-          apiBaseUrl: 'https://example.test',
-        );
-        final context = VeloraContext(config);
+    test('register() does not throw when loadIfNeeded is true and no assets '
+        'exist -- boot continues without crashing', () async {
+      const config = VeloraConfig(
+        appName: 'Test',
+        apiBaseUrl: 'https://example.test',
+      );
+      final context = VeloraContext(config);
 
-        final plugin = VeloraEnvPlugin(
-          asset: 'assets/definitely-missing.env',
-        );
+      final plugin = VeloraEnvPlugin(asset: 'assets/definitely-missing.env');
 
-        await plugin.register(context);
+      await plugin.register(context);
 
-        expect(Get.find<VeloraEnvService>(), isA<VeloraEnvService>());
-      },
-    );
+      expect(Get.find<VeloraEnvService>(), isA<VeloraEnvService>());
+    });
 
-    test(
-      'register() with loadIfNeeded: false does not call load, but still '
-      'registers the service',
-      () async {
-        const config = VeloraConfig(
-          appName: 'Test',
-          apiBaseUrl: 'https://example.test',
-        );
-        final context = VeloraContext(config);
+    test('register() with loadIfNeeded: false does not call load, but still '
+        'registers the service', () async {
+      const config = VeloraConfig(
+        appName: 'Test',
+        apiBaseUrl: 'https://example.test',
+      );
+      final context = VeloraContext(config);
 
-        final plugin = VeloraEnvPlugin(loadIfNeeded: false);
-        await plugin.register(context);
+      final plugin = VeloraEnvPlugin(loadIfNeeded: false);
+      await plugin.register(context);
 
-        expect(VeloraEnv.isLoaded, isFalse);
-        expect(Get.find<VeloraEnvService>(), isA<VeloraEnvService>());
-      },
-    );
+      expect(VeloraEnv.isLoaded, isFalse);
+      expect(Get.find<VeloraEnvService>(), isA<VeloraEnvService>());
+    });
 
-    test(
-      'register() skips loading when VeloraEnv is already loaded',
-      () async {
-        VeloraEnv.loadFromMap({'ALREADY': 'loaded'});
+    test('register() skips loading when VeloraEnv is already loaded', () async {
+      VeloraEnv.loadFromMap({'ALREADY': 'loaded'});
 
-        const config = VeloraConfig(
-          appName: 'Test',
-          apiBaseUrl: 'https://example.test',
-        );
-        final context = VeloraContext(config);
+      const config = VeloraConfig(
+        appName: 'Test',
+        apiBaseUrl: 'https://example.test',
+      );
+      final context = VeloraContext(config);
 
-        final plugin = VeloraEnvPlugin(
-          asset: 'assets/definitely-missing.env',
-        );
-        await plugin.register(context);
+      final plugin = VeloraEnvPlugin(asset: 'assets/definitely-missing.env');
+      await plugin.register(context);
 
-        // Still loaded with the pre-existing value -- the plugin didn't
-        // attempt (and fail/override via) its own load call.
-        expect(VeloraEnv.get('ALREADY'), 'loaded');
-      },
-    );
+      // Still loaded with the pre-existing value -- the plugin didn't
+      // attempt (and fail/override via) its own load call.
+      expect(VeloraEnv.get('ALREADY'), 'loaded');
+    });
   });
 }
 

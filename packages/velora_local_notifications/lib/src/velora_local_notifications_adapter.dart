@@ -31,7 +31,7 @@ import 'local_notifications_client.dart';
 /// client (see `test/velora_local_notifications_test.dart`).
 class VeloraLocalNotificationsAdapter implements LocalNotificationAdapter {
   VeloraLocalNotificationsAdapter({LocalNotificationsClient? client})
-      : _client = client ?? FlutterLocalNotificationsClient();
+    : _client = client ?? FlutterLocalNotificationsClient();
 
   final LocalNotificationsClient _client;
 
@@ -77,12 +77,7 @@ class VeloraLocalNotificationsAdapter implements LocalNotificationAdapter {
     Map<String, dynamic> payload = const {},
   }) {
     final id = _getAndIncrementShowId();
-    return _client.show(
-      id,
-      title,
-      body,
-      payload: _encodePayload(payload),
-    );
+    return _client.show(id, title, body, payload: _encodePayload(payload));
   }
 
   @override

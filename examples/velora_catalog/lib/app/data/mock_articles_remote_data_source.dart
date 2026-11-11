@@ -29,7 +29,8 @@ import 'article.dart';
 /// read-only catalog/reader, so `VeloraCachedRepository`'s write path (which
 /// always delegates to the remote as the source of truth) is intentionally
 /// left unexercised here.
-class MockArticlesRemoteDataSource implements VeloraRemoteDataSource<Article, String> {
+class MockArticlesRemoteDataSource
+    implements VeloraRemoteDataSource<Article, String> {
   final ToggleConnectivitySource _connectivity;
 
   MockArticlesRemoteDataSource(this._connectivity);

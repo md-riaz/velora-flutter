@@ -76,7 +76,8 @@ class NotificationsController extends VeloraController {
   }
 
   void _recalculateUnread() {
-    Velora.notify.unreadCount.value =
-        Velora.notify.notifications.where((n) => n.isUnread).length;
+    Velora.notify.unreadCount.value = Velora.notify.notifications
+        .where((n) => n.isUnread)
+        .length;
   }
 }

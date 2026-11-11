@@ -101,7 +101,9 @@ class _ProfileCard extends StatelessWidget {
       final typedUser = authUser is AuthUser ? authUser : null;
       final name = typedUser?.name ?? AccountController.mockUser.name;
       final email = typedUser?.email ?? AccountController.mockUser.email;
-      final plan = controller.isAuthenticated ? 'Pro' : AccountController.mockUser.plan;
+      final plan = controller.isAuthenticated
+          ? 'Pro'
+          : AccountController.mockUser.plan;
       return _ProfileCardContent(
         name: name,
         email: email,
@@ -274,7 +276,9 @@ class _SessionSection extends StatelessWidget {
             title: Text('User object', style: textTheme.bodyMedium),
             trailing: Text(
               controller.currentUser != null ? 'VeloraUser' : 'null',
-              style: textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+              style: textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
             ),
           ),
           if (!isAuth)
@@ -320,7 +324,8 @@ class _SdkPatternsSection extends StatelessWidget {
       children: [
         _CodeCard(
           title: 'Login',
-          code: 'await Velora.login({\n'
+          code:
+              'await Velora.login({\n'
               "  'email': email,\n"
               "  'password': password,\n"
               '});',
@@ -329,7 +334,8 @@ class _SdkPatternsSection extends StatelessWidget {
         ),
         _CodeCard(
           title: 'Access current user',
-          code: 'final user = Velora.user;\n'
+          code:
+              'final user = Velora.user;\n'
               '// or cast to your model:\n'
               'final appUser = Velora.userAs<AppUser>();',
           scheme: scheme,
@@ -337,7 +343,8 @@ class _SdkPatternsSection extends StatelessWidget {
         ),
         _CodeCard(
           title: 'Guard routes',
-          code: 'GetPage(\n'
+          code:
+              'GetPage(\n'
               "  name: '/home',\n"
               '  page: () => HomePage(),\n'
               '  middlewares: Velora.authOnly,\n'
@@ -347,7 +354,8 @@ class _SdkPatternsSection extends StatelessWidget {
         ),
         _CodeCard(
           title: 'React to auth state',
-          code: 'Obx(() {\n'
+          code:
+              'Obx(() {\n'
               '  if (!Velora.auth.isAuthenticated.value)\n'
               '    return LoginPrompt();\n'
               '  return ProfileBody();\n'
@@ -357,7 +365,8 @@ class _SdkPatternsSection extends StatelessWidget {
         ),
         _CodeCard(
           title: 'Custom user model',
-          code: 'class AppUser implements VeloraUser {\n'
+          code:
+              'class AppUser implements VeloraUser {\n'
               '  // your fields ...\n'
               '  static AppUser fromJson(Map<String, dynamic> j) => ...;\n'
               '}\n\n'
@@ -368,7 +377,8 @@ class _SdkPatternsSection extends StatelessWidget {
         ),
         _CodeCard(
           title: 'Permission-gated UI (Can / RoleOnly)',
-          code: '// Hide a widget unless the user has a permission:\n'
+          code:
+              '// Hide a widget unless the user has a permission:\n'
               'Can(\n'
               "  permission: 'users.manage',\n"
               '  child: DeleteButton(),\n'
@@ -380,7 +390,8 @@ class _SdkPatternsSection extends StatelessWidget {
         ),
         _CodeCard(
           title: 'Form validation (VeloraFormController)',
-          code: 'class ProfileController extends VeloraFormController {\n'
+          code:
+              'class ProfileController extends VeloraFormController {\n'
               '  Future<void> save() async {\n'
               '    // Server returns field-level errors:\n'
               "    setErrors({'email': ['Already taken']});\n"
@@ -392,7 +403,8 @@ class _SdkPatternsSection extends StatelessWidget {
         ),
         _CodeCard(
           title: 'Repository pattern',
-          code: 'class UserRepository {\n'
+          code:
+              'class UserRepository {\n'
               '  final VeloraHttp http;\n'
               '  UserRepository(this.http);\n\n'
               '  Future<List<User>> index() =>\n'
@@ -404,7 +416,8 @@ class _SdkPatternsSection extends StatelessWidget {
         ),
         _CodeCard(
           title: 'Logout coordinator',
-          code: 'await Velora.logoutCoordinator.run(\n'
+          code:
+              'await Velora.logoutCoordinator.run(\n'
               '  remoteLogout: () => repository.logout(token),\n'
               '  clearSession: () async {\n'
               '    await Velora.storage.clearToken();\n'
@@ -448,8 +461,11 @@ class _AdminSection extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(Icons.admin_panel_settings_outlined,
-                      size: 18, color: scheme.error),
+                  Icon(
+                    Icons.admin_panel_settings_outlined,
+                    size: 18,
+                    color: scheme.error,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     'Admin panel',

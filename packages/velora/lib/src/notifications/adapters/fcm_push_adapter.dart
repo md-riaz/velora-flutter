@@ -58,12 +58,12 @@ class FcmPushAdapter implements PushAdapter {
     required Stream<PushMessage> onMessage,
     required Stream<PushMessage> onMessageOpenedApp,
     Future<void> Function()? onDispose,
-  })  : _getToken = getToken,
-        _deleteToken = deleteToken,
-        _requestPermission = requestPermission,
-        _onMessage = onMessage,
-        _onMessageOpenedApp = onMessageOpenedApp,
-        _onDispose = onDispose;
+  }) : _getToken = getToken,
+       _deleteToken = deleteToken,
+       _requestPermission = requestPermission,
+       _onMessage = onMessage,
+       _onMessageOpenedApp = onMessageOpenedApp,
+       _onDispose = onDispose;
 
   @override
   String get provider => 'fcm';

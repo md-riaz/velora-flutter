@@ -83,16 +83,21 @@ class Velora {
   // ---------------------------------------------------------------------------
 
   /// Requires the user to be authenticated; redirects to login otherwise.
-  static List<GetMiddleware> get authOnly =>
-      [VeloraMiddleware(guards: const [VeloraAuthGuard()])];
+  static List<GetMiddleware> get authOnly => [
+    VeloraMiddleware(guards: const [VeloraAuthGuard()]),
+  ];
 
   /// Requires the user to be a guest; redirects to [authenticatedRoute] otherwise.
-  static List<GetMiddleware> guestOnly({String authenticatedRoute = '/'}) =>
-      [VeloraMiddleware(guards: [VeloraGuestGuard(authenticatedRoute: authenticatedRoute)])];
+  static List<GetMiddleware> guestOnly({String authenticatedRoute = '/'}) => [
+    VeloraMiddleware(
+      guards: [VeloraGuestGuard(authenticatedRoute: authenticatedRoute)],
+    ),
+  ];
 
   /// Wrap arbitrary guards into a middleware list.
-  static List<GetMiddleware> guard(List<VeloraRouteGuard> guards) =>
-      [VeloraMiddleware(guards: guards)];
+  static List<GetMiddleware> guard(List<VeloraRouteGuard> guards) => [
+    VeloraMiddleware(guards: guards),
+  ];
 
   // ---------------------------------------------------------------------------
 
@@ -198,11 +203,14 @@ class Velora {
     );
     Get.put<NotificationRemoteDataSource>(notificationRemote, permanent: true);
 
-    final notificationRepository = NotificationRepositoryImpl(notificationRemote);
+    final notificationRepository = NotificationRepositoryImpl(
+      notificationRemote,
+    );
     Get.put<NotificationRepository>(notificationRepository, permanent: true);
 
     final resolvedPushAdapter = pushAdapter ?? NoopPushAdapter();
-    final resolvedLocalAdapter = localAdapter ?? InMemoryLocalNotificationAdapter();
+    final resolvedLocalAdapter =
+        localAdapter ?? InMemoryLocalNotificationAdapter();
 
     final notify = VeloraNotify(
       repository: notificationRepository,
@@ -250,7 +258,9 @@ class Velora {
     final ctx = VeloraContext(config);
     for (final p in plugins) {
       if (_plugins.any((existing) => existing.name == p.name)) {
-        throw ArgumentError('Plugin with name "${p.name}" is already registered.');
+        throw ArgumentError(
+          'Plugin with name "${p.name}" is already registered.',
+        );
       }
       await p.register(ctx);
       _plugins.add(p);

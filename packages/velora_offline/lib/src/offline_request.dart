@@ -17,12 +17,12 @@ class OfflineRequest {
   });
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'method': method,
-        'path': path,
-        'data': data,
-        'createdAt': createdAt.toIso8601String(),
-      };
+    'id': id,
+    'method': method,
+    'path': path,
+    'data': data,
+    'createdAt': createdAt.toIso8601String(),
+  };
 
   factory OfflineRequest.fromJson(Map<String, dynamic> json) {
     return OfflineRequest(
@@ -30,7 +30,8 @@ class OfflineRequest {
       method: json['method']?.toString() ?? 'POST',
       path: json['path']?.toString() ?? '',
       data: json['data'],
-      createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
+      createdAt:
+          DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
           DateTime.now(),
     );
   }

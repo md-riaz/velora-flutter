@@ -48,5 +48,6 @@ class VeloraContext {
       onLogout(VeloraLogoutHook(onBeforeLogout: hook));
 
   /// Retrieve a typed config extension the app registered on [VeloraConfig].
-  T? configExtension<T extends VeloraConfigExtension>() => config.extension<T>();
+  T? configExtension<T extends VeloraConfigExtension>() =>
+      config.extension<T>();
 }

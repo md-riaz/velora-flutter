@@ -69,15 +69,12 @@ class HomePage extends GetView<HomeController> {
                               color: Theme.of(context).colorScheme.error,
                               borderRadius: BorderRadius.circular(999),
                             ),
-                            constraints:
-                                const BoxConstraints(minWidth: 16),
+                            constraints: const BoxConstraints(minWidth: 16),
                             child: Text(
                               count > 99 ? '99+' : '$count',
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onError,
+                                color: Theme.of(context).colorScheme.onError,
                                 fontSize: 9,
                                 fontWeight: FontWeight.w700,
                                 height: 1.2,
@@ -92,7 +89,9 @@ class HomePage extends GetView<HomeController> {
               Obx(() {
                 final isDark = Velora.theme.current == ThemeMode.dark;
                 return IconButton(
-                  tooltip: isDark ? 'Switch to light mode' : 'Switch to dark mode',
+                  tooltip: isDark
+                      ? 'Switch to light mode'
+                      : 'Switch to dark mode',
                   icon: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 250),
                     child: Icon(
@@ -200,7 +199,8 @@ class HomePage extends GetView<HomeController> {
                 final conv = items[index];
                 final tile = _ConversationTile(
                   conversation: conv,
-                  onTap: () => Velora.nav.to('/chat/${conv.id}', arguments: conv),
+                  onTap: () =>
+                      Velora.nav.to('/chat/${conv.id}', arguments: conv),
                 );
                 if (index == items.length - 1) return tile;
                 return Column(
@@ -310,8 +310,7 @@ class _AppDrawer extends StatelessWidget {
                       Velora.nav.to('/chat/${conv.id}', arguments: conv);
                     },
                     dense: true,
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 16),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                   );
                 }).toList(),
               );
@@ -389,8 +388,7 @@ class _DrawerHeader extends StatelessWidget {
                 ),
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: ClaudeColors.primary.withAlpha(26),
                   borderRadius: BorderRadius.circular(4),
@@ -419,10 +417,7 @@ class _ConversationTile extends StatelessWidget {
   final ConversationModel conversation;
   final VoidCallback onTap;
 
-  const _ConversationTile({
-    required this.conversation,
-    required this.onTap,
-  });
+  const _ConversationTile({required this.conversation, required this.onTap});
 
   @override
   Widget build(BuildContext context) {

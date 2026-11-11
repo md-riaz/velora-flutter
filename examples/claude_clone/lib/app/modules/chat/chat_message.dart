@@ -27,9 +27,9 @@ class ChatMessage {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'content': content,
-        'role': role == MessageRole.user ? 'user' : 'assistant',
-        'created_at': createdAt.toIso8601String(),
-      };
+    'id': id,
+    'content': content,
+    'role': role == MessageRole.user ? 'user' : 'assistant',
+    'created_at': createdAt.toIso8601String(),
+  };
 }

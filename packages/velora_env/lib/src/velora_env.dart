@@ -56,8 +56,8 @@ class VeloraEnv {
   /// loaded config. It can also be set directly (e.g. in tests, to mock the
   /// active environment without a compile-time define).
   static VeloraEnvironment get current => _current ??= VeloraEnvironment.parse(
-        const String.fromEnvironment('VELORA_ENV'),
-      );
+    const String.fromEnvironment('VELORA_ENV'),
+  );
 
   /// Overrides [current]. Intended for tests (to mock the active
   /// environment) and is also how [load]/[loadFromString] keep [current] in

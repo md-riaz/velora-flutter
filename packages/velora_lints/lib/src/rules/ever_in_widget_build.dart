@@ -76,8 +76,7 @@ class EverInWidgetBuild extends DartLintRule {
         return current.name.lexeme == 'build';
       }
       // Stop if we enter a nested function or closure — that's a different scope.
-      if (current is FunctionExpression ||
-          current is FunctionDeclaration) {
+      if (current is FunctionExpression || current is FunctionDeclaration) {
         return false;
       }
       current = current.parent;

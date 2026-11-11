@@ -114,9 +114,7 @@ Future<void> _seedDemoDataIfEmpty() async {
 
   await seedConversation(
     title: 'Sam (Work)',
-    thread: [
-      ('Can you review the PR when you get a chance?', false, 20),
-    ],
+    thread: [('Can you review the PR when you get a chance?', false, 20)],
   );
 }
 

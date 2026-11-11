@@ -37,7 +37,8 @@ class OfflineQueueInterceptor extends VeloraApiInterceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
-    final isConnectionFailure = err.type == DioExceptionType.connectionError ||
+    final isConnectionFailure =
+        err.type == DioExceptionType.connectionError ||
         err.type == DioExceptionType.connectionTimeout ||
         err.type == DioExceptionType.sendTimeout;
     final method = err.requestOptions.method.toUpperCase();
@@ -46,12 +47,14 @@ class OfflineQueueInterceptor extends VeloraApiInterceptor {
       // Replays happen while the queue is flushing; a replay that fails again
       // must not be re-enqueued, or the queue would grow without bound.
       final isReplay = queue.isFlushing;
-      final isExcluded = excludedPaths.contains(err.requestOptions.path) ||
+      final isExcluded =
+          excludedPaths.contains(err.requestOptions.path) ||
           (shouldQueue != null && !shouldQueue!(err.requestOptions));
 
       if (!isReplay && !isExcluded) {
         final rawData = err.requestOptions.data;
-        final isSerializable = rawData == null ||
+        final isSerializable =
+            rawData == null ||
             rawData is Map ||
             rawData is List ||
             rawData is String ||

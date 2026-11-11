@@ -16,7 +16,9 @@ class Can extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Velora.permission.can(permission) ? child : fallback ?? const SizedBox.shrink();
+    return Velora.permission.can(permission)
+        ? child
+        : fallback ?? const SizedBox.shrink();
   }
 }
 
@@ -34,6 +36,8 @@ class RoleOnly extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Velora.permission.hasRole(role) ? child : fallback ?? const SizedBox.shrink();
+    return Velora.permission.hasRole(role)
+        ? child
+        : fallback ?? const SizedBox.shrink();
   }
 }

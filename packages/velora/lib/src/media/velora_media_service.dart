@@ -124,7 +124,9 @@ class VeloraMediaService extends GetxService {
         allowedExtensions: allowedExtensions,
       );
       return await Future.wait(
-        files.where((f) => f.path != null).map(
+        files
+            .where((f) => f.path != null)
+            .map(
               (f) async => VeloraAttachment.local(
                 path: f.path!,
                 name: f.name,

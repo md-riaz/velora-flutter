@@ -38,81 +38,77 @@ void main() {
   Future<void> settle() => Future<void>.delayed(Duration.zero);
 
   group('VeloraTable.watchAll', () {
-    test(
-      'emits the current rows immediately, then re-emits after insert, '
-      'update, and delete',
-      () async {
-        final emissions = <List<TodoModel>>[];
-        final sub = table.watchAll().listen(emissions.add);
-        addTearDown(sub.cancel);
+    test('emits the current rows immediately, then re-emits after insert, '
+        'update, and delete', () async {
+      final emissions = <List<TodoModel>>[];
+      final sub = table.watchAll().listen(emissions.add);
+      addTearDown(sub.cancel);
 
-        await settle();
-        expect(emissions, hasLength(1));
-        expect(emissions.single, isEmpty);
+      await settle();
+      expect(emissions, hasLength(1));
+      expect(emissions.single, isEmpty);
 
-        final created = await table.create(
-          const TodoModel(title: 'alpha').toJson(),
-        );
-        await settle();
-        expect(emissions, hasLength(2));
-        expect(emissions.last.map((t) => t.title), ['alpha']);
+      final created = await table.create(
+        const TodoModel(title: 'alpha').toJson(),
+      );
+      await settle();
+      expect(emissions, hasLength(2));
+      expect(emissions.last.map((t) => t.title), ['alpha']);
 
-        await table.update(created.id!, {'title': 'alpha-renamed'});
-        await settle();
-        expect(emissions, hasLength(3));
-        expect(emissions.last.single.title, 'alpha-renamed');
+      await table.update(created.id!, {'title': 'alpha-renamed'});
+      await settle();
+      expect(emissions, hasLength(3));
+      expect(emissions.last.single.title, 'alpha-renamed');
 
-        await table.delete(created.id!);
-        await settle();
-        expect(emissions, hasLength(4));
-        expect(emissions.last, isEmpty);
-      },
-    );
+      await table.delete(created.id!);
+      await settle();
+      expect(emissions, hasLength(4));
+      expect(emissions.last, isEmpty);
+    });
 
-    test(
-      'is broadcast-friendly: two independent listeners each get their own '
-      'initial emission and independently see subsequent writes, and '
-      'cancelling one does not affect the other',
-      () async {
-        final first = <List<TodoModel>>[];
-        final second = <List<TodoModel>>[];
-        final subA = table.watchAll().listen(first.add);
-        await settle();
+    test('is broadcast-friendly: two independent listeners each get their own '
+        'initial emission and independently see subsequent writes, and '
+        'cancelling one does not affect the other', () async {
+      final first = <List<TodoModel>>[];
+      final second = <List<TodoModel>>[];
+      final subA = table.watchAll().listen(first.add);
+      await settle();
 
-        final subB = table.watchAll().listen(second.add);
-        addTearDown(subB.cancel);
-        await settle();
+      final subB = table.watchAll().listen(second.add);
+      addTearDown(subB.cancel);
+      await settle();
 
-        // `first` has an initial emission from subA's own subscribe, plus
-        // whatever it's seen since; `second` gets its own initial emission
-        // now, independent of `first`'s history.
-        expect(first, isNotEmpty);
-        expect(second, hasLength(1));
-        expect(second.single, isEmpty);
+      // `first` has an initial emission from subA's own subscribe, plus
+      // whatever it's seen since; `second` gets its own initial emission
+      // now, independent of `first`'s history.
+      expect(first, isNotEmpty);
+      expect(second, hasLength(1));
+      expect(second.single, isEmpty);
 
-        await table.create(const TodoModel(title: 'shared').toJson());
-        await settle();
-        expect(first.last.map((t) => t.title), ['shared']);
-        expect(second.last.map((t) => t.title), ['shared']);
+      await table.create(const TodoModel(title: 'shared').toJson());
+      await settle();
+      expect(first.last.map((t) => t.title), ['shared']);
+      expect(second.last.map((t) => t.title), ['shared']);
 
-        // Cancelling subA must not disturb subB's stream.
-        await subA.cancel();
-        final secondCountBeforeMoreWrites = second.length;
+      // Cancelling subA must not disturb subB's stream.
+      await subA.cancel();
+      final secondCountBeforeMoreWrites = second.length;
 
-        await table.create(const TodoModel(title: 'after-cancel').toJson());
-        await settle();
-        expect(second.length, greaterThan(secondCountBeforeMoreWrites));
-        expect(
-          second.last.map((t) => t.title),
-          containsAll(['shared', 'after-cancel']),
-        );
-      },
-    );
+      await table.create(const TodoModel(title: 'after-cancel').toJson());
+      await settle();
+      expect(second.length, greaterThan(secondCountBeforeMoreWrites));
+      expect(
+        second.last.map((t) => t.title),
+        containsAll(['shared', 'after-cancel']),
+      );
+    });
   });
 
   group('VeloraTable.watchFind', () {
     test('reflects updates and deletes to the watched row', () async {
-      final created = await table.create(const TodoModel(title: 'first').toJson());
+      final created = await table.create(
+        const TodoModel(title: 'first').toJson(),
+      );
 
       final emissions = <TodoModel?>[];
       final sub = table.watchFind(created.id!).listen(emissions.add);
@@ -145,60 +141,54 @@ void main() {
   });
 
   group('VeloraTable.watchQuery', () {
-    test(
-      're-emits when a row starts or stops matching the filter',
-      () async {
-        await table.create(const TodoModel(title: 'keep', done: false).toJson());
-        final target = await table.create(
-          const TodoModel(title: 'flip', done: false).toJson(),
-        );
+    test('re-emits when a row starts or stops matching the filter', () async {
+      await table.create(const TodoModel(title: 'keep', done: false).toJson());
+      final target = await table.create(
+        const TodoModel(title: 'flip', done: false).toJson(),
+      );
 
-        final emissions = <List<TodoModel>>[];
-        final sub = table
-            .watchQuery(table.query().where('done', 1))
-            .listen(emissions.add);
-        addTearDown(sub.cancel);
+      final emissions = <List<TodoModel>>[];
+      final sub = table
+          .watchQuery(table.query().where('done', 1))
+          .listen(emissions.add);
+      addTearDown(sub.cancel);
 
-        await settle();
-        expect(emissions, hasLength(1));
-        expect(emissions.single, isEmpty);
+      await settle();
+      expect(emissions, hasLength(1));
+      expect(emissions.single, isEmpty);
 
-        await table.update(target.id!, {'done': 1});
-        await settle();
-        expect(emissions, hasLength(2));
-        expect(emissions.last.map((t) => t.title), ['flip']);
+      await table.update(target.id!, {'done': 1});
+      await settle();
+      expect(emissions, hasLength(2));
+      expect(emissions.last.map((t) => t.title), ['flip']);
 
-        await table.update(target.id!, {'done': 0});
-        await settle();
-        expect(emissions, hasLength(3));
-        expect(emissions.last, isEmpty);
-      },
-    );
+      await table.update(target.id!, {'done': 0});
+      await settle();
+      expect(emissions, hasLength(3));
+      expect(emissions.last, isEmpty);
+    });
 
-    test(
-      'supports reactive pagination via orderBy + limit/offset, re-running '
-      'on every write',
-      () async {
-        await table.create(const TodoModel(title: 'a').toJson());
-        await table.create(const TodoModel(title: 'b').toJson());
+    test('supports reactive pagination via orderBy + limit/offset, re-running '
+        'on every write', () async {
+      await table.create(const TodoModel(title: 'a').toJson());
+      await table.create(const TodoModel(title: 'b').toJson());
 
-        final emissions = <List<TodoModel>>[];
-        final sub = table
-            .watchQuery(table.query().orderBy('title').limit(2))
-            .listen(emissions.add);
-        addTearDown(sub.cancel);
+      final emissions = <List<TodoModel>>[];
+      final sub = table
+          .watchQuery(table.query().orderBy('title').limit(2))
+          .listen(emissions.add);
+      addTearDown(sub.cancel);
 
-        await settle();
-        expect(emissions, hasLength(1));
-        expect(emissions.single.map((t) => t.title), ['a', 'b']);
+      await settle();
+      expect(emissions, hasLength(1));
+      expect(emissions.single.map((t) => t.title), ['a', 'b']);
 
-        // A new row that sorts first pushes 'b' out of the first page.
-        await table.create(const TodoModel(title: '0-first').toJson());
-        await settle();
-        expect(emissions, hasLength(2));
-        expect(emissions.last.map((t) => t.title), ['0-first', 'a']);
-      },
-    );
+      // A new row that sorts first pushes 'b' out of the first page.
+      await table.create(const TodoModel(title: '0-first').toJson());
+      await settle();
+      expect(emissions, hasLength(2));
+      expect(emissions.last.map((t) => t.title), ['0-first', 'a']);
+    });
   });
 }
 
@@ -236,11 +226,7 @@ class TodoModel {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      if (id != null) 'id': id,
-      'title': title,
-      'done': done ? 1 : 0,
-    };
+    return {if (id != null) 'id': id, 'title': title, 'done': done ? 1 : 0};
   }
 
   static int? _toInt(Object? value) {

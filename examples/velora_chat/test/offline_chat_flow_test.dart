@@ -72,89 +72,80 @@ void main() {
     await db.close();
   });
 
-  test(
-    'sending a message while offline writes it locally as pending and '
-    'queues exactly one outbox write',
-    () async {
-      await messagesRepo.store(
-        Message(
-          id: 'm1',
-          conversationId: 'c1',
-          body: 'hello there',
-          outgoing: true,
-          status: 'pending',
-          createdAt: DateTime.now(),
-        ).toMap(),
-      );
+  test('sending a message while offline writes it locally as pending and '
+      'queues exactly one outbox write', () async {
+    await messagesRepo.store(
+      Message(
+        id: 'm1',
+        conversationId: 'c1',
+        body: 'hello there',
+        outgoing: true,
+        status: 'pending',
+        createdAt: DateTime.now(),
+      ).toMap(),
+    );
 
-      final stored = await messagesTable().find('m1');
-      expect(stored, isNotNull);
-      expect(stored!.status, 'pending');
-      expect(stored.outgoing, isTrue);
+    final stored = await messagesTable().find('m1');
+    expect(stored, isNotNull);
+    expect(stored!.status, 'pending');
+    expect(stored.outgoing, isTrue);
 
-      expect(queue.pending, hasLength(1));
-      expect(queue.pending.single.method, 'POST');
-      expect(queue.pending.single.path, 'messages');
-    },
-  );
+    expect(queue.pending, hasLength(1));
+    expect(queue.pending.single.method, 'POST');
+    expect(queue.pending.single.path, 'messages');
+  });
 
-  test(
-    'toggling online flushes the outbox, and the mock server acknowledges '
-    'the message by flipping it to sent',
-    () async {
-      await messagesRepo.store(
-        Message(
-          id: 'm2',
-          conversationId: 'c1',
-          body: 'are you there?',
-          outgoing: true,
-          status: 'pending',
-          createdAt: DateTime.now(),
-        ).toMap(),
-      );
-      expect(queue.pending, hasLength(1));
-      expect((await messagesTable().find('m2'))!.status, 'pending');
+  test('toggling online flushes the outbox, and the mock server acknowledges '
+      'the message by flipping it to sent', () async {
+    await messagesRepo.store(
+      Message(
+        id: 'm2',
+        conversationId: 'c1',
+        body: 'are you there?',
+        outgoing: true,
+        status: 'pending',
+        createdAt: DateTime.now(),
+      ).toMap(),
+    );
+    expect(queue.pending, hasLength(1));
+    expect((await messagesTable().find('m2'))!.status, 'pending');
 
-      // Flip the demo's simulated connectivity back on -- this is exactly
-      // what the conversations page's Switch does.
-      toggleSource.setOnline(true);
+    // Flip the demo's simulated connectivity back on -- this is exactly
+    // what the conversations page's Switch does.
+    toggleSource.setOnline(true);
 
-      // ConnectivityService's onOnline hook fires the queue flush
-      // fire-and-forget; the mock server then waits ~400ms before
-      // acknowledging. Give both enough runway to settle deterministically.
-      await Future<void>.delayed(const Duration(milliseconds: 800));
-      await pumpEventQueue();
+    // ConnectivityService's onOnline hook fires the queue flush
+    // fire-and-forget; the mock server then waits ~400ms before
+    // acknowledging. Give both enough runway to settle deterministically.
+    await Future<void>.delayed(const Duration(milliseconds: 800));
+    await pumpEventQueue();
 
-      expect(queue.pending, isEmpty);
-      final stored = await messagesTable().find('m2');
-      expect(stored!.status, 'sent');
-    },
-  );
+    expect(queue.pending, isEmpty);
+    final stored = await messagesTable().find('m2');
+    expect(stored!.status, 'sent');
+  });
 
-  test(
-    'a write made while already online is enqueued and flushed immediately, '
-    'without needing a connectivity toggle',
-    () async {
-      toggleSource.setOnline(true);
-      await pumpEventQueue();
+  test('a write made while already online is enqueued and flushed immediately, '
+      'without needing a connectivity toggle', () async {
+    toggleSource.setOnline(true);
+    await pumpEventQueue();
 
-      await messagesRepo.store(
-        Message(
-          id: 'm3',
-          conversationId: 'c1',
-          body: 'already online',
-          outgoing: true,
-          status: 'pending',
-          createdAt: DateTime.now(),
-        ).toMap(),
-      );
+    await messagesRepo.store(
+      Message(
+        id: 'm3',
+        conversationId: 'c1',
+        body: 'already online',
+        outgoing: true,
+        status: 'pending',
+        createdAt: DateTime.now(),
+      ).toMap(),
+    );
 
-      await Future<void>.delayed(const Duration(milliseconds: 800));
-      await pumpEventQueue();
+    await Future<void>.delayed(const Duration(milliseconds: 800));
+    await pumpEventQueue();
 
-      expect(queue.pending, isEmpty);
-      final stored = await messagesTable().find('m3');
-      expect(stored!.status, 'sent');
-    },
-  );
+    expect(queue.pending, isEmpty);
+    final stored = await messagesTable().find('m3');
+    expect(stored!.status, 'sent');
+  });
 }

@@ -154,21 +154,23 @@ class VeloraOfflineFirstRepository<T, ID> implements VeloraRepository<T, ID> {
         data,
         'data',
         'store() requires a client-generated "${table.primaryKey}" value: an '
-        'offline create writes to the local table before any server '
-        'round-trip, so the primary key must be present in the data map '
-        '(e.g. a UUID generated on-device). See this class\'s dartdoc.',
+            'offline create writes to the local table before any server '
+            'round-trip, so the primary key must be present in the data map '
+            '(e.g. a UUID generated on-device). See this class\'s dartdoc.',
       );
     }
   }
 
   Future<void> _enqueueSync(String method, String path, Object? data) async {
-    await queue.enqueue(OfflineRequest(
-      id: '${DateTime.now().microsecondsSinceEpoch}-$path',
-      method: method,
-      path: path,
-      data: data,
-      createdAt: DateTime.now(),
-    ));
+    await queue.enqueue(
+      OfflineRequest(
+        id: '${DateTime.now().microsecondsSinceEpoch}-$path',
+        method: method,
+        path: path,
+        data: data,
+        createdAt: DateTime.now(),
+      ),
+    );
     // If we're already online, kick a flush now; otherwise ConnectivityService's
     // onOnline hook (wired by VeloraOfflinePlugin) flushes on reconnect.
     if (connectivity.isOnline.value) {

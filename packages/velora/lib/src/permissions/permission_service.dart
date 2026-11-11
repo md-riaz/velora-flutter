@@ -30,5 +30,6 @@ class PermissionService extends GetxService {
 
   bool hasAnyRole(Iterable<String> roles) => roles.any(hasRole);
 
-  bool hasAllPermissions(Iterable<String> permissions) => permissions.every(can);
+  bool hasAllPermissions(Iterable<String> permissions) =>
+      permissions.every(can);
 }

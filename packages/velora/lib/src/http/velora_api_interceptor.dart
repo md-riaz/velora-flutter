@@ -29,8 +29,10 @@ abstract class VeloraApiInterceptor extends Interceptor {
       handler.next(options);
 
   @override
-  void onResponse(Response<dynamic> response, ResponseInterceptorHandler handler) =>
-      handler.next(response);
+  void onResponse(
+    Response<dynamic> response,
+    ResponseInterceptorHandler handler,
+  ) => handler.next(response);
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) =>
@@ -49,7 +51,7 @@ class VeloraLogInterceptor extends VeloraApiInterceptor {
   final Logger _log;
 
   VeloraLogInterceptor({Logger? logger})
-      : _log = logger ?? Logger(printer: PrettyPrinter(methodCount: 0));
+    : _log = logger ?? Logger(printer: PrettyPrinter(methodCount: 0));
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
@@ -58,7 +60,10 @@ class VeloraLogInterceptor extends VeloraApiInterceptor {
   }
 
   @override
-  void onResponse(Response<dynamic> response, ResponseInterceptorHandler handler) {
+  void onResponse(
+    Response<dynamic> response,
+    ResponseInterceptorHandler handler,
+  ) {
     _log.d('← ${response.statusCode} ${response.requestOptions.path}');
     handler.next(response);
   }
@@ -98,7 +103,8 @@ class VeloraRetryInterceptor extends VeloraApiInterceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) async {
-    final isRetryable = err.type == DioExceptionType.connectionError ||
+    final isRetryable =
+        err.type == DioExceptionType.connectionError ||
         err.type == DioExceptionType.connectionTimeout ||
         err.type == DioExceptionType.sendTimeout ||
         err.type == DioExceptionType.receiveTimeout;

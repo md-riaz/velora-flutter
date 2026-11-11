@@ -38,15 +38,13 @@ class VeloraErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.error_outline_rounded,
-              size: 52,
-              color: scheme.error,
-            ),
+            Icon(Icons.error_outline_rounded, size: 52, color: scheme.error),
             const SizedBox(height: 16),
             Text(
               'Something went wrong',
-              style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+              style: textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),

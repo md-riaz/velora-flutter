@@ -72,16 +72,15 @@ class VeloraAttachment {
     required String name,
     String? mimeType,
     int? sizeBytes,
-  }) =>
-      VeloraAttachment._(
-        id: _uid(),
-        name: name,
-        localPath: path,
-        mimeType: mimeType ?? _mimeOf(name),
-        sizeBytes: sizeBytes,
-        status: AttachmentStatus.pending,
-        progress: 0,
-      );
+  }) => VeloraAttachment._(
+    id: _uid(),
+    name: name,
+    localPath: path,
+    mimeType: mimeType ?? _mimeOf(name),
+    sizeBytes: sizeBytes,
+    status: AttachmentStatus.pending,
+    progress: 0,
+  );
 
   factory VeloraAttachment.remote({
     required String id,
@@ -91,18 +90,17 @@ class VeloraAttachment {
     int? sizeBytes,
     String? mediaId,
     String? mediaUuid,
-  }) =>
-      VeloraAttachment._(
-        id: id,
-        name: name,
-        remoteUrl: url,
-        mimeType: mimeType ?? _mimeOf(name),
-        sizeBytes: sizeBytes,
-        mediaId: mediaId,
-        mediaUuid: mediaUuid,
-        status: AttachmentStatus.done,
-        progress: 1,
-      );
+  }) => VeloraAttachment._(
+    id: id,
+    name: name,
+    remoteUrl: url,
+    mimeType: mimeType ?? _mimeOf(name),
+    sizeBytes: sizeBytes,
+    mediaId: mediaId,
+    mediaUuid: mediaUuid,
+    status: AttachmentStatus.done,
+    progress: 1,
+  );
 
   bool get isImage => mimeType?.startsWith('image/') == true;
   bool get isPdf => mimeType == 'application/pdf';
@@ -138,20 +136,19 @@ class VeloraAttachment {
     AttachmentStatus? status,
     double? progress,
     String? errorMessage,
-  }) =>
-      VeloraAttachment._(
-        id: id,
-        name: name ?? this.name,
-        localPath: localPath ?? this.localPath,
-        mimeType: mimeType ?? this.mimeType,
-        sizeBytes: sizeBytes ?? this.sizeBytes,
-        remoteUrl: remoteUrl ?? this.remoteUrl,
-        mediaId: mediaId ?? this.mediaId,
-        mediaUuid: mediaUuid ?? this.mediaUuid,
-        status: status ?? this.status,
-        progress: progress ?? this.progress,
-        errorMessage: errorMessage,
-      );
+  }) => VeloraAttachment._(
+    id: id,
+    name: name ?? this.name,
+    localPath: localPath ?? this.localPath,
+    mimeType: mimeType ?? this.mimeType,
+    sizeBytes: sizeBytes ?? this.sizeBytes,
+    remoteUrl: remoteUrl ?? this.remoteUrl,
+    mediaId: mediaId ?? this.mediaId,
+    mediaUuid: mediaUuid ?? this.mediaUuid,
+    status: status ?? this.status,
+    progress: progress ?? this.progress,
+    errorMessage: errorMessage,
+  );
 
   static final _rng = math.Random();
 

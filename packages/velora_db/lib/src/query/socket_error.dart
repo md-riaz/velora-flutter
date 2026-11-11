@@ -6,4 +6,5 @@
 /// Mirrors the pattern in `../driver/db_factory.dart`.
 library;
 
-export 'socket_error_io.dart' if (dart.library.js_interop) 'socket_error_web.dart';
+export 'socket_error_io.dart'
+    if (dart.library.js_interop) 'socket_error_web.dart';

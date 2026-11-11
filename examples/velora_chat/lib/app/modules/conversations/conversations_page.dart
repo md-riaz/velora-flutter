@@ -38,9 +38,7 @@ class ConversationsPage extends GetView<ConversationsController> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  controller.isOnline.value
-                      ? Icons.wifi
-                      : Icons.wifi_off,
+                  controller.isOnline.value ? Icons.wifi : Icons.wifi_off,
                   size: 20,
                 ),
                 Switch(
@@ -84,7 +82,9 @@ class _ConversationTile extends StatelessWidget {
       leading: CircleAvatar(
         backgroundColor: scheme.primaryContainer,
         child: Text(
-          conversation.title.isEmpty ? '?' : conversation.title[0].toUpperCase(),
+          conversation.title.isEmpty
+              ? '?'
+              : conversation.title[0].toUpperCase(),
           style: TextStyle(color: scheme.onPrimaryContainer),
         ),
       ),
