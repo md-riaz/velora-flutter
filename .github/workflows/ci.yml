@@ -39,11 +39,52 @@ jobs:
       - name: Check docs match shipped code
         run: tool/check_docs.sh
 
-  analyze:
-    name: Analyze & Test
+  changes:
+    name: Find affected packages
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      packages: ${{ steps.affected.outputs.packages }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      # A PR checks only the packages it touches and the packages that
+      # depend on them. A push to main checks everything.
+      - id: affected
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ "$EVENT" = "pull_request" ]; then
+            packages="$(tool/affected_packages.py "origin/$BASE_REF")"
+          else
+            packages="$(tool/affected_packages.py --all)"
+          fi
+          echo "packages=$packages" >> "$GITHUB_OUTPUT"
+          echo "Affected: $packages"
+
+  check:
+    name: ${{ matrix.package }}
+    needs: changes
+    if: needs.changes.outputs.packages != '[]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        package: ${{ fromJSON(needs.changes.outputs.packages) }}
+    defaults:
+      run:
+        working-directory: ${{ matrix.package }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: subosito/flutter-action@v2
         with:
@@ -52,227 +93,60 @@ jobs:
           cache: true
 
       - name: Check Flutter/Dart baseline
+        working-directory: .
         run: tool/check_baseline.sh
 
-      - name: Install dependencies (velora_lints)
-        working-directory: packages/velora_lints
-        run: dart pub get
-
-      - name: Analyze velora_lints
-        working-directory: packages/velora_lints
-        run: dart analyze
-
-      - name: Run velora_lints tests
-        working-directory: packages/velora_lints
-        run: dart test
-
-      - name: Install dependencies (velora_cli)
-        working-directory: packages/velora_cli
-        run: dart pub get
-
-      - name: Analyze velora_cli
-        working-directory: packages/velora_cli
-        run: dart analyze
-
-      - name: Run velora_cli tests
-        working-directory: packages/velora_cli
-        run: dart test
-
-      - name: Install dependencies (velora)
-        working-directory: packages/velora
-        run: flutter pub get
-
-      - name: Analyze velora package
-        working-directory: packages/velora
-        run: flutter analyze --no-fatal-infos
-
-      - name: Lint velora package
-        working-directory: packages/velora
-        run: dart run custom_lint --no-fatal-warnings
-
-      - name: Run velora tests
-        working-directory: packages/velora
+      # Flutter packages use the flutter tool; pure Dart ones use dart.
+      - name: Install dependencies
         run: |
-          if [ -d "test" ] && find test -name '*_test.dart' -print -quit | grep -q .; then
-            flutter test --coverage
+          if grep -qE '^\s+sdk: flutter\s*$' pubspec.yaml; then
+            flutter pub get
           else
-            echo "No test files found — skipping"
+            dart pub get
           fi
 
-      - name: Install dependencies (velora_offline)
-        working-directory: packages/velora_offline
-        run: flutter pub get
-
-      - name: Analyze velora_offline package
-        working-directory: packages/velora_offline
-        run: flutter analyze --no-fatal-infos
-
-      - name: Run velora_offline tests
-        working-directory: packages/velora_offline
+      - name: Analyze
         run: |
-          if [ -d "test" ] && find test -name '*_test.dart' -print -quit | grep -q .; then
-            flutter test --coverage
+          if grep -qE '^\s+sdk: flutter\s*$' pubspec.yaml; then
+            flutter analyze --no-fatal-infos
           else
-            echo "No test files found — skipping"
+            dart analyze
           fi
 
-      - name: Install dependencies (velora_db)
-        working-directory: packages/velora_db
-        run: flutter pub get
-
-      - name: Analyze velora_db package
-        working-directory: packages/velora_db
-        run: flutter analyze --no-fatal-infos
-
-      - name: Run velora_db tests
-        working-directory: packages/velora_db
+      # velora_lints defines the rules; every other package that lists
+      # custom_lint runs them.
+      - name: Lint (custom_lint)
+        if: matrix.package != 'packages/velora_lints'
         run: |
-          if [ -d "test" ] && find test -name '*_test.dart' -print -quit | grep -q .; then
-            flutter test --coverage
+          if grep -qE '^\s+custom_lint:' pubspec.yaml; then
+            dart run custom_lint --no-fatal-warnings
           else
-            echo "No test files found — skipping"
+            echo "custom_lint not configured — skipping"
           fi
 
-      - name: Install dependencies (velora_fcm)
-        working-directory: packages/velora_fcm
-        run: flutter pub get
-
-      - name: Analyze velora_fcm package
-        working-directory: packages/velora_fcm
-        run: flutter analyze --no-fatal-infos
-
-      - name: Run velora_fcm tests
-        working-directory: packages/velora_fcm
+      - name: Test
         run: |
-          if [ -d "test" ] && find test -name '*_test.dart' -print -quit | grep -q .; then
-            flutter test --coverage
-          else
+          if [ ! -d test ] || ! find test -name '*_test.dart' -print -quit | grep -q .; then
             echo "No test files found — skipping"
+          elif grep -qE '^\s+sdk: flutter\s*$' pubspec.yaml; then
+            flutter test
+          else
+            dart test
           fi
 
-      - name: Install dependencies (velora_local_notifications)
-        working-directory: packages/velora_local_notifications
-        run: flutter pub get
-
-      - name: Analyze velora_local_notifications package
-        working-directory: packages/velora_local_notifications
-        run: flutter analyze --no-fatal-infos
-
-      - name: Run velora_local_notifications tests
-        working-directory: packages/velora_local_notifications
+  # One stable check name for branch protection, whatever the matrix ran.
+  analyze:
+    name: Analyze & Test
+    needs: [changes, check]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every package check to pass
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          CHECK: ${{ needs.check.result }}
         run: |
-          if [ -d "test" ] && find test -name '*_test.dart' -print -quit | grep -q .; then
-            flutter test --coverage
-          else
-            echo "No test files found — skipping"
-          fi
-
-      - name: Install dependencies (velora_env)
-        working-directory: packages/velora_env
-        run: flutter pub get
-
-      - name: Analyze velora_env package
-        working-directory: packages/velora_env
-        run: flutter analyze --no-fatal-infos
-
-      - name: Run velora_env tests
-        working-directory: packages/velora_env
-        run: |
-          if [ -d "test" ] && find test -name '*_test.dart' -print -quit | grep -q .; then
-            flutter test --coverage
-          else
-            echo "No test files found — skipping"
-          fi
-
-      - name: Install dependencies (velora_ui)
-        working-directory: packages/velora_ui
-        run: flutter pub get
-
-      - name: Analyze velora_ui package
-        working-directory: packages/velora_ui
-        run: flutter analyze --no-fatal-infos
-
-      - name: Run velora_ui tests
-        working-directory: packages/velora_ui
-        run: |
-          if [ -d "test" ] && find test -name '*_test.dart' -print -quit | grep -q .; then
-            flutter test --coverage
-          else
-            echo "No test files found — skipping"
-          fi
-
-      - name: Install dependencies (claude_clone)
-        working-directory: examples/claude_clone
-        run: flutter pub get
-
-      - name: Analyze claude_clone
-        working-directory: examples/claude_clone
-        run: flutter analyze --no-fatal-infos
-
-      - name: Lint claude_clone
-        working-directory: examples/claude_clone
-        run: dart run custom_lint --no-fatal-warnings
-
-      - name: Install dependencies (velora_chat)
-        working-directory: examples/velora_chat
-        run: flutter pub get
-
-      - name: Analyze velora_chat
-        working-directory: examples/velora_chat
-        run: flutter analyze --no-fatal-infos
-
-      - name: Lint velora_chat
-        working-directory: examples/velora_chat
-        run: dart run custom_lint --no-fatal-warnings
-
-      - name: Run velora_chat tests
-        working-directory: examples/velora_chat
-        run: |
-          if [ -d "test" ] && find test -name '*_test.dart' -print -quit | grep -q .; then
-            flutter test --coverage
-          else
-            echo "No test files found — skipping"
-          fi
-
-      - name: Install dependencies (velora_catalog)
-        working-directory: examples/velora_catalog
-        run: flutter pub get
-
-      - name: Analyze velora_catalog
-        working-directory: examples/velora_catalog
-        run: flutter analyze --no-fatal-infos
-
-      - name: Lint velora_catalog
-        working-directory: examples/velora_catalog
-        run: dart run custom_lint --no-fatal-warnings
-
-      - name: Run velora_catalog tests
-        working-directory: examples/velora_catalog
-        run: |
-          if [ -d "test" ] && find test -name '*_test.dart' -print -quit | grep -q .; then
-            flutter test --coverage
-          else
-            echo "No test files found — skipping"
-          fi
-
-      - name: Install dependencies (velora_ui_gallery)
-        working-directory: examples/velora_ui_gallery
-        run: flutter pub get
-
-      - name: Analyze velora_ui_gallery
-        working-directory: examples/velora_ui_gallery
-        run: flutter analyze --no-fatal-infos
-
-      - name: Lint velora_ui_gallery
-        working-directory: examples/velora_ui_gallery
-        run: dart run custom_lint --no-fatal-warnings
-
-      - name: Run velora_ui_gallery tests
-        working-directory: examples/velora_ui_gallery
-        run: |
-          if [ -d "test" ] && find test -name '*_test.dart' -print -quit | grep -q .; then
-            flutter test --coverage
-          else
-            echo "No test files found — skipping"
-          fi
-
+          echo "changes=$CHANGES check=$CHECK"
+          [ "$CHANGES" = "success" ] || exit 1
+          # "skipped" means no package was affected.
+          [ "$CHECK" = "success" ] || [ "$CHECK" = "skipped" ] || exit 1

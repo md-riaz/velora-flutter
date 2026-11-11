@@ -4,6 +4,8 @@ Keep Velora changes focused on MVP productivity.
 
 The workspace requires Flutter >=3.47.0 / Dart >=3.13.0. Run `tool/check_baseline.sh` and `tool/pub_get_all.sh` after cloning; CI runs both, plus `dart format --output=none --set-exit-if-changed packages examples`. See [Toolchain baseline](toolchain.md).
 
+On a pull request, CI analyzes and tests only the packages the change touches and the packages that depend on them (`tool/affected_packages.py origin/main` prints the list). Markdown-only changes run no package checks. A push to `main`, or a change to the CI workflows, checks everything.
+
 - Prefer conventions over configuration.
 - Keep runtime work in `packages/velora` unless CLI or starter code is required.
 - Follow the architecture in [`architecture.md`](architecture.md) — it is the canonical layering guide. (`velora.part2.md` is a superseded design deliberation, kept only for history.)

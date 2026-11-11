@@ -75,8 +75,24 @@
 ///   feedback, with an optional semantic [VeloraStatus] icon and action.
 /// - [VeloraTooltip] — a thin wrapper around Material's `Tooltip`, styled by
 ///   the theme's `tooltipTheme`.
+///
+/// **Layer 7** adds data, multi-step flows, and the app shell — the page
+/// structures CRUD and admin screens are built from. All controlled: the
+/// caller owns rows, selection, sort, the current step, and the selected
+/// destination.
+///
+/// - [VeloraDataTable] — a responsive table with typed [VeloraDataColumn]s,
+///   selection, sort ([VeloraSortState]), row actions, and loading/empty/
+///   error states; [VeloraPagination] fits its footer.
+/// - [VeloraStepper] — step progress, horizontal or vertical.
+/// - [VeloraWizard] — a stepper plus step content and Back/Continue/Submit.
+/// - [VeloraAdaptiveShell] — bottom bar when compact, rail when wider, with
+///   status and secondary-pane slots.
+/// - [VeloraMasterDetailShell] — list and detail, side by side or stacked.
+/// - [VeloraStatusStrip] — a caller-driven connectivity/sync banner.
 library;
 
+export 'src/components/velora_adaptive_shell.dart';
 export 'src/components/velora_alert.dart';
 export 'src/components/velora_avatar.dart';
 export 'src/components/velora_badge.dart';
@@ -85,6 +101,7 @@ export 'src/components/velora_button.dart';
 export 'src/components/velora_card.dart';
 export 'src/components/velora_checkbox.dart';
 export 'src/components/velora_chip.dart';
+export 'src/components/velora_data_table.dart';
 export 'src/components/velora_dialog.dart';
 export 'src/components/velora_divider.dart';
 export 'src/components/velora_empty_state.dart';
@@ -99,6 +116,7 @@ export 'src/components/velora_section_header.dart';
 export 'src/components/velora_select.dart';
 export 'src/components/velora_skeleton.dart';
 export 'src/components/velora_status.dart';
+export 'src/components/velora_stepper.dart';
 export 'src/components/velora_switch.dart';
 export 'src/components/velora_tabs.dart';
 export 'src/components/velora_text_field.dart';

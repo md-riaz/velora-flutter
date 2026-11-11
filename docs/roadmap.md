@@ -12,7 +12,7 @@
 ## Shipped
 
 - Package split into `velora`, `velora_cli`, `velora_lints`, `velora_offline`, `velora_db`, `velora_env`, `velora_fcm`, `velora_local_notifications`, and `velora_ui`.
-- Design system (`velora_ui`): tokens and theme, core components, form inputs, layout, navigation, and feedback/overlays — see [velora_ui](packages/ui.md) for the component list.
+- Design system (`velora_ui`): tokens and theme, core components, form inputs, layout, navigation, feedback/overlays, and data table, stepper/wizard, and adaptive shell — see [velora_ui](packages/ui.md) for the component list.
 - Push and on-device notifications through the optional `velora_fcm` and `velora_local_notifications` adapters.
 - `.env` config and flavors (`velora_env`).
 - Toolchain baseline of Flutter 3.47 / Dart 3.13 — see [Toolchain baseline](toolchain.md).
@@ -25,7 +25,7 @@
 
 Not shipped. Tracked as GitHub issues, and subject to change.
 
-- Data table, stepper/wizard, and adaptive app shell for `velora_ui`.
+- CRUD page templates in `velora make:module` built on the `velora_ui` data table and shell.
 - Splitting optional core capabilities into focused packages.
 - Realtime, desktop lifecycle, and Windows notification support.
 - More backend presets.

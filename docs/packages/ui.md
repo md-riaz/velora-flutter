@@ -8,7 +8,7 @@
 
 `velora_ui` is Velora's own, original design system — **token-first theming**, expressed the Flutter way. It's informed by (not copied from) the architecture surveyed in the internal `velora-ui-design-reference` planning note, but the palette, token taxonomy, and API are entirely Velora's: no external branding, no borrowed theme names.
 
-The package ships six layers, all exported from `package:velora_ui/velora_ui.dart`:
+The package ships seven layers, all exported from `package:velora_ui/velora_ui.dart`:
 
 <!-- generated:ui-layers source=packages/velora_ui/components.json — do not edit; run tool/check_docs.sh --write -->
 | Layer | Focus | Exports |
@@ -19,6 +19,7 @@ The package ships six layers, all exported from `package:velora_ui/velora_ui.dar
 | 4 | Layout & content display | `VeloraAvatar`, `VeloraListTile`, `VeloraSectionHeader`, `VeloraDivider`, `VeloraProgress` |
 | 5 | Navigation & scaffolding | `VeloraNavDestination`, `VeloraNavBar`, `VeloraNavRail`, `VeloraTabs`, `VeloraScaffold` |
 | 6 | Feedback & overlays | `VeloraDialog`, `VeloraBottomSheet`, `VeloraToast`, `VeloraTooltip` |
+| 7 | Data, flows & app shell | `VeloraDataTable`, `VeloraDataColumn`, `VeloraSortState`, `VeloraPagination`, `VeloraStepper`, `VeloraStep`, `VeloraStepState`, `VeloraWizard`, `VeloraAdaptiveShell`, `VeloraShellBreakpoint`, `VeloraMasterDetailShell`, `VeloraStatusStrip` |
 <!-- /generated:ui-layers -->
 
 Every component reads its colors, spacing, radius, and motion from the active theme, and depends only on `flutter`. What you get:
@@ -41,6 +42,8 @@ Every component reads its colors, spacing, radius, and motion from the active th
 **Layer 5 — navigation & scaffolding:** `VeloraNavBar`, `VeloraNavRail`, `VeloraTabs`, `VeloraScaffold`, sharing the `VeloraNavDestination` model — see [Navigation and scaffolding](#navigation-and-scaffolding).
 
 **Layer 6 — feedback & overlays:** `VeloraDialog`, `VeloraBottomSheet`, `VeloraToast`, `VeloraTooltip` — see [Feedback and overlays](#feedback-and-overlays).
+
+**Layer 7 — data, flows & app shell:** `VeloraDataTable`, `VeloraStepper`, `VeloraWizard`, `VeloraAdaptiveShell`, `VeloraMasterDetailShell` — see [Data table](#data-table), [Stepper and wizard](#stepper-and-wizard), and [App shell](#app-shell).
 
 `velora_ui` is **not** a [Velora plugin](../plugins.md) and doesn't wire into `Velora.boot(plugins: [...])` — it's just Flutter theming, applied via your app's `theme:`/`darkTheme:` arguments (or a `VeloraApp` wrapper, if your app uses one), exactly like any other `ThemeData`.
 
@@ -254,9 +257,215 @@ Layer 6 covers what interrupts or floats above the current screen. The chrome co
 
 `VeloraToast` needs a `ScaffoldMessenger` above it and a `BuildContext`. `Velora.toast` in `package:velora` is the separate, context-free facade for controllers; `velora_ui` does not depend on it.
 
+## Data table
+
+`VeloraDataTable<T>` displays one page of rows. It does not fetch, sort, filter, or page; the caller does, and passes the result back in. That keeps it usable with `setState`, a Velora controller, or anything else.
+
+```dart
+VeloraDataTable<User>(
+  rows: pageOfUsers,                       // already sorted and paged
+  columns: [
+    VeloraDataColumn(
+      id: 'name',
+      label: 'Name',
+      sortable: true,
+      cell: (user) => Text(user.name),
+    ),
+    VeloraDataColumn(
+      id: 'seats',
+      label: 'Seats',
+      numeric: true,
+      cell: (user) => Text('${user.seats}'),
+    ),
+  ],
+  selected: selected,
+  onSelectionChanged: (next) => setState(() => selected = next),
+  sort: sort,
+  onSortChanged: (next) => setState(() {
+    sort = next;
+    pageOfUsers = sortAndPage(allUsers, next, page);
+  }),
+  onRowTap: (user) => setState(() => open = user),
+  rowLabel: (user) => user.name,
+  loading: loading,
+  empty: const VeloraEmptyState(icon: Icons.inbox_outlined, title: 'No users'),
+  footer: VeloraPagination(
+    page: page,
+    pageCount: pageCount,
+    onPageChanged: (p) => setState(() => page = p),
+  ),
+);
+```
+
+| Parameter | Meaning |
+|---|---|
+| `rows`, `columns` | The page of rows and the `VeloraDataColumn<T>` definitions (`id`, `label`, `cell`, `sortable`, `numeric`, `flex`). |
+| `selected`, `onSelectionChanged`, `multiSelect` | Controlled selection as a `Set<T>`, matched by `==`. A null callback makes the table non-selectable. `multiSelect: false` replaces the selection and hides select-all. Selected rows that are not on the current page are preserved. |
+| `sort`, `onSortChanged` | A `VeloraSortState(columnId, ascending:)` shown in the header, and the sort the user asked for. Tapping a sorted column flips its direction. |
+| `onRowTap`, `rowActions` | Row activation, and a builder for trailing per-row actions. |
+| `rowLabel` | Describes a row for screen readers ("Select Ada Lovelace"). |
+| `loading`, `error`, `empty` | See states below. |
+| `footer` | The pagination slot. `VeloraPagination(page:, pageCount:, onPageChanged:)` fits it; pages start at 1. |
+| `compactBreakpoint`, `minColumnWidth`, `skeletonRows` | 600, 120, and 3 by default. |
+
+**States.** `error` replaces the rows. `loading` with no rows shows skeleton rows; `loading` with rows keeps them on screen under a progress bar. No rows and not loading shows `empty` (or "No results").
+
+**Widths.** Below `compactBreakpoint` each row becomes a card with every value labelled, plus a sort menu and select-all. Above it, if the columns need more than `minColumnWidth × flex` each, the table scrolls horizontally instead of squeezing. The breakpoint is the table's own width, not the window's, so a table inside a narrow pane goes compact too.
+
+**Keyboard and accessibility.** Tab reaches select-all, each sortable header, then each row. On a row, Up/Down move between rows, Enter calls `onRowTap`, and Space toggles selection. The focused row has a `primary`-colored outline. Headers announce "Name, sorted ascending"; checkboxes announce "Select …". Rows grow with text scale.
+
+**Tokens.** Spacing and radius from `VeloraTokens`; `primary`, `primaryContainer`, `outlineVariant`, `surfaceContainerLow`, and `onSurfaceVariant` from the `ColorScheme`.
+
+**Common mistakes.**
+
+- Expecting the table to sort. It reports `onSortChanged`; sort or re-query, then pass new `rows`.
+- Passing every record. The table builds all rows it is given; pass one page.
+- Selecting by a model without `==`. After a refetch the new instances will not match `selected`; implement `==`/`hashCode` on an id.
+- With a Velora controller, wrap the table in `Obx` and read the reactive values inside it: `Obx(() => VeloraDataTable(rows: c.rows.toList(), selected: c.selected.toSet(), ...))`. Passing an `RxList` without reading it registers no subscription.
+
+## Stepper and wizard
+
+`VeloraStepper` shows progress. `VeloraWizard` adds the current step's content and Back / Continue / Submit. Neither owns flow state or validation.
+
+```dart
+VeloraWizard(
+  steps: const [
+    VeloraStep(title: 'Account'),
+    VeloraStep(title: 'Plan', description: 'Change it any time'),
+    VeloraStep(title: 'Invite', optional: true),
+  ],
+  currentStep: step,
+  stepBuilder: (context, index) => switch (index) {
+    0 => VeloraTextField(label: 'Email', controller: email, errorText: emailError),
+    1 => PlanPicker(value: plan, onChanged: (p) => setState(() => plan = p)),
+    _ => const InviteForm(),
+  },
+  onNext: () {
+    if (step == 0 && !email.text.contains('@')) {
+      setState(() => emailError = 'Enter a valid email');
+      return;                               // validation stays in the app
+    }
+    setState(() => step++);
+  },
+  onBack: () => setState(() => step--),
+  onSubmit: () async => api.createAccount(email.text, plan),
+  errorText: submitError,
+);
+```
+
+`VeloraStep` has `title`, `description`, `optional`, and `state`. A step's state is derived from `currentStep` (before it: `completed`; at it: `current`; after it: `upcoming`) unless `state` overrides it; use the override for `VeloraStepState.error` and `VeloraStepState.disabled`.
+
+| `VeloraStepper` | |
+|---|---|
+| `steps`, `currentStep` | Required. |
+| `onStepTapped` | Reports taps on any step that is not disabled. Null makes steps non-interactive. |
+| `direction` | `Axis.horizontal` (default) or `Axis.vertical`. |
+
+| `VeloraWizard` | |
+|---|---|
+| `steps`, `currentStep`, `stepBuilder` | Required. `stepBuilder(context, index)` builds a step's content. |
+| `onNext`, `onBack`, `onSubmit` | What was pressed. The primary button calls `onSubmit` on the last step and `onNext` otherwise. `onNext` and `onSubmit` may return a `Future`. |
+| `busy`, `canContinue`, `errorText` | Caller-controlled: disable everything and show a spinner; disable the primary button; show an error above the actions. |
+| `onStepTapped`, `stepperDirection` | Passed to the stepper. |
+| `backLabel`, `nextLabel`, `submitLabel` | "Back", "Continue", "Submit". |
+
+**Behavior.**
+
+- Visited steps stay mounted, so going back keeps what was typed. Steps never visited are not built.
+- If `onNext` or `onSubmit` returns a `Future`, all actions are disabled until it completes. A second press cannot submit twice.
+- When `currentStep` changes, focus moves to the new step, so the next Tab lands on its first field.
+- A horizontal stepper needs about 96 px per step (more at larger text sizes). With less, it collapses to "Step 2 of 5", the current title, and a progress bar. Vertical never collapses.
+- Each step announces "Step 2 of 5, Plan, current". The indicator's color change is skipped when the platform asks for reduced motion.
+
+**With `VeloraFormController`.** The wizard is not coupled to it. Validate in `onNext`, put the messages in the controller with `setErrors`, and read them back with `firstError`:
+
+```dart
+onNext: () {
+  form.clearErrors();
+  if (step == 0 && !form.email.text.contains('@')) {
+    form.setErrors({'email': ['Enter a valid email']});
+    return;
+  }
+  setState(() => step++);
+},
+// in stepBuilder:
+Obx(
+  () => VeloraTextField(
+    label: 'Email',
+    controller: form.email,
+    errorText: form.firstError('email'),
+  ),
+),
+```
+
+Here `form` is your own `VeloraFormController` subclass that owns the `email` `TextEditingController`. Server-side 422 errors go through the same `setErrors` call from `onSubmit`.
+
+**Common mistakes.**
+
+- Advancing `currentStep` inside `stepBuilder` or a field's `onChanged`. Only `onNext`/`onBack`/`onStepTapped` should move it.
+- Creating `TextEditingController`s inside `stepBuilder`. Own them in your state or controller; the wizard keeps widgets alive, not objects you rebuild.
+- Putting a tall wizard in a fixed-height box. It sizes to its content; wrap it in a scroll view.
+
+## App shell
+
+`VeloraAdaptiveShell` is a `Scaffold` whose navigation follows the width: a `VeloraNavBar` at the bottom below 600 px, a `VeloraNavRail` at the side from 600 px, and an optional secondary pane from 1024 px. `VeloraShellBreakpoint.forWidth(width)` returns `compact`, `medium`, or `expanded` using the same thresholds.
+
+```dart
+VeloraAdaptiveShell(
+  destinations: const [
+    VeloraNavDestination(icon: Icons.inbox_outlined, label: 'Inbox'),
+    VeloraNavDestination(icon: Icons.people_outline, label: 'People'),
+  ],
+  selectedIndex: index,
+  onDestinationSelected: (i) => setState(() => index = i),   // or your router
+  appBar: AppBar(title: const Text('Acme')),
+  status: offline
+      ? const VeloraStatusStrip(icon: Icons.cloud_off_outlined, message: 'Offline')
+      : null,
+  body: IndexedStack(index: index, children: pages),
+);
+```
+
+| Parameter | Meaning |
+|---|---|
+| `destinations`, `selectedIndex`, `onDestinationSelected` | Controlled navigation. The shell reports a choice and never selects on its own. |
+| `body` | The current page. The app owns what goes here. |
+| `appBar`, `floatingActionButton` | Passed to the `Scaffold`. |
+| `status` | A strip under the app bar. `VeloraStatusStrip(message:, icon:, busy:, action:)` is provided; it is a live region, so changes are announced. |
+| `secondaryPane`, `secondaryPaneWidth` | A side pane shown only when expanded (360 px). |
+| `railLeading`, `railTrailing` | Slots above and below the rail destinations, e.g. an account switcher. |
+| `mediumBreakpoint`, `expandedBreakpoint` | 600 and 1024. |
+
+`VeloraMasterDetailShell` handles list and detail:
+
+```dart
+VeloraMasterDetailShell(
+  master: UserTable(onOpen: (u) => setState(() => open = u)),
+  detail: open == null ? null : UserDetail(open!),
+  placeholder: const VeloraEmptyState(icon: Icons.person_outline, title: 'Select a user'),
+  onCloseDetail: () => setState(() => open = null),
+);
+```
+
+From 840 px (`breakpoint`) the list (`masterWidth`, 360 px) and the detail sit side by side. Below that the detail covers the list while one is open, and system back or Escape calls `onCloseDetail`.
+
+**What the shell does not do.** It has no route names and parses nothing. A deep link or notification selects a destination by changing the `selectedIndex` you pass; your app decides which index a link maps to. It does not detect connectivity or sync state either; `status` shows what you give it.
+
+**State across resizing.** `body`, `secondaryPane`, the master, and the detail keep their `State` when the window crosses a breakpoint. In the stacked layout the list stays mounted while covered, so its scroll position survives. To keep pages alive when switching destinations, use an `IndexedStack` as the body; the shell shows whatever body it is given.
+
+**Focus.** Destinations come before the body in Tab order. When the detail closes, focus returns to what was focused in the list, normally the row that opened it. When it opens, focus moves into the detail.
+
+**Windows.** The shell reads only its own constraints, so it responds to any resize. It holds no timers or listeners, so nothing needs handling when the window is hidden, inactive, or restored. There is no enforced minimum window size: the layouts are tested down to 320 px wide and at 200% text scale. If your app sets a minimum, 360 × 480 is a reasonable floor.
+
+**Common mistakes.**
+
+- Putting a `Scaffold` in `body`. The shell is the `Scaffold`; a nested one doubles the safe-area padding.
+- Changing `selectedIndex` in `onDestinationSelected` without changing the body. They are separate inputs.
+- Expecting `secondaryPane` to appear on phones. It is expanded-only; on smaller widths show that content elsewhere.
+
 ## Not included
 
-No data table, stepper/wizard, or adaptive app shell ships yet. There is also no dedicated `VeloraFormController` binding helper; wire fields by hand as shown under [Form inputs](#form-inputs).
+There is no virtualized table for very large row sets, no column resizing or reordering, and no dedicated `VeloraFormController` binding helper. `velora make:module` does not generate pages that use these widgets yet.
 
 ---
 

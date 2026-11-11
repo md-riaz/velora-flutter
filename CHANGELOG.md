@@ -11,7 +11,13 @@
 
 - `velora doctor` prints the required and detected Flutter/Dart versions and warns when either is missing or below the baseline.
 - `velora new` generates apps with the baseline `environment` constraints.
+- CI on pull requests now analyzes and tests only affected packages, in parallel, instead of every package on every PR.
 - CI pins Flutter 3.47.9, rejects older toolchains, checks formatting, resolves every package from a clean checkout with enforced lockfiles, and now also tests `velora_cli` and `velora_lints`.
+
+### Added
+
+- `velora_ui` Layer 7: `VeloraDataTable` (typed columns, selection, sort, row actions, loading/empty/error, compact card layout, keyboard row navigation) with `VeloraPagination`; `VeloraStepper` and `VeloraWizard`; `VeloraAdaptiveShell`, `VeloraMasterDetailShell`, and `VeloraStatusStrip`. All controlled and state-management independent.
+- UI gallery: a data/flows section and a resizable desktop scenario.
 
 ### Removed
 

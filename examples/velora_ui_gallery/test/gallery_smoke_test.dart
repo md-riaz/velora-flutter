@@ -148,4 +148,22 @@ void main() {
 
     expect(find.text('Saved successfully'), findsOneWidget);
   });
+
+  testWidgets('the data section table sorts and selects via setState', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const GalleryApp());
+    await tester.pump();
+
+    final listView = find.byType(ListView);
+    await _scrollUntilFound(tester, find.text('Selected: 0'), listView);
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(find.text('Selected: 0'), findsOneWidget);
+
+    await tester.ensureVisible(find.bySemanticsLabel('Select all rows'));
+    await tester.pump();
+    await tester.tap(find.bySemanticsLabel('Select all rows'));
+    await tester.pump();
+    expect(find.text('Selected: 4'), findsOneWidget);
+  });
 }
