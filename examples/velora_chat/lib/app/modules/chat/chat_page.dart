@@ -59,9 +59,8 @@ class ChatPage extends GetView<ChatController> {
               return ListView.builder(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 itemCount: items.length,
-                itemBuilder: (context, index) => _MessageBubble(
-                  message: items[index],
-                ),
+                itemBuilder: (context, index) =>
+                    _MessageBubble(message: items[index]),
               );
             }),
           ),
@@ -91,7 +90,9 @@ class _MessageBubble extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isOutgoing ? scheme.primaryContainer : scheme.surfaceContainerHighest,
+          color: isOutgoing
+              ? scheme.primaryContainer
+              : scheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(14),
         ),
         child: Column(
@@ -143,15 +144,18 @@ class _ComposeBar extends StatelessWidget {
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(24)),
                   ),
-                  contentPadding:
-                      EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
                 ),
               ),
             ),
             const SizedBox(width: 8),
             IconButton.filled(
               icon: const Icon(Icons.send),
-              onPressed: () => controller.send(controller.composeController.text),
+              onPressed: () =>
+                  controller.send(controller.composeController.text),
             ),
           ],
         ),

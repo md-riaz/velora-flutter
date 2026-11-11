@@ -24,10 +24,26 @@ class SettingsController extends VeloraController {
   // ---------------------------------------------------------------------------
 
   static const demoFeatures = [
-    (id: AppFeatures.voice, label: 'Voice input', description: 'Speak instead of type'),
-    (id: AppFeatures.canvas, label: 'Canvas mode', description: 'Side-by-side editor view'),
-    (id: AppFeatures.codeInterpreter, label: 'Code interpreter', description: 'Run code in chat'),
-    (id: AppFeatures.artifacts, label: 'Artifacts', description: 'Render live previews'),
+    (
+      id: AppFeatures.voice,
+      label: 'Voice input',
+      description: 'Speak instead of type',
+    ),
+    (
+      id: AppFeatures.canvas,
+      label: 'Canvas mode',
+      description: 'Side-by-side editor view',
+    ),
+    (
+      id: AppFeatures.codeInterpreter,
+      label: 'Code interpreter',
+      description: 'Run code in chat',
+    ),
+    (
+      id: AppFeatures.artifacts,
+      label: 'Artifacts',
+      description: 'Render live previews',
+    ),
   ];
 
   bool isEnabled(String featureId) => Velora.feature.enabled(featureId);

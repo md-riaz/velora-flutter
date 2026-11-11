@@ -1,0 +1,81 @@
+{
+  "_comment": "Source of truth for velora_ui's public surface. tool/check_docs.sh fails when an export in lib/velora_ui.dart is missing here, or an entry here is missing from docs/packages/ui.md.",
+  "layers": [
+    {
+      "layer": 1,
+      "title": "Tokens & theme",
+      "components": [
+        {"name": "VeloraTokens", "file": "src/tokens/velora_tokens.dart"},
+        {"name": "VeloraThemePreset", "file": "src/theme/velora_theme.dart"},
+        {"name": "buildVeloraTheme", "file": "src/theme/velora_theme.dart"},
+        {"name": "VeloraTheme", "file": "src/theme/velora_theme.dart"},
+        {"name": "veloraTextTheme", "file": "src/theme/velora_typography.dart"},
+        {"name": "VeloraTokensContext", "file": "src/theme/velora_tokens_context.dart"}
+      ]
+    },
+    {
+      "layer": 2,
+      "title": "Core components",
+      "components": [
+        {"name": "VeloraButton", "file": "src/components/velora_button.dart"},
+        {"name": "VeloraButtonVariant", "file": "src/components/velora_button.dart"},
+        {"name": "VeloraButtonSize", "file": "src/components/velora_button.dart"},
+        {"name": "VeloraCard", "file": "src/components/velora_card.dart"},
+        {"name": "VeloraBadge", "file": "src/components/velora_badge.dart"},
+        {"name": "VeloraBadgeStyle", "file": "src/components/velora_badge.dart"},
+        {"name": "VeloraChip", "file": "src/components/velora_chip.dart"},
+        {"name": "VeloraAlert", "file": "src/components/velora_alert.dart"},
+        {"name": "VeloraEmptyState", "file": "src/components/velora_empty_state.dart"},
+        {"name": "VeloraSkeleton", "file": "src/components/velora_skeleton.dart"},
+        {"name": "VeloraStatus", "file": "src/components/velora_status.dart"},
+        {"name": "VeloraStatusColors", "file": "src/components/velora_status.dart"},
+        {"name": "VeloraStatusResolver", "file": "src/components/velora_status.dart"}
+      ]
+    },
+    {
+      "layer": 3,
+      "title": "Form inputs",
+      "components": [
+        {"name": "VeloraTextField", "file": "src/components/velora_text_field.dart"},
+        {"name": "VeloraSelect", "file": "src/components/velora_select.dart"},
+        {"name": "VeloraSelectOption", "file": "src/components/velora_select.dart"},
+        {"name": "VeloraCheckbox", "file": "src/components/velora_checkbox.dart"},
+        {"name": "VeloraSwitch", "file": "src/components/velora_switch.dart"},
+        {"name": "VeloraRadioGroup", "file": "src/components/velora_radio_group.dart"},
+        {"name": "VeloraRadioOption", "file": "src/components/velora_radio_group.dart"}
+      ]
+    },
+    {
+      "layer": 4,
+      "title": "Layout & content display",
+      "components": [
+        {"name": "VeloraAvatar", "file": "src/components/velora_avatar.dart"},
+        {"name": "VeloraListTile", "file": "src/components/velora_list_tile.dart"},
+        {"name": "VeloraSectionHeader", "file": "src/components/velora_section_header.dart"},
+        {"name": "VeloraDivider", "file": "src/components/velora_divider.dart"},
+        {"name": "VeloraProgress", "file": "src/components/velora_progress.dart"}
+      ]
+    },
+    {
+      "layer": 5,
+      "title": "Navigation & scaffolding",
+      "components": [
+        {"name": "VeloraNavDestination", "file": "src/components/velora_nav_destination.dart"},
+        {"name": "VeloraNavBar", "file": "src/components/velora_nav_bar.dart"},
+        {"name": "VeloraNavRail", "file": "src/components/velora_nav_rail.dart"},
+        {"name": "VeloraTabs", "file": "src/components/velora_tabs.dart"},
+        {"name": "VeloraScaffold", "file": "src/components/velora_scaffold.dart"}
+      ]
+    },
+    {
+      "layer": 6,
+      "title": "Feedback & overlays",
+      "components": [
+        {"name": "VeloraDialog", "file": "src/components/velora_dialog.dart"},
+        {"name": "VeloraBottomSheet", "file": "src/components/velora_bottom_sheet.dart"},
+        {"name": "VeloraToast", "file": "src/components/velora_toast.dart"},
+        {"name": "VeloraTooltip", "file": "src/components/velora_tooltip.dart"}
+      ]
+    }
+  ]
+}

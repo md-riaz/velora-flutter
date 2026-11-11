@@ -121,8 +121,9 @@ class RxInBuildWithoutObx extends DartLintRule {
     while (current != null) {
       if (current is FunctionExpression) {
         final parent = current.parent;
-        final Expression argument =
-            parent is NamedExpression ? parent : current;
+        final Expression argument = parent is NamedExpression
+            ? parent
+            : current;
         final parameter = argument.staticParameterElement;
         if (parameter != null) {
           if (parameter.name.startsWith('on')) return true;
@@ -131,8 +132,7 @@ class RxInBuildWithoutObx extends DartLintRule {
           if (type is FunctionType) {
             final returnType = type.returnType;
             if (returnType is VoidType ||
-                (returnType is InterfaceType &&
-                    returnType.isDartAsyncFuture)) {
+                (returnType is InterfaceType && returnType.isDartAsyncFuture)) {
               return true;
             }
           }

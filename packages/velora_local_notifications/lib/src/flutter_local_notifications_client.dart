@@ -24,12 +24,12 @@ class FlutterLocalNotificationsClient implements LocalNotificationsClient {
     String channelDescription = 'Default notification channel for this app.',
     AndroidScheduleMode androidScheduleMode =
         AndroidScheduleMode.inexactAllowWhileIdle,
-  })  : _plugin = plugin ?? FlutterLocalNotificationsPlugin(),
-        _androidDefaultIcon = androidDefaultIcon,
-        _channelId = channelId,
-        _channelName = channelName,
-        _channelDescription = channelDescription,
-        _androidScheduleMode = androidScheduleMode;
+  }) : _plugin = plugin ?? FlutterLocalNotificationsPlugin(),
+       _androidDefaultIcon = androidDefaultIcon,
+       _channelId = channelId,
+       _channelName = channelName,
+       _channelDescription = channelDescription,
+       _androidScheduleMode = androidScheduleMode;
 
   final FlutterLocalNotificationsPlugin _plugin;
   final String _androidDefaultIcon;
@@ -66,8 +66,8 @@ class FlutterLocalNotificationsClient implements LocalNotificationsClient {
     if (!_timeZonesInitialized) {
       tz_data.initializeTimeZones();
       try {
-        final name = await FlutterTimezone.getLocalTimezone();
-        tz.setLocalLocation(tz.getLocation(name));
+        final info = await FlutterTimezone.getLocalTimezone();
+        tz.setLocalLocation(tz.getLocation(info.identifier));
       } catch (_) {
         tz.setLocalLocation(tz.getLocation('UTC'));
       }
@@ -82,7 +82,7 @@ class FlutterLocalNotificationsClient implements LocalNotificationsClient {
       macOS: darwinSettings,
     );
 
-    await _plugin.initialize(initializationSettings);
+    await _plugin.initialize(settings: initializationSettings);
     await _requestPermissions();
   }
 
@@ -94,7 +94,8 @@ class FlutterLocalNotificationsClient implements LocalNotificationsClient {
     try {
       await _plugin
           .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>()
+            AndroidFlutterLocalNotificationsPlugin
+          >()
           ?.requestNotificationsPermission();
     } catch (_) {
       // Platform doesn't support (or doesn't need) this permission request.
@@ -103,7 +104,8 @@ class FlutterLocalNotificationsClient implements LocalNotificationsClient {
     try {
       await _plugin
           .resolvePlatformSpecificImplementation<
-              IOSFlutterLocalNotificationsPlugin>()
+            IOSFlutterLocalNotificationsPlugin
+          >()
           ?.requestPermissions(alert: true, badge: true, sound: true);
     } catch (_) {
       // Platform doesn't support (or doesn't need) this permission request.
@@ -112,7 +114,8 @@ class FlutterLocalNotificationsClient implements LocalNotificationsClient {
     try {
       await _plugin
           .resolvePlatformSpecificImplementation<
-              MacOSFlutterLocalNotificationsPlugin>()
+            MacOSFlutterLocalNotificationsPlugin
+          >()
           ?.requestPermissions(alert: true, badge: true, sound: true);
     } catch (_) {
       // Platform doesn't support (or doesn't need) this permission request.
@@ -120,17 +123,12 @@ class FlutterLocalNotificationsClient implements LocalNotificationsClient {
   }
 
   @override
-  Future<void> show(
-    int id,
-    String? title,
-    String? body, {
-    String? payload,
-  }) {
+  Future<void> show(int id, String? title, String? body, {String? payload}) {
     return _plugin.show(
-      id,
-      title,
-      body,
-      _notificationDetails(),
+      id: id,
+      title: title,
+      body: body,
+      notificationDetails: _notificationDetails(),
       payload: payload,
     );
   }
@@ -145,20 +143,18 @@ class FlutterLocalNotificationsClient implements LocalNotificationsClient {
   }) {
     final scheduledDate = tz.TZDateTime.from(dateTime, tz.local);
     return _plugin.zonedSchedule(
-      id,
-      title,
-      body,
-      scheduledDate,
-      _notificationDetails(),
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
+      id: id,
+      title: title,
+      body: body,
+      scheduledDate: scheduledDate,
+      notificationDetails: _notificationDetails(),
       androidScheduleMode: _androidScheduleMode,
       payload: payload,
     );
   }
 
   @override
-  Future<void> cancel(int id) => _plugin.cancel(id);
+  Future<void> cancel(int id) => _plugin.cancel(id: id);
 
   @override
   Future<void> cancelAll() => _plugin.cancelAll();

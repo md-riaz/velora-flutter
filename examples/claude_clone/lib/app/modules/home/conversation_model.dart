@@ -41,16 +41,18 @@ class ConversationModel {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'title': title,
-        'last_message': lastMessage,
-        'updated_at': updatedAt.toIso8601String(),
-        'is_starred': isStarred,
-      };
+    'id': id,
+    'title': title,
+    'last_message': lastMessage,
+    'updated_at': updatedAt.toIso8601String(),
+    'is_starred': isStarred,
+  };
 
   String get timeAgo {
     final now = DateTime.now();
-    final diff = now.isBefore(updatedAt) ? Duration.zero : now.difference(updatedAt);
+    final diff = now.isBefore(updatedAt)
+        ? Duration.zero
+        : now.difference(updatedAt);
     if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
     if (diff.inHours < 24) return '${diff.inHours}h ago';
     if (diff.inDays < 7) return '${diff.inDays}d ago';

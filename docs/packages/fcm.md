@@ -32,8 +32,8 @@ The package is intentionally small:
 dependencies:
   velora_fcm:
     path: packages/velora_fcm # or the pub.dev version once published
-  firebase_core: ^3.6.0
-  firebase_messaging: ^15.1.0
+  firebase_core: ^5.1.0
+  firebase_messaging: ^17.0.1
 ```
 
 Or let the CLI add the dependency and print the full checklist:

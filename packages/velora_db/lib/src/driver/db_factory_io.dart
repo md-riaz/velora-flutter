@@ -20,10 +20,7 @@ QueryExecutor defaultVeloraDbExecutor(String databaseName) {
   return LazyDatabase(() async {
     final path = p.isAbsolute(databaseName)
         ? databaseName
-        : p.join(
-            (await getApplicationDocumentsDirectory()).path,
-            databaseName,
-          );
+        : p.join((await getApplicationDocumentsDirectory()).path, databaseName);
     return NativeDatabase.createInBackground(File(path));
   });
 }

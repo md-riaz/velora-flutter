@@ -86,4 +86,5 @@ nav:
     - Example apps: examples.md
   - Project:
     - Contributing: contributing.md
+    - Toolchain Baseline: toolchain.md
     - Roadmap: roadmap.md

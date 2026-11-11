@@ -76,7 +76,8 @@ class FeatureService extends GetxService with VeloraLogoutAwareDefaults {
         .where((feature) => canAccess(feature.id))
         .expand((feature) => feature.menuItems)
         .where(
-          (item) => item.permission == null || permissionCheck(item.permission!),
+          (item) =>
+              item.permission == null || permissionCheck(item.permission!),
         )
         .toList(growable: false);
   }

@@ -44,8 +44,9 @@ class EditProfilePage extends GetView<EditProfileController> {
                       'This form uses VeloraFormController — submit with '
                       'blank or invalid fields to see server-side validation '
                       'errors rendered inline.',
-                      style: textTheme.bodySmall
-                          ?.copyWith(color: ClaudeColors.primary),
+                      style: textTheme.bodySmall?.copyWith(
+                        color: ClaudeColors.primary,
+                      ),
                     ),
                   ),
                 ],
@@ -53,7 +54,11 @@ class EditProfilePage extends GetView<EditProfileController> {
             ),
 
             // Name field
-            _FieldLabel(label: 'Display name', textTheme: textTheme, scheme: scheme),
+            _FieldLabel(
+              label: 'Display name',
+              textTheme: textTheme,
+              scheme: scheme,
+            ),
             const SizedBox(height: 6),
             Obx(() {
               final nameError = controller.firstError('name');
@@ -74,8 +79,7 @@ class EditProfilePage extends GetView<EditProfileController> {
                     const SizedBox(height: 4),
                     Text(
                       nameError,
-                      style: textTheme.bodySmall
-                          ?.copyWith(color: scheme.error),
+                      style: textTheme.bodySmall?.copyWith(color: scheme.error),
                     ),
                   ],
                 ],
@@ -108,8 +112,7 @@ class EditProfilePage extends GetView<EditProfileController> {
                     const SizedBox(height: 4),
                     Text(
                       emailError,
-                      style: textTheme.bodySmall
-                          ?.copyWith(color: scheme.error),
+                      style: textTheme.bodySmall?.copyWith(color: scheme.error),
                     ),
                   ],
                 ],
@@ -165,8 +168,7 @@ class EditProfilePage extends GetView<EditProfileController> {
       prefixIcon: Icon(icon, size: 20),
       filled: true,
       fillColor: scheme.surfaceContainerHighest,
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide.none,

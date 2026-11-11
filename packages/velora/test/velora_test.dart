@@ -93,54 +93,48 @@ void main() {
     );
   });
 
-  test(
-    'api service normalizes a connection-level DioException into an '
-    'ApiException with isConnectionError set, so callers never see the raw '
-    'DioException',
-    () async {
-      final api = await _apiService((options) {
-        throw DioException(
-          requestOptions: options,
-          type: DioExceptionType.connectionError,
-          error: 'Connection failed',
-        );
-      });
+  test('api service normalizes a connection-level DioException into an '
+      'ApiException with isConnectionError set, so callers never see the raw '
+      'DioException', () async {
+    final api = await _apiService((options) {
+      throw DioException(
+        requestOptions: options,
+        type: DioExceptionType.connectionError,
+        error: 'Connection failed',
+      );
+    });
 
-      await expectLater(
-        api.get<Object?>('/todos'),
-        throwsA(
-          isA<ApiException>()
-              .having(
-                (error) => error.isConnectionError,
-                'isConnectionError',
-                isTrue,
-              )
-              .having((error) => error.statusCode, 'statusCode', isNull),
+    await expectLater(
+      api.get<Object?>('/todos'),
+      throwsA(
+        isA<ApiException>()
+            .having(
+              (error) => error.isConnectionError,
+              'isConnectionError',
+              isTrue,
+            )
+            .having((error) => error.statusCode, 'statusCode', isNull),
+      ),
+    );
+  });
+
+  test('api service does not flag a well-formed error response as a '
+      'connection error', () async {
+    final api = await _apiService(
+      (_) => ResponseBody.fromString('Server exploded', 500),
+    );
+
+    await expectLater(
+      api.get<Object?>('/boom'),
+      throwsA(
+        isA<ApiException>().having(
+          (error) => error.isConnectionError,
+          'isConnectionError',
+          isFalse,
         ),
-      );
-    },
-  );
-
-  test(
-    'api service does not flag a well-formed error response as a '
-    'connection error',
-    () async {
-      final api = await _apiService(
-        (_) => ResponseBody.fromString('Server exploded', 500),
-      );
-
-      await expectLater(
-        api.get<Object?>('/boom'),
-        throwsA(
-          isA<ApiException>().having(
-            (error) => error.isConnectionError,
-            'isConnectionError',
-            isFalse,
-          ),
-        ),
-      );
-    },
-  );
+      ),
+    );
+  });
 
   test('auth user parses roles permissions features and defaults safely', () {
     final user = AuthUser.fromJson({
@@ -197,117 +191,111 @@ void main() {
     },
   );
 
-  test(
-    'feature service registers, toggles, syncs, filters permissions, and flushes scope',
-    () async {
-      final auth = await _authService();
-      auth.currentUser.value = const AuthUser(
-        id: 1,
-        name: 'Admin',
-        email: 'admin@example.com',
-        permissions: ['reports.view'],
-      );
-      Get.put<PermissionService>(PermissionService(auth: auth));
+  test('feature service registers, toggles, syncs, filters permissions, and flushes scope', () async {
+    final auth = await _authService();
+    auth.currentUser.value = const AuthUser(
+      id: 1,
+      name: 'Admin',
+      email: 'admin@example.com',
+      permissions: ['reports.view'],
+    );
+    Get.put<PermissionService>(PermissionService(auth: auth));
 
-      final service = FeatureService(
-        permissionCheck: Get.find<PermissionService>().can,
-      );
-      service.registerAll([
-        const VeloraFeature(
-          id: 'reports',
-          name: 'Reports',
-          permission: 'reports.view',
-          menuItems: [
-            VeloraMenuItem(label: 'Reports', route: '/reports'),
-            VeloraMenuItem(
-              label: 'Reports Admin',
-              route: '/reports/admin',
-              permission: 'reports.admin',
-            ),
-          ],
-        ),
-        const VeloraFeature(
-          id: 'billing',
-          name: 'Billing',
-          permission: 'billing.view',
-          menuItems: [VeloraMenuItem(label: 'Billing', route: '/billing')],
-        ),
-      ]);
+    final service = FeatureService(
+      permissionCheck: Get.find<PermissionService>().can,
+    );
+    service.registerAll([
+      const VeloraFeature(
+        id: 'reports',
+        name: 'Reports',
+        permission: 'reports.view',
+        menuItems: [
+          VeloraMenuItem(label: 'Reports', route: '/reports'),
+          VeloraMenuItem(
+            label: 'Reports Admin',
+            route: '/reports/admin',
+            permission: 'reports.admin',
+          ),
+        ],
+      ),
+      const VeloraFeature(
+        id: 'billing',
+        name: 'Billing',
+        permission: 'billing.view',
+        menuItems: [VeloraMenuItem(label: 'Billing', route: '/billing')],
+      ),
+    ]);
 
-      expect(service.canAccess('reports'), isFalse);
+    expect(service.canAccess('reports'), isFalse);
 
-      service.enable('reports');
-      service.enable('billing');
+    service.enable('reports');
+    service.enable('billing');
 
-      expect(service.enabled('reports'), isTrue);
-      expect(service.canAccess('reports'), isTrue);
-      expect(service.canAccess('billing'), isFalse);
-      expect(service.menuItems.map((item) => item.label), ['Reports']);
+    expect(service.enabled('reports'), isTrue);
+    expect(service.canAccess('reports'), isTrue);
+    expect(service.canAccess('billing'), isFalse);
+    expect(service.menuItems.map((item) => item.label), ['Reports']);
 
-      service.disable('reports');
-      expect(service.enabled('reports'), isFalse);
-      expect(service.canAccess('reports'), isFalse);
+    service.disable('reports');
+    expect(service.enabled('reports'), isFalse);
+    expect(service.canAccess('reports'), isFalse);
 
-      service.syncFromUserFeatures(['reports']);
-      expect(service.enabled('reports'), isTrue);
-      expect(service.enabled('billing'), isFalse);
+    service.syncFromUserFeatures(['reports']);
+    expect(service.enabled('reports'), isTrue);
+    expect(service.enabled('billing'), isFalse);
 
-      await service.flushUserScope();
-      expect(service.enabled('reports'), isFalse);
+    await service.flushUserScope();
+    expect(service.enabled('reports'), isFalse);
 
-      var userScopeDisposed = 0;
-      service.registerUserScopeDisposer(() async {
-        userScopeDisposed += 1;
-      });
+    var userScopeDisposed = 0;
+    service.registerUserScopeDisposer(() async {
+      userScopeDisposed += 1;
+    });
 
-      var featureDisposed = 0;
-      service.register(
-        VeloraFeature(
-          id: 'exports',
-          name: 'Exports',
-          disposers: [
-            () async {
-              featureDisposed += 1;
-            },
-          ],
-        ),
-      );
+    var featureDisposed = 0;
+    service.register(
+      VeloraFeature(
+        id: 'exports',
+        name: 'Exports',
+        disposers: [
+          () async {
+            featureDisposed += 1;
+          },
+        ],
+      ),
+    );
 
-      service.enable('exports');
-      await service.flushUserScope();
-      expect(service.enabled('exports'), isFalse);
-      expect(userScopeDisposed, 1);
-      expect(featureDisposed, 1);
-    },
-  );
+    service.enable('exports');
+    await service.flushUserScope();
+    expect(service.enabled('exports'), isFalse);
+    expect(userScopeDisposed, 1);
+    expect(featureDisposed, 1);
+  });
 
-  test(
-    'feature service accepts an injected permission resolver without a registered PermissionService',
-    () {
-      final service = FeatureService(
-        permissionCheck: (permission) => permission == 'reports.view',
-      );
-      service.register(
-        const VeloraFeature(
-          id: 'reports',
-          name: 'Reports',
-          permission: 'reports.view',
-        ),
-      );
-      service.register(
-        const VeloraFeature(
-          id: 'billing',
-          name: 'Billing',
-          permission: 'billing.view',
-        ),
-      );
-      service.enable('reports');
-      service.enable('billing');
+  test('feature service accepts an injected permission resolver without a registered PermissionService', () {
+    final service = FeatureService(
+      permissionCheck: (permission) => permission == 'reports.view',
+    );
+    service.register(
+      const VeloraFeature(
+        id: 'reports',
+        name: 'Reports',
+        permission: 'reports.view',
+      ),
+    );
+    service.register(
+      const VeloraFeature(
+        id: 'billing',
+        name: 'Billing',
+        permission: 'billing.view',
+      ),
+    );
+    service.enable('reports');
+    service.enable('billing');
 
-      expect(service.canAccess('reports'), isTrue);
-      expect(service.canAccess('billing'), isFalse);
-    },
-  );
+    expect(service.canAccess('reports'), isTrue);
+    expect(service.canAccess('billing'), isFalse);
+  });
 
   test('theme service tracks mode changes', () {
     final service = ThemeService();
@@ -514,10 +502,7 @@ void main() {
         notifications: notificationConfig,
       );
 
-      await Velora.login({
-        'email': 'admin@example.test',
-        'password': 'secret',
-      });
+      await Velora.login({'email': 'admin@example.test', 'password': 'secret'});
 
       expect(auth.check, isTrue);
       expect(notify.initialized.value, isTrue);
@@ -531,58 +516,55 @@ void main() {
     },
   );
 
-  test(
-    'logout coordinator is idempotent and clears local session after remote failure',
-    () async {
-      var logoutRequests = 0;
-      final api = await _apiService((options) {
-        logoutRequests += 1;
-        return _jsonResponse(500, {'message': 'Server unavailable'});
-      });
-      final storage = await _storage();
-      await storage.setToken('auth-token');
-      await storage.setJson('velora.auth.user', {
-        'id': 7,
-        'name': 'Admin',
-        'email': 'admin@example.test',
-      });
-      final lifecycle = VeloraLifecycleRegistry();
-      final auth = await AuthService(
-        api: api,
-        storage: storage,
-        config: const VeloraAuthConfig(),
-      ).init();
-      final coordinator = LogoutCoordinator(
-        lifecycle: lifecycle,
-        auth: auth,
-        nav: VeloraNav(),
-        logoutRedirectRoute: '/login',
-      );
-      auth.attachLogoutCoordinator(coordinator);
+  test('logout coordinator is idempotent and clears local session after remote failure', () async {
+    var logoutRequests = 0;
+    final api = await _apiService((options) {
+      logoutRequests += 1;
+      return _jsonResponse(500, {'message': 'Server unavailable'});
+    });
+    final storage = await _storage();
+    await storage.setToken('auth-token');
+    await storage.setJson('velora.auth.user', {
+      'id': 7,
+      'name': 'Admin',
+      'email': 'admin@example.test',
+    });
+    final lifecycle = VeloraLifecycleRegistry();
+    final auth = await AuthService(
+      api: api,
+      storage: storage,
+      config: const VeloraAuthConfig(),
+    ).init();
+    final coordinator = LogoutCoordinator(
+      lifecycle: lifecycle,
+      auth: auth,
+      nav: VeloraNav(),
+      logoutRedirectRoute: '/login',
+    );
+    auth.attachLogoutCoordinator(coordinator);
 
-      Get.put<AuthService>(auth);
-      Get.put<VeloraApiService>(api);
-      Get.put<LogoutCoordinator>(coordinator);
-      Get.put<VeloraLifecycleRegistry>(lifecycle);
-      Velora.config = const VeloraConfig(
-        appName: 'Test',
-        apiBaseUrl: 'https://example.test',
-        auth: VeloraAuthConfig(logoutRedirectRoute: '/login'),
-        notifications: VeloraNotificationConfig(enabled: false),
-      );
+    Get.put<AuthService>(auth);
+    Get.put<VeloraApiService>(api);
+    Get.put<LogoutCoordinator>(coordinator);
+    Get.put<VeloraLifecycleRegistry>(lifecycle);
+    Velora.config = const VeloraConfig(
+      appName: 'Test',
+      apiBaseUrl: 'https://example.test',
+      auth: VeloraAuthConfig(logoutRedirectRoute: '/login'),
+      notifications: VeloraNotificationConfig(enabled: false),
+    );
 
-      expect(auth.check, isTrue);
+    expect(auth.check, isTrue);
 
-      await Future.wait([auth.logout(), Velora.logout()]);
+    await Future.wait([auth.logout(), Velora.logout()]);
 
-      expect(logoutRequests, 1);
-      expect(auth.check, isFalse);
-      expect(auth.isLoggingOut, isFalse);
-      expect(auth.state.value, SessionState.guest);
-      expect(await storage.getToken(), isNull);
-      expect(storage.getJson('velora.auth.user'), isNull);
-    },
-  );
+    expect(logoutRequests, 1);
+    expect(auth.check, isFalse);
+    expect(auth.isLoggingOut, isFalse);
+    expect(auth.state.value, SessionState.guest);
+    expect(await storage.getToken(), isNull);
+    expect(storage.getJson('velora.auth.user'), isNull);
+  });
   test('auth guard fails closed when Velora is not booted', () {
     // No AuthService registered → fail closed by default (redirect).
     expect(const VeloraAuthGuard().redirect('/dashboard'), '/login');
@@ -612,14 +594,17 @@ void main() {
     expect(const VeloraAuthGuard().redirect('/dashboard'), isNull);
   });
 
-  test('auth guard falls back to fallbackRoute when config is missing', () async {
-    // Booted (AuthService present) but config unavailable → must still deny.
-    Get.put<AuthService>(await _authService());
-    expect(
-      const VeloraAuthGuard(fallbackRoute: '/signin').redirect('/dashboard'),
-      '/signin',
-    );
-  });
+  test(
+    'auth guard falls back to fallbackRoute when config is missing',
+    () async {
+      // Booted (AuthService present) but config unavailable → must still deny.
+      Get.put<AuthService>(await _authService());
+      expect(
+        const VeloraAuthGuard(fallbackRoute: '/signin').redirect('/dashboard'),
+        '/signin',
+      );
+    },
+  );
 
   test('storage never stores the token in plaintext by default', () async {
     SharedPreferences.setMockInitialValues({});
@@ -633,23 +618,50 @@ void main() {
     expect(storage.allowInsecureFallback, isFalse);
   });
 
-  test('storage rethrows when secure storage fails and fallback is off', () async {
-    SharedPreferences.setMockInitialValues({});
-    final storage = await VeloraStorageService(
-      secureStorage: _ThrowingSecureStorage(),
-    ).init();
+  test(
+    'storage rethrows when secure storage fails and fallback is off',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final storage = await VeloraStorageService(
+        secureStorage: _ThrowingSecureStorage(),
+      ).init();
 
-    await expectLater(storage.setToken('secret-token'), throwsA(anything));
-    // Nothing was written to plaintext prefs.
-    expect(storage.get<String>('velora.auth.token'), isNull);
+      await expectLater(storage.setToken('secret-token'), throwsA(anything));
+      // Nothing was written to plaintext prefs.
+      expect(storage.get<String>('velora.auth.token'), isNull);
+    },
+  );
+
+  test('boot registers plugins and exposes them for introspection', () async {
+    SharedPreferences.setMockInitialValues({});
+    final plugin = _FakePlugin();
+    await Velora.boot(
+      config: const VeloraConfig(
+        appName: 'Test',
+        apiBaseUrl: 'https://example.test',
+        notifications: VeloraNotificationConfig(
+          enabled: false,
+          provider: PushProvider.none,
+        ),
+      ),
+      plugins: [plugin],
+    );
+
+    expect(Velora.plugin<_FakePlugin>(), same(plugin));
+    expect(Velora.plugins, [plugin]);
+    expect(Get.isRegistered<_FakeService>(), isTrue);
+    expect(plugin.registered, isTrue);
+
+    await Velora.logout();
+
+    expect(plugin.loggedOut, isTrue);
   });
 
-  test(
-    'boot registers plugins and exposes them for introspection',
-    () async {
-      SharedPreferences.setMockInitialValues({});
-      final plugin = _FakePlugin();
-      await Velora.boot(
+  test('boot rejects a second plugin registered under the same name', () async {
+    SharedPreferences.setMockInitialValues({});
+
+    await expectLater(
+      Velora.boot(
         config: const VeloraConfig(
           appName: 'Test',
           apiBaseUrl: 'https://example.test',
@@ -658,69 +670,36 @@ void main() {
             provider: PushProvider.none,
           ),
         ),
-        plugins: [plugin],
-      );
+        plugins: [_FakePlugin(), _FakePlugin()],
+      ),
+      throwsArgumentError,
+    );
+  });
 
-      expect(Velora.plugin<_FakePlugin>(), same(plugin));
-      expect(Velora.plugins, [plugin]);
-      expect(Get.isRegistered<_FakeService>(), isTrue);
-      expect(plugin.registered, isTrue);
+  test('boot supports lazy registration via VeloraContext.lazyPut', () async {
+    SharedPreferences.setMockInitialValues({});
+    final plugin = _LazyFakePlugin();
 
-      await Velora.logout();
-
-      expect(plugin.loggedOut, isTrue);
-    },
-  );
-
-  test(
-    'boot rejects a second plugin registered under the same name',
-    () async {
-      SharedPreferences.setMockInitialValues({});
-
-      await expectLater(
-        Velora.boot(
-          config: const VeloraConfig(
-            appName: 'Test',
-            apiBaseUrl: 'https://example.test',
-            notifications: VeloraNotificationConfig(
-              enabled: false,
-              provider: PushProvider.none,
-            ),
-          ),
-          plugins: [_FakePlugin(), _FakePlugin()],
+    await Velora.boot(
+      config: const VeloraConfig(
+        appName: 'Test',
+        apiBaseUrl: 'https://example.test',
+        notifications: VeloraNotificationConfig(
+          enabled: false,
+          provider: PushProvider.none,
         ),
-        throwsArgumentError,
-      );
-    },
-  );
+      ),
+      plugins: [plugin],
+    );
 
-  test(
-    'boot supports lazy registration via VeloraContext.lazyPut',
-    () async {
-      SharedPreferences.setMockInitialValues({});
-      final plugin = _LazyFakePlugin();
+    expect(Get.isRegistered<_LazyFakeService>(), isTrue);
+    expect(plugin.built, isFalse);
 
-      await Velora.boot(
-        config: const VeloraConfig(
-          appName: 'Test',
-          apiBaseUrl: 'https://example.test',
-          notifications: VeloraNotificationConfig(
-            enabled: false,
-            provider: PushProvider.none,
-          ),
-        ),
-        plugins: [plugin],
-      );
+    final instance = Get.find<_LazyFakeService>();
 
-      expect(Get.isRegistered<_LazyFakeService>(), isTrue);
-      expect(plugin.built, isFalse);
-
-      final instance = Get.find<_LazyFakeService>();
-
-      expect(plugin.built, isTrue);
-      expect(instance, isA<_LazyFakeService>());
-    },
-  );
+    expect(plugin.built, isTrue);
+    expect(instance, isA<_LazyFakeService>());
+  });
 
   test(
     'boot wires a custom localAdapter into VeloraNotify/NotificationService',
@@ -793,8 +772,7 @@ class _ThrowingSecureStorage extends FlutterSecureStorage {
     WebOptions? webOptions,
     AppleOptions? mOptions,
     WindowsOptions? wOptions,
-  }) async =>
-      _boom();
+  }) async => _boom();
 
   @override
   Future<String?> read({
@@ -805,8 +783,7 @@ class _ThrowingSecureStorage extends FlutterSecureStorage {
     WebOptions? webOptions,
     AppleOptions? mOptions,
     WindowsOptions? wOptions,
-  }) async =>
-      _boom();
+  }) async => _boom();
 
   @override
   Future<void> delete({
@@ -817,8 +794,7 @@ class _ThrowingSecureStorage extends FlutterSecureStorage {
     WebOptions? webOptions,
     AppleOptions? mOptions,
     WindowsOptions? wOptions,
-  }) async =>
-      _boom();
+  }) async => _boom();
 }
 
 /// Records every call made through it, proving [Velora.boot]'s `localAdapter`

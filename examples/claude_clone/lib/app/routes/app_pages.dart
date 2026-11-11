@@ -21,31 +21,41 @@ class AppPages {
     GetPage(
       name: AppRoutes.login,
       page: () => const LoginPage(),
-      binding: BindingsBuilder(() => Get.lazyPut(() => LoginController(), fenix: true)),
+      binding: BindingsBuilder(
+        () => Get.lazyPut(() => LoginController(), fenix: true),
+      ),
       middlewares: Velora.guestOnly(authenticatedRoute: AppRoutes.home),
     ),
     GetPage(
       name: AppRoutes.home,
       page: () => const HomePage(),
-      binding: BindingsBuilder(() => Get.lazyPut(() => HomeController(), fenix: true)),
+      binding: BindingsBuilder(
+        () => Get.lazyPut(() => HomeController(), fenix: true),
+      ),
       middlewares: Velora.authOnly,
     ),
     GetPage(
       name: AppRoutes.chat,
       page: () => const ChatPage(),
-      binding: BindingsBuilder(() => Get.lazyPut(() => ChatController(), fenix: true)),
+      binding: BindingsBuilder(
+        () => Get.lazyPut(() => ChatController(), fenix: true),
+      ),
       middlewares: Velora.authOnly,
     ),
     GetPage(
       name: AppRoutes.settings,
       page: () => const SettingsPage(),
-      binding: BindingsBuilder(() => Get.lazyPut(() => SettingsController(), fenix: true)),
+      binding: BindingsBuilder(
+        () => Get.lazyPut(() => SettingsController(), fenix: true),
+      ),
       middlewares: Velora.authOnly,
     ),
     GetPage(
       name: AppRoutes.account,
       page: () => const AccountPage(),
-      binding: BindingsBuilder(() => Get.lazyPut(() => AccountController(), fenix: true)),
+      binding: BindingsBuilder(
+        () => Get.lazyPut(() => AccountController(), fenix: true),
+      ),
       middlewares: Velora.authOnly,
     ),
     GetPage(

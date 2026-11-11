@@ -19,12 +19,14 @@ class ChatController extends VeloraController with VeloraAttachmentsMixin {
   final scrollController = ScrollController();
 
   // Eagerly initialized (not late final) — avoids LateInitializationError that corrupts GetX proxy state before _bootstrapFromId completes.
-  final conversation = Rx<ConversationModel>(ConversationModel(
-    id: '',
-    title: '',
-    lastMessage: '',
-    updatedAt: DateTime.utc(2020),
-  ));
+  final conversation = Rx<ConversationModel>(
+    ConversationModel(
+      id: '',
+      title: '',
+      lastMessage: '',
+      updatedAt: DateTime.utc(2020),
+    ),
+  );
 
   /// ID of the oldest loaded message — used as cursor for the next
   /// "load earlier" request.
@@ -33,8 +35,8 @@ class ChatController extends VeloraController with VeloraAttachmentsMixin {
   ChatController({
     MessagesDataSource? messagesDs,
     ConversationsDataSource? conversationsDs,
-  })  : _messagesDs = messagesDs ?? MockMessagesDataSource(),
-        _conversationsDs = conversationsDs ?? MockConversationsDataSource();
+  }) : _messagesDs = messagesDs ?? MockMessagesDataSource(),
+       _conversationsDs = conversationsDs ?? MockConversationsDataSource();
 
   @override
   void onInit() {
@@ -215,7 +217,9 @@ class ChatController extends VeloraController with VeloraAttachmentsMixin {
       conversation.value = conversation.value.copyWith(isStarred: !newStarred);
       return;
     }
-    Velora.toast.success(newStarred ? 'Added to starred' : 'Removed from starred');
+    Velora.toast.success(
+      newStarred ? 'Added to starred' : 'Removed from starred',
+    );
   }
 
   Future<void> clearHistory() async {

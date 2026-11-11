@@ -34,8 +34,8 @@ class Conversation {
       unread: row['unread'] == null
           ? 0
           : (row['unread'] is int
-              ? row['unread'] as int
-              : int.parse(row['unread'].toString())),
+                ? row['unread'] as int
+                : int.parse(row['unread'].toString())),
     );
   }
 

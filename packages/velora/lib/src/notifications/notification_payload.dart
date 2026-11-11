@@ -33,15 +33,23 @@ abstract class VeloraNotification {
 }
 
 class AppNotification implements VeloraNotification {
-  @override final String id;
+  @override
+  final String id;
   final String type;
-  @override final String title;
-  @override final String body;
-  @override final String? feature;
-  @override final String? permission;
-  @override final String? route;
-  @override final Map<String, dynamic> data;
-  @override final DateTime? readAt;
+  @override
+  final String title;
+  @override
+  final String body;
+  @override
+  final String? feature;
+  @override
+  final String? permission;
+  @override
+  final String? route;
+  @override
+  final Map<String, dynamic> data;
+  @override
+  final DateTime? readAt;
   final DateTime createdAt;
 
   const AppNotification({

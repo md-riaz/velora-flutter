@@ -44,8 +44,9 @@ class VeloraAttachmentChip extends StatelessWidget {
           Stack(
             children: [
               ClipRRect(
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(11)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(11),
+                ),
                 child: _Thumbnail(attachment: attachment),
               ),
               // Remove button — uses IconButton for keyboard focus and a11y semantics
@@ -64,7 +65,11 @@ class VeloraAttachmentChip extends StatelessWidget {
                       padding: const EdgeInsets.all(2),
                       constraints: const BoxConstraints(),
                       tooltip: 'Remove',
-                      icon: Icon(Icons.close, size: 14, color: scheme.onSurface),
+                      icon: Icon(
+                        Icons.close,
+                        size: 14,
+                        color: scheme.onSurface,
+                      ),
                     ),
                   ),
                 ),
@@ -117,11 +122,18 @@ class VeloraAttachmentChip extends StatelessWidget {
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
                         tooltip: 'Retry upload',
-                        icon: Icon(Icons.refresh, size: 13, color: scheme.error),
+                        icon: Icon(
+                          Icons.refresh,
+                          size: 13,
+                          color: scheme.error,
+                        ),
                       )
                     else if (attachment.status == AttachmentStatus.done)
-                      Icon(Icons.check_circle_outline,
-                          size: 12, color: scheme.primary),
+                      Icon(
+                        Icons.check_circle_outline,
+                        size: 12,
+                        color: scheme.primary,
+                      ),
                   ],
                 ),
               ],
@@ -135,11 +147,15 @@ class VeloraAttachmentChip extends StatelessWidget {
   String _statusLabel() {
     switch (attachment.status) {
       case AttachmentStatus.pending:
-        return attachment.displaySize.isEmpty ? 'Ready' : attachment.displaySize;
+        return attachment.displaySize.isEmpty
+            ? 'Ready'
+            : attachment.displaySize;
       case AttachmentStatus.uploading:
         return '${(attachment.progress * 100).toInt()}%';
       case AttachmentStatus.done:
-        return attachment.displaySize.isEmpty ? 'Uploaded' : attachment.displaySize;
+        return attachment.displaySize.isEmpty
+            ? 'Uploaded'
+            : attachment.displaySize;
       case AttachmentStatus.error:
         return 'Failed — use ↺ to retry';
     }
@@ -173,10 +189,7 @@ class _Thumbnail extends StatelessWidget {
       );
     }
 
-    return _FilePlaceholder(
-      icon: _iconForMime(attachment),
-      scheme: scheme,
-    );
+    return _FilePlaceholder(icon: _iconForMime(attachment), scheme: scheme);
   }
 
   static IconData _iconForMime(VeloraAttachment a) {

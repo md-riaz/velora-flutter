@@ -85,7 +85,8 @@ class VeloraOfflinePlugin extends VeloraPlugin {
 class VeloraOffline {
   const VeloraOffline._();
 
-  static ConnectivityService get connectivity => Get.find<ConnectivityService>();
+  static ConnectivityService get connectivity =>
+      Get.find<ConnectivityService>();
 
   static bool get isOnline => connectivity.isOnline.value;
 

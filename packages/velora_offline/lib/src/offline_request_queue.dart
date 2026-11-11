@@ -31,7 +31,10 @@ class OfflineRequestQueue {
       pending.assignAll(
         items
             .whereType<Map>()
-            .map((item) => OfflineRequest.fromJson(Map<String, dynamic>.from(item)))
+            .map(
+              (item) =>
+                  OfflineRequest.fromJson(Map<String, dynamic>.from(item)),
+            )
             .toList(),
       );
     }

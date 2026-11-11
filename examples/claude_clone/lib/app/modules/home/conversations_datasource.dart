@@ -95,7 +95,10 @@ class MockConversationsDataSource implements ConversationsDataSource {
     await VeloraMockApi.ok<void>(null, delayMs: 100);
     final idx = _store.indexWhere((c) => c.id == id);
     if (idx != -1) {
-      _store[idx] = _store[idx].copyWith(lastMessage: '', updatedAt: DateTime.now());
+      _store[idx] = _store[idx].copyWith(
+        lastMessage: '',
+        updatedAt: DateTime.now(),
+      );
     }
   }
 
@@ -121,7 +124,8 @@ class MockConversationsDataSource implements ConversationsDataSource {
       ConversationModel(
         id: '1',
         title: 'Explaining quantum entanglement',
-        lastMessage: 'Think of it like two coins that always land on opposite sides…',
+        lastMessage:
+            'Think of it like two coins that always land on opposite sides…',
         updatedAt: now.subtract(const Duration(minutes: 4)),
         isStarred: true,
       ),
@@ -141,7 +145,8 @@ class MockConversationsDataSource implements ConversationsDataSource {
       ConversationModel(
         id: '4',
         title: 'Planning a 2-week trip to Japan',
-        lastMessage: 'For cherry blossom season, March–April in Tokyo is perfect…',
+        lastMessage:
+            'For cherry blossom season, March–April in Tokyo is perfect…',
         updatedAt: now.subtract(const Duration(days: 1)),
       ),
       ConversationModel(

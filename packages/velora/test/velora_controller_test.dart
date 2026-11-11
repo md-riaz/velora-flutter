@@ -24,10 +24,7 @@ void main() {
       final source = StreamController<int>.broadcast();
       final received = <int>[];
 
-      final subscription = controller.listenStream(
-        source.stream,
-        received.add,
-      );
+      final subscription = controller.listenStream(source.stream, received.add);
 
       // listenStream hands back a usable StreamSubscription.
       expect(subscription, isA<StreamSubscription<int>>());
@@ -59,10 +56,7 @@ void main() {
       final source = StreamController<int>.broadcast();
       final received = <int>[];
 
-      final subscription = controller.listenStream(
-        source.stream,
-        received.add,
-      );
+      final subscription = controller.listenStream(source.stream, received.add);
 
       // Early cancel — should be a no-op safe call, and onClose's later
       // cancel-again must not throw.

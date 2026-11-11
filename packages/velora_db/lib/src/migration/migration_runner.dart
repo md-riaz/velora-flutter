@@ -12,7 +12,7 @@ class VeloraMigrationRunner {
   final List<VeloraMigration> migrations;
 
   VeloraMigrationRunner(List<VeloraMigration> migrations)
-      : migrations = _sorted(migrations);
+    : migrations = _sorted(migrations);
 
   static List<VeloraMigration> _sorted(List<VeloraMigration> migrations) {
     final sorted = [...migrations]

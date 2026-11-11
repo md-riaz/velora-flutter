@@ -1,6 +1,15 @@
 include: package:flutter_lints/flutter.yaml
 
 analyzer:
+  errors:
+    # custom_lint still loads through the legacy analyzer plugin API, which
+    # Dart 3.13 flags as deprecated. Remove once velora_lints moves to
+    # analysis_server_plugin (see docs/toolchain.md).
+    analysis_options_deprecated_plugins: ignore
+  exclude:
+    - build/**
+    - android/**
+    - web/**
   plugins:
     - custom_lint
 

@@ -188,31 +188,26 @@ dependencies:
       expect(updated, contains('dependencies:\n  velora_offline: ^0.0.1'));
     });
 
-    test(
-      'leaves an existing 4-space-indented dependency unchanged '
-      '(idempotent regardless of indentation width)',
-      () {
-        const pubspec = '''name: demo
+    test('leaves an existing 4-space-indented dependency unchanged '
+        '(idempotent regardless of indentation width)', () {
+      const pubspec = '''name: demo
 dependencies:
     velora_offline: ^9.9.9
     flutter:
         sdk: flutter
 ''';
-        final updated = addDependencyToPubspec(
-          pubspec,
-          'velora_offline',
-          '^0.0.1',
-        );
-        expect(updated, pubspec);
-        expect('velora_offline:'.allMatches(updated).length, 1);
-      },
-    );
+      final updated = addDependencyToPubspec(
+        pubspec,
+        'velora_offline',
+        '^0.0.1',
+      );
+      expect(updated, pubspec);
+      expect('velora_offline:'.allMatches(updated).length, 1);
+    });
 
-    test(
-      'still adds to dependencies: when the name only exists under '
-      'dev_dependencies:',
-      () {
-        const pubspec = '''name: demo
+    test('still adds to dependencies: when the name only exists under '
+        'dev_dependencies:', () {
+      const pubspec = '''name: demo
 dependencies:
   flutter:
     sdk: flutter
@@ -222,21 +217,20 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 ''';
-        final updated = addDependencyToPubspec(
-          pubspec,
-          'velora_offline',
-          '^0.0.1',
-        );
-        // Added to dependencies: (not skipped just because it's present
-        // under dev_dependencies:), so it now appears twice.
-        expect('velora_offline:'.allMatches(updated).length, 2);
-        final depsIndex = updated.indexOf('dependencies:');
-        final devDepsIndex = updated.indexOf('dev_dependencies:');
-        final firstVeloraIndex = updated.indexOf('velora_offline:');
-        expect(firstVeloraIndex, greaterThan(depsIndex));
-        expect(firstVeloraIndex, lessThan(devDepsIndex));
-      },
-    );
+      final updated = addDependencyToPubspec(
+        pubspec,
+        'velora_offline',
+        '^0.0.1',
+      );
+      // Added to dependencies: (not skipped just because it's present
+      // under dev_dependencies:), so it now appears twice.
+      expect('velora_offline:'.allMatches(updated).length, 2);
+      final depsIndex = updated.indexOf('dependencies:');
+      final devDepsIndex = updated.indexOf('dev_dependencies:');
+      final firstVeloraIndex = updated.indexOf('velora_offline:');
+      expect(firstVeloraIndex, greaterThan(depsIndex));
+      expect(firstVeloraIndex, lessThan(devDepsIndex));
+    });
   });
 
   group('wirePluginIntoBoot', () {
@@ -260,7 +254,9 @@ Future<void> main() async {
       expect(result.content, contains(importLine));
       expect(
         result.content,
-        contains('Velora.boot(config: config, plugins: [VeloraOfflinePlugin()])'),
+        contains(
+          'Velora.boot(config: config, plugins: [VeloraOfflinePlugin()])',
+        ),
       );
       expect(result.content, contains('config: config'));
       expect(result.content, isNot(contains('  plugins:')));
@@ -288,29 +284,28 @@ Future<void> main() async {
       },
     );
 
-    test(
-      'does not duplicate the import when it already exists with double '
-      'quotes',
-      () {
-        const main = '''import "package:velora/velora.dart";
+    test('does not duplicate the import when it already exists with double '
+        'quotes', () {
+      const main = '''import "package:velora/velora.dart";
 import "package:velora_offline/velora_offline.dart";
 
 Future<void> main() async {
   await Velora.boot(config: config);
 }
 ''';
-        final result = wirePluginIntoBoot(
-          main,
-          importLine: importLine,
-          pluginExpr: pluginExpr,
-        );
-        expect(result.wired, isTrue);
-        expect(
-          'package:velora_offline/velora_offline.dart'.allMatches(result.content).length,
-          1,
-        );
-      },
-    );
+      final result = wirePluginIntoBoot(
+        main,
+        importLine: importLine,
+        pluginExpr: pluginExpr,
+      );
+      expect(result.wired, isTrue);
+      expect(
+        'package:velora_offline/velora_offline.dart'
+            .allMatches(result.content)
+            .length,
+        1,
+      );
+    });
 
     test('appends into an existing plugins list', () {
       const main = '''import 'package:velora/velora.dart';
@@ -430,26 +425,23 @@ Future<void> main() async {
       },
     );
 
-    test(
-      'does not insert a second plugins: when the argument is a const list '
-      'literal, and leaves it unchanged',
-      () {
-        const main = '''import 'package:velora/velora.dart';
+    test('does not insert a second plugins: when the argument is a const list '
+        'literal, and leaves it unchanged', () {
+      const main = '''import 'package:velora/velora.dart';
 
 Future<void> main() async {
   await Velora.boot(plugins: const [Foo()]);
 }
 ''';
-        final result = wirePluginIntoBoot(
-          main,
-          importLine: importLine,
-          pluginExpr: pluginExpr,
-        );
-        expect(result.wired, isFalse);
-        expect('plugins:'.allMatches(result.content).length, 1);
-        expect(result.content, contains('plugins: const [Foo()]'));
-      },
-    );
+      final result = wirePluginIntoBoot(
+        main,
+        importLine: importLine,
+        pluginExpr: pluginExpr,
+      );
+      expect(result.wired, isFalse);
+      expect('plugins:'.allMatches(result.content).length, 1);
+      expect(result.content, contains('plugins: const [Foo()]'));
+    });
 
     test('still merges into a plain inline plugins: [...] literal', () {
       const main = '''import 'package:velora/velora.dart';
@@ -516,11 +508,9 @@ Future<void> main() async {
   group('bootWiresPlugin', () {
     const pluginExpr = 'VeloraOfflinePlugin()';
 
-    test(
-      'is false when the plugin expr only appears in a comment, not the '
-      'plugins: list',
-      () {
-        const main = '''
+    test('is false when the plugin expr only appears in a comment, not the '
+        'plugins: list', () {
+      const main = '''
 import 'package:velora/velora.dart';
 
 // VeloraOfflinePlugin() still needs to be added below.
@@ -528,14 +518,11 @@ Future<void> main() async {
   await Velora.boot(config: config);
 }
 ''';
-        expect(bootWiresPlugin(main, pluginExpr), isFalse);
-      },
-    );
+      expect(bootWiresPlugin(main, pluginExpr), isFalse);
+    });
 
-    test(
-      'is false when the plugin expr only appears in a string literal',
-      () {
-        const main = '''
+    test('is false when the plugin expr only appears in a string literal', () {
+      const main = '''
 import 'package:velora/velora.dart';
 
 const note = 'VeloraOfflinePlugin() still needs to be added below.';
@@ -544,15 +531,12 @@ Future<void> main() async {
   await Velora.boot(config: config);
 }
 ''';
-        expect(bootWiresPlugin(main, pluginExpr), isFalse);
-      },
-    );
+      expect(bootWiresPlugin(main, pluginExpr), isFalse);
+    });
 
-    test(
-      'is false when the plugin expr appears elsewhere in the file but not '
-      'inside the boot plugins: list',
-      () {
-        const main = '''
+    test('is false when the plugin expr appears elsewhere in the file but not '
+        'inside the boot plugins: list', () {
+      const main = '''
 import 'package:velora/velora.dart';
 
 final unrelated = VeloraOfflinePlugin();
@@ -561,9 +545,8 @@ Future<void> main() async {
   await Velora.boot(config: config);
 }
 ''';
-        expect(bootWiresPlugin(main, pluginExpr), isFalse);
-      },
-    );
+      expect(bootWiresPlugin(main, pluginExpr), isFalse);
+    });
 
     test('is true when the plugin expr is actually in the plugins: list', () {
       const main = '''
@@ -592,10 +575,7 @@ Future<void> main() async {
     final package = veloraPackageCatalog['velora_db']!;
     expect(package.name, 'velora_db');
     expect(package.pluginExpr, 'VeloraDbPlugin()');
-    expect(
-      package.importLine,
-      "import 'package:velora_db/velora_db.dart';",
-    );
+    expect(package.importLine, "import 'package:velora_db/velora_db.dart';");
   });
 
   test('catalog contains velora_env', () {
@@ -603,42 +583,33 @@ Future<void> main() async {
     final package = veloraPackageCatalog['velora_env']!;
     expect(package.name, 'velora_env');
     expect(package.pluginExpr, 'VeloraEnvPlugin()');
-    expect(
-      package.importLine,
-      "import 'package:velora_env/velora_env.dart';",
-    );
+    expect(package.importLine, "import 'package:velora_env/velora_env.dart';");
     expect(package.notes, isNotEmpty);
   });
 
-  test(
-    'velora_offline, velora_db, and velora_env wire a plugin '
-    '(wiresPlugin == true)',
-    () {
-      for (final name in ['velora_offline', 'velora_db', 'velora_env']) {
-        final package = veloraPackageCatalog[name]!;
-        expect(package.wiresPlugin, isTrue, reason: name);
-        expect(package.importLine, isNotNull, reason: name);
-        expect(package.pluginExpr, isNotNull, reason: name);
-      }
-    },
-  );
+  test('velora_offline, velora_db, and velora_env wire a plugin '
+      '(wiresPlugin == true)', () {
+    for (final name in ['velora_offline', 'velora_db', 'velora_env']) {
+      final package = veloraPackageCatalog[name]!;
+      expect(package.wiresPlugin, isTrue, reason: name);
+      expect(package.importLine, isNotNull, reason: name);
+      expect(package.pluginExpr, isNotNull, reason: name);
+    }
+  });
 
-  test(
-    'catalog contains velora_fcm and velora_local_notifications as '
-    'dependency-only entries (wiresPlugin == false)',
-    () {
-      for (final name in ['velora_fcm', 'velora_local_notifications']) {
-        expect(veloraPackageCatalog.containsKey(name), isTrue, reason: name);
-        final package = veloraPackageCatalog[name]!;
-        expect(package.name, name);
-        expect(package.constraint, '^0.0.1');
-        expect(package.wiresPlugin, isFalse, reason: name);
-        expect(package.importLine, isNull, reason: name);
-        expect(package.pluginExpr, isNull, reason: name);
-        expect(package.notes, isNotEmpty, reason: name);
-      }
-    },
-  );
+  test('catalog contains velora_fcm and velora_local_notifications as '
+      'dependency-only entries (wiresPlugin == false)', () {
+    for (final name in ['velora_fcm', 'velora_local_notifications']) {
+      expect(veloraPackageCatalog.containsKey(name), isTrue, reason: name);
+      final package = veloraPackageCatalog[name]!;
+      expect(package.name, name);
+      expect(package.constraint, '^0.0.1');
+      expect(package.wiresPlugin, isFalse, reason: name);
+      expect(package.importLine, isNull, reason: name);
+      expect(package.pluginExpr, isNull, reason: name);
+      expect(package.notes, isNotEmpty, reason: name);
+    }
+  });
 
   test('velora_fcm notes reference the real adapter and boot argument', () {
     final notes = veloraPackageCatalog['velora_fcm']!.notes.join('\n');
@@ -648,79 +619,65 @@ Future<void> main() async {
     expect(notes, contains('flutterfire configure'));
   });
 
-  test(
-    'velora_local_notifications notes reference the real adapter and boot '
-    'argument',
-    () {
-      final notes = veloraPackageCatalog['velora_local_notifications']!.notes
-          .join('\n');
-      expect(notes, contains('VeloraLocalNotificationsAdapter()'));
-      expect(notes, contains('localAdapter:'));
-    },
-  );
+  test('velora_local_notifications notes reference the real adapter and boot '
+      'argument', () {
+    final notes = veloraPackageCatalog['velora_local_notifications']!.notes
+        .join('\n');
+    expect(notes, contains('VeloraLocalNotificationsAdapter()'));
+    expect(notes, contains('localAdapter:'));
+  });
 
-  test(
-    'install velora_fcm --no-pub-get adds the dependency without touching '
-    'lib/main.dart, and prints the setup notes',
-    () async {
-      final temp = Directory.systemTemp.createTempSync(
-        'velora_cli_install_fcm_',
-      );
-      addTearDown(() {
-        if (temp.existsSync()) temp.deleteSync(recursive: true);
-      });
+  test('install velora_fcm --no-pub-get adds the dependency without touching '
+      'lib/main.dart, and prints the setup notes', () async {
+    final temp = Directory.systemTemp.createTempSync('velora_cli_install_fcm_');
+    addTearDown(() {
+      if (temp.existsSync()) temp.deleteSync(recursive: true);
+    });
 
-      final packageRoot = Directory.current.path;
-      Future<ProcessResult> runCli(List<String> args) {
-        return Process.run(Platform.resolvedExecutable, <String>[
-          '$packageRoot/bin/velora_cli.dart',
-          ...args,
-        ], workingDirectory: Directory.current.path);
-      }
+    final packageRoot = Directory.current.path;
+    Future<ProcessResult> runCli(List<String> args) {
+      return Process.run(Platform.resolvedExecutable, <String>[
+        '$packageRoot/bin/velora_cli.dart',
+        ...args,
+      ], workingDirectory: Directory.current.path);
+    }
 
-      final app = Directory('${temp.path}/app')..createSync();
-      File('${app.path}/pubspec.yaml').writeAsStringSync('''name: demo
+    final app = Directory('${temp.path}/app')..createSync();
+    File('${app.path}/pubspec.yaml').writeAsStringSync('''name: demo
 dependencies:
   flutter:
     sdk: flutter
 ''');
-      Directory('${app.path}/lib').createSync();
-      const originalMain = '''
+    Directory('${app.path}/lib').createSync();
+    const originalMain = '''
 Future<void> main() async {
   await Velora.boot(config: config);
 }
 ''';
-      File('${app.path}/lib/main.dart').writeAsStringSync(originalMain);
+    File('${app.path}/lib/main.dart').writeAsStringSync(originalMain);
 
-      final original = Directory.current;
-      ProcessResult install;
-      try {
-        Directory.current = app;
-        install = await runCli(<String>[
-          'install',
-          'velora_fcm',
-          '--no-pub-get',
-        ]);
-        expect(install.exitCode, 0, reason: install.stderr.toString());
-      } finally {
-        Directory.current = original;
-      }
+    final original = Directory.current;
+    ProcessResult install;
+    try {
+      Directory.current = app;
+      install = await runCli(<String>['install', 'velora_fcm', '--no-pub-get']);
+      expect(install.exitCode, 0, reason: install.stderr.toString());
+    } finally {
+      Directory.current = original;
+    }
 
-      final pubspecContent = File(
-        '${app.path}/pubspec.yaml',
-      ).readAsStringSync();
-      expect(pubspecContent, contains('velora_fcm: ^0.0.1'));
+    final pubspecContent = File('${app.path}/pubspec.yaml').readAsStringSync();
+    expect(pubspecContent, contains('velora_fcm: ^0.0.1'));
 
-      final mainContent = File('${app.path}/lib/main.dart').readAsStringSync();
-      expect(mainContent, originalMain, reason: 'main.dart must be untouched');
+    final mainContent = File('${app.path}/lib/main.dart').readAsStringSync();
+    expect(mainContent, originalMain, reason: 'main.dart must be untouched');
 
-      final stdoutText = install.stdout.toString();
-      expect(stdoutText, contains('Added velora_fcm: ^0.0.1 to pubspec.yaml'));
-      expect(stdoutText, contains('pushAdapter: VeloraFcmAdapter()'));
-      expect(stdoutText, contains('Firebase.initializeApp'));
-      expect(stdoutText, isNot(contains('Wired')));
-    },
-  );
+    final stdoutText = install.stdout.toString();
+    expect(stdoutText, contains('Added velora_fcm: ^0.0.1 to pubspec.yaml'));
+    expect(stdoutText, contains('pushAdapter: VeloraFcmAdapter()'));
+    expect(stdoutText, contains('Firebase.initializeApp'));
+    expect(stdoutText, isNot(contains('Wired')));
+  });
 
   test('install command wires a package into a generated app', () async {
     final temp = Directory.systemTemp.createTempSync('velora_cli_install_');
@@ -819,9 +776,8 @@ Future<void> main() async {
         Directory.current = original;
       }
 
-      final pubspecContent = File(
-        '${app.path}/pubspec.yaml',
-      ).readAsStringSync();
+      final pubspecContent = File('${app.path}/pubspec.yaml')
+          .readAsStringSync();
       expect(pubspecContent, contains('velora_env: ^0.0.1'));
 
       final mainContent = File('${app.path}/lib/main.dart').readAsStringSync();
@@ -834,146 +790,212 @@ Future<void> main() async {
 
       final stdoutText = install.stdout.toString();
       expect(stdoutText, contains('Added velora_env: ^0.0.1 to pubspec.yaml'));
-      expect(stdoutText, contains('Wired VeloraEnvPlugin() into Velora.boot()'));
+      expect(
+        stdoutText,
+        contains('Wired VeloraEnvPlugin() into Velora.boot()'),
+      );
       expect(stdoutText, contains('VeloraEnv.load()'));
       expect(stdoutText, contains('VELORA_ENV'));
     },
   );
 
-  test(
-    'install --no-wire adds the dependency but leaves main.dart untouched '
-    'and does not print the false wiring claim',
-    () async {
-      final temp = Directory.systemTemp.createTempSync(
-        'velora_cli_install_no_wire_',
-      );
-      addTearDown(() {
-        if (temp.existsSync()) temp.deleteSync(recursive: true);
-      });
+  test('install --no-wire adds the dependency but leaves main.dart untouched '
+      'and does not print the false wiring claim', () async {
+    final temp = Directory.systemTemp.createTempSync(
+      'velora_cli_install_no_wire_',
+    );
+    addTearDown(() {
+      if (temp.existsSync()) temp.deleteSync(recursive: true);
+    });
 
-      final packageRoot = Directory.current.path;
-      Future<ProcessResult> runCli(List<String> args) {
-        return Process.run(Platform.resolvedExecutable, <String>[
-          '$packageRoot/bin/velora_cli.dart',
-          ...args,
-        ], workingDirectory: Directory.current.path);
-      }
+    final packageRoot = Directory.current.path;
+    Future<ProcessResult> runCli(List<String> args) {
+      return Process.run(Platform.resolvedExecutable, <String>[
+        '$packageRoot/bin/velora_cli.dart',
+        ...args,
+      ], workingDirectory: Directory.current.path);
+    }
 
-      final app = Directory('${temp.path}/app')..createSync();
-      File('${app.path}/pubspec.yaml').writeAsStringSync('''name: demo
+    final app = Directory('${temp.path}/app')..createSync();
+    File('${app.path}/pubspec.yaml').writeAsStringSync('''name: demo
 dependencies:
   flutter:
     sdk: flutter
 ''');
-      Directory('${app.path}/lib').createSync();
-      const originalMain = '''
+    Directory('${app.path}/lib').createSync();
+    const originalMain = '''
 Future<void> main() async {
   await Velora.boot(config: config);
 }
 ''';
-      File('${app.path}/lib/main.dart').writeAsStringSync(originalMain);
+    File('${app.path}/lib/main.dart').writeAsStringSync(originalMain);
 
-      final original = Directory.current;
-      ProcessResult install;
-      try {
-        Directory.current = app;
-        install = await runCli(<String>[
-          'install',
-          'velora_offline',
-          '--no-pub-get',
-          '--no-wire',
-        ]);
-        expect(install.exitCode, 0, reason: install.stderr.toString());
-      } finally {
-        Directory.current = original;
-      }
+    final original = Directory.current;
+    ProcessResult install;
+    try {
+      Directory.current = app;
+      install = await runCli(<String>[
+        'install',
+        'velora_offline',
+        '--no-pub-get',
+        '--no-wire',
+      ]);
+      expect(install.exitCode, 0, reason: install.stderr.toString());
+    } finally {
+      Directory.current = original;
+    }
 
-      final pubspecContent = File(
-        '${app.path}/pubspec.yaml',
-      ).readAsStringSync();
-      expect(pubspecContent, contains('velora_offline:'));
+    final pubspecContent = File('${app.path}/pubspec.yaml').readAsStringSync();
+    expect(pubspecContent, contains('velora_offline:'));
 
-      final mainContent = File('${app.path}/lib/main.dart').readAsStringSync();
-      expect(mainContent, originalMain);
+    final mainContent = File('${app.path}/lib/main.dart').readAsStringSync();
+    expect(mainContent, originalMain);
 
-      final stdoutText = install.stdout.toString();
-      expect(
-        stdoutText,
-        isNot(
-          contains(
-            'Added velora_offline and wired VeloraOfflinePlugin() into '
-            'Velora.boot().',
-          ),
+    final stdoutText = install.stdout.toString();
+    expect(
+      stdoutText,
+      isNot(
+        contains(
+          'Added velora_offline and wired VeloraOfflinePlugin() into '
+          'Velora.boot().',
         ),
-      );
-      expect(stdoutText, contains('--no-wire was passed'));
-      expect(stdoutText, contains('plugins: [VeloraOfflinePlugin()]'));
-    },
-  );
+      ),
+    );
+    expect(stdoutText, contains('--no-wire was passed'));
+    expect(stdoutText, contains('plugins: [VeloraOfflinePlugin()]'));
+  });
 
-  test(
-    'install with an unknown package name fails loudly without touching '
-    'pubspec.yaml or main.dart',
-    () async {
-      final temp = Directory.systemTemp.createTempSync(
-        'velora_cli_install_unknown_',
-      );
-      addTearDown(() {
-        if (temp.existsSync()) temp.deleteSync(recursive: true);
-      });
+  test('install with an unknown package name fails loudly without touching '
+      'pubspec.yaml or main.dart', () async {
+    final temp = Directory.systemTemp.createTempSync(
+      'velora_cli_install_unknown_',
+    );
+    addTearDown(() {
+      if (temp.existsSync()) temp.deleteSync(recursive: true);
+    });
 
-      final packageRoot = Directory.current.path;
-      Future<ProcessResult> runCli(List<String> args) {
-        return Process.run(Platform.resolvedExecutable, <String>[
-          '$packageRoot/bin/velora_cli.dart',
-          ...args,
-        ], workingDirectory: Directory.current.path);
-      }
+    final packageRoot = Directory.current.path;
+    Future<ProcessResult> runCli(List<String> args) {
+      return Process.run(Platform.resolvedExecutable, <String>[
+        '$packageRoot/bin/velora_cli.dart',
+        ...args,
+      ], workingDirectory: Directory.current.path);
+    }
 
-      final app = Directory('${temp.path}/app')..createSync();
-      const originalPubspec = '''name: demo
+    final app = Directory('${temp.path}/app')..createSync();
+    const originalPubspec = '''name: demo
 dependencies:
   flutter:
     sdk: flutter
 ''';
-      File('${app.path}/pubspec.yaml').writeAsStringSync(originalPubspec);
-      Directory('${app.path}/lib').createSync();
-      const originalMain = '''
+    File('${app.path}/pubspec.yaml').writeAsStringSync(originalPubspec);
+    Directory('${app.path}/lib').createSync();
+    const originalMain = '''
 Future<void> main() async {
   await Velora.boot(config: config);
 }
 ''';
-      File('${app.path}/lib/main.dart').writeAsStringSync(originalMain);
+    File('${app.path}/lib/main.dart').writeAsStringSync(originalMain);
 
-      final original = Directory.current;
-      ProcessResult install;
-      try {
-        Directory.current = app;
-        install = await runCli(<String>[
-          'install',
-          'velora_nope',
-          '--no-pub-get',
-        ]);
-      } finally {
-        Directory.current = original;
+    final original = Directory.current;
+    ProcessResult install;
+    try {
+      Directory.current = app;
+      install = await runCli(<String>[
+        'install',
+        'velora_nope',
+        '--no-pub-get',
+      ]);
+    } finally {
+      Directory.current = original;
+    }
+
+    expect(install.exitCode, isNot(0));
+    final combinedOutput =
+        install.stdout.toString() + install.stderr.toString();
+    expect(combinedOutput, contains("Unknown package 'velora_nope'"));
+    expect(combinedOutput, contains('velora_offline'));
+
+    expect(
+      File('${app.path}/pubspec.yaml').readAsStringSync(),
+      originalPubspec,
+    );
+    expect(File('${app.path}/lib/main.dart').readAsStringSync(), originalMain);
+  });
+
+  group('registries', () {
+    test('help lists every registered command and installable package', () {
+      final help = veloraHelpText();
+      for (final command in veloraCommands) {
+        expect(help, contains(command.usage));
+        expect(help, contains(command.summary));
       }
+      for (final name in veloraPackageCatalog.keys) {
+        expect(help, contains(name));
+      }
+    });
 
-      expect(install.exitCode, isNot(0));
-      final combinedOutput =
-          install.stdout.toString() + install.stderr.toString();
-      expect(combinedOutput, contains("Unknown package 'velora_nope'"));
-      expect(combinedOutput, contains('velora_offline'));
+    test('`velora help` prints the registry-driven help', () async {
+      final result = await Process.run(Platform.resolvedExecutable, <String>[
+        'bin/velora_cli.dart',
+        'help',
+      ]);
+      expect(result.exitCode, 0, reason: result.stderr.toString());
+      expect(result.stdout.toString(), veloraHelpText());
+    });
 
+    test('every installable package carries docs metadata', () {
+      for (final package in veloraPackageCatalog.values) {
+        expect(package.summary, isNotEmpty, reason: package.name);
+        expect(package.wiring, isNotEmpty, reason: package.name);
+        expect(package.docs, startsWith('docs/packages/'));
+      }
+    });
+
+    test('velora_ui notes do not claim components are unshipped', () {
+      final notes = veloraPackageCatalog['velora_ui']!.notes.join('\n');
+      expect(notes, isNot(contains('not shipped')));
+      expect(notes, contains('docs/packages/ui.md'));
+    });
+  });
+
+  group('toolchain baseline', () {
+    test('parseDartVersion reads Platform.version', () {
       expect(
-        File('${app.path}/pubspec.yaml').readAsStringSync(),
-        originalPubspec,
+        parseDartVersion('3.13.7 (stable) (Tue Oct 20 2026) on "linux_x64"'),
+        '3.13.7',
+      );
+      expect(parseDartVersion('unknown'), isNull);
+    });
+
+    test('parseFlutterVersion finds the version line anywhere in output', () {
+      expect(
+        parseFlutterVersion('Flutter 3.47.9 • channel stable\nTools • Dart'),
+        '3.47.9',
       );
       expect(
-        File('${app.path}/lib/main.dart').readAsStringSync(),
-        originalMain,
+        parseFlutterVersion('notice\nFlutter 3.47.0-1.2.pre • channel beta'),
+        '3.47.0',
       );
-    },
-  );
+      expect(parseFlutterVersion('Dart SDK version: 3.13.7'), isNull);
+    });
+
+    test('versionAtLeast compares numerically, not lexically', () {
+      expect(versionAtLeast('3.47.0', '3.47.0'), isTrue);
+      expect(versionAtLeast('3.47.9', '3.47.0'), isTrue);
+      expect(versionAtLeast('3.100.0', '3.47.0'), isTrue);
+      expect(versionAtLeast('4.0.0', '3.47.0'), isTrue);
+      expect(versionAtLeast('3.46.12', '3.47.0'), isFalse);
+      expect(versionAtLeast('3.9.9', '3.13.0'), isFalse);
+      expect(versionAtLeast('garbage', '3.13.0'), isFalse);
+    });
+
+    test('generated apps declare the baseline SDK constraints', () {
+      final source = File('bin/velora_cli.dart').readAsStringSync();
+      expect(source, contains(r'sdk: ^$veloraMinDartVersion'));
+      expect(source, contains(r"flutter: '>=$veloraMinFlutterVersion'"));
+    });
+  });
 
   group('doctor', () {
     Future<ProcessResult> runDoctor(String workingDirectory) {
@@ -984,17 +1006,54 @@ Future<void> main() async {
       ], workingDirectory: workingDirectory);
     }
 
-    test('passes in a valid Velora project and reports the passing checks', () async {
-      final temp = Directory.systemTemp.createTempSync('velora_cli_doctor_ok_');
-      addTearDown(() {
-        if (temp.existsSync()) temp.deleteSync(recursive: true);
-      });
+    test(
+      'passes in a valid Velora project and reports the passing checks',
+      () async {
+        final temp = Directory.systemTemp.createTempSync(
+          'velora_cli_doctor_ok_',
+        );
+        addTearDown(() {
+          if (temp.existsSync()) temp.deleteSync(recursive: true);
+        });
 
-      final app = Directory('${temp.path}/app')..createSync();
-      File('${app.path}/pubspec.yaml').writeAsStringSync('''name: demo
+        final app = Directory('${temp.path}/app')..createSync();
+        File('${app.path}/pubspec.yaml').writeAsStringSync('''name: demo
 dependencies:
   flutter:
     sdk: flutter
+  velora: ^0.0.1
+''');
+        Directory('${app.path}/lib').createSync();
+        File('${app.path}/lib/main.dart').writeAsStringSync('''
+Future<void> main() async {
+  await Velora.boot(config: config);
+}
+''');
+
+        final result = await runDoctor(app.path);
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+        final output = result.stdout.toString();
+        expect(output, contains('pubspec.yaml declares a `velora` dependency'));
+        expect(output, contains('lib/main.dart calls Velora.boot()'));
+        expect(output, contains('Dart:'));
+        expect(output, contains('(required >=$veloraMinDartVersion)'));
+        expect(output, contains('Flutter:'));
+        expect(output, contains('(required >=$veloraMinFlutterVersion)'));
+      },
+    );
+
+    // Puts a fake `flutter` first on PATH so doctor sees [versionOutput]
+    // instead of the real SDK. POSIX shell script — skipped on Windows.
+    Future<ProcessResult> runDoctorWithFakeFlutter(String versionOutput) async {
+      final temp = Directory.systemTemp.createTempSync(
+        'velora_cli_doctor_toolchain_',
+      );
+      addTearDown(() {
+        if (temp.existsSync()) temp.deleteSync(recursive: true);
+      });
+      final app = Directory('${temp.path}/app')..createSync();
+      File('${app.path}/pubspec.yaml').writeAsStringSync('''name: demo
+dependencies:
   velora: ^0.0.1
 ''');
       Directory('${app.path}/lib').createSync();
@@ -1003,56 +1062,93 @@ Future<void> main() async {
   await Velora.boot(config: config);
 }
 ''');
+      final bin = Directory('${temp.path}/bin')..createSync();
+      final fake = File('${bin.path}/flutter')
+        ..writeAsStringSync("#!/bin/sh\ncat <<'EOF'\n$versionOutput\nEOF\n");
+      final chmod = await Process.run('chmod', <String>['+x', fake.path]);
+      expect(chmod.exitCode, 0, reason: chmod.stderr.toString());
 
-      final result = await runDoctor(app.path);
+      return Process.run(
+        Platform.resolvedExecutable,
+        <String>['${Directory.current.path}/bin/velora_cli.dart', 'doctor'],
+        workingDirectory: app.path,
+        environment: <String, String>{
+          'PATH': '${bin.path}:${Platform.environment['PATH']}',
+        },
+      );
+    }
+
+    test('warns with the required and detected version when Flutter is below '
+        'the baseline', () async {
+      final result = await runDoctorWithFakeFlutter(
+        'Flutter 3.44.9 • channel stable • https://example.invalid/flutter',
+      );
       expect(result.exitCode, 0, reason: result.stderr.toString());
       final output = result.stdout.toString();
-      expect(output, contains('pubspec.yaml declares a `velora` dependency'));
-      expect(output, contains('lib/main.dart calls Velora.boot()'));
-      expect(output, contains('Dart:'));
-    });
+      expect(
+        output,
+        contains(
+          '⚠ Flutter: 3.44.9 is below the required '
+          '>=$veloraMinFlutterVersion',
+        ),
+      );
+      expect(output, contains('flutter upgrade'));
+      expect(output, contains('finished with warnings'));
+    }, testOn: '!windows');
 
     test(
-      'fails loudly when there is no pubspec.yaml or velora is not a dependency',
+      'accepts a Flutter version at the baseline even after a leading notice',
       () async {
-        final temp = Directory.systemTemp.createTempSync(
-          'velora_cli_doctor_no_pubspec_',
+        final result = await runDoctorWithFakeFlutter(
+          'A notice line printed before the version.\n'
+          'Flutter $veloraMinFlutterVersion • channel stable',
         );
-        addTearDown(() {
-          if (temp.existsSync()) temp.deleteSync(recursive: true);
-        });
-        final noPubspecDir = Directory('${temp.path}/no_pubspec')
-          ..createSync();
-
-        final noPubspecResult = await runDoctor(noPubspecDir.path);
-        // `_fail` always sets `exitCode = 64` — assert the exact contract,
-        // not just "some failure code".
-        expect(noPubspecResult.exitCode, 64);
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+        final output = result.stdout.toString();
         expect(
-          noPubspecResult.stdout.toString() +
-              noPubspecResult.stderr.toString(),
-          contains('No pubspec.yaml'),
+          output,
+          contains(
+            '✓ Flutter: $veloraMinFlutterVersion '
+            '(required >=$veloraMinFlutterVersion)',
+          ),
         );
+        expect(output, contains('all checks passed'));
+      },
+      testOn: '!windows',
+    );
 
-        final notVeloraDir = Directory('${temp.path}/not_velora')
-          ..createSync();
-        File(
-          '${notVeloraDir.path}/pubspec.yaml',
-        ).writeAsStringSync('''name: demo
+    test('fails loudly when there is no pubspec.yaml or velora is not a dependency', () async {
+      final temp = Directory.systemTemp.createTempSync(
+        'velora_cli_doctor_no_pubspec_',
+      );
+      addTearDown(() {
+        if (temp.existsSync()) temp.deleteSync(recursive: true);
+      });
+      final noPubspecDir = Directory('${temp.path}/no_pubspec')..createSync();
+
+      final noPubspecResult = await runDoctor(noPubspecDir.path);
+      // `_fail` always sets `exitCode = 64` — assert the exact contract,
+      // not just "some failure code".
+      expect(noPubspecResult.exitCode, 64);
+      expect(
+        noPubspecResult.stdout.toString() + noPubspecResult.stderr.toString(),
+        contains('No pubspec.yaml'),
+      );
+
+      final notVeloraDir = Directory('${temp.path}/not_velora')..createSync();
+      File('${notVeloraDir.path}/pubspec.yaml').writeAsStringSync('''name: demo
 dependencies:
   flutter:
     sdk: flutter
 ''');
 
-        final notVeloraResult = await runDoctor(notVeloraDir.path);
-        expect(notVeloraResult.exitCode, 64);
-        expect(
-          notVeloraResult.stdout.toString() +
-              notVeloraResult.stderr.toString(),
-          contains('Not a Velora project'),
-        );
-      },
-    );
+      final notVeloraResult = await runDoctor(notVeloraDir.path);
+      expect(notVeloraResult.exitCode, 64);
+      expect(
+        notVeloraResult.stdout.toString() + notVeloraResult.stderr.toString(),
+        contains('Not a Velora project'),
+      );
+    });
 
     test(
       'warns when a declared plugin package is not wired into Velora.boot()',
@@ -1088,108 +1184,99 @@ Future<void> main() async {
       },
     );
 
-    test(
-      'still warns declared-but-not-wired when the plugin expr only '
-      'appears in a comment in main.dart',
-      () async {
-        final temp = Directory.systemTemp.createTempSync(
-          'velora_cli_doctor_commented_plugin_',
-        );
-        addTearDown(() {
-          if (temp.existsSync()) temp.deleteSync(recursive: true);
-        });
+    test('still warns declared-but-not-wired when the plugin expr only '
+        'appears in a comment in main.dart', () async {
+      final temp = Directory.systemTemp.createTempSync(
+        'velora_cli_doctor_commented_plugin_',
+      );
+      addTearDown(() {
+        if (temp.existsSync()) temp.deleteSync(recursive: true);
+      });
 
-        final app = Directory('${temp.path}/app')..createSync();
-        File('${app.path}/pubspec.yaml').writeAsStringSync('''name: demo
+      final app = Directory('${temp.path}/app')..createSync();
+      File('${app.path}/pubspec.yaml').writeAsStringSync('''name: demo
 dependencies:
   flutter:
     sdk: flutter
   velora: ^0.0.1
   velora_offline: ^0.0.1
 ''');
-        Directory('${app.path}/lib').createSync();
-        File('${app.path}/lib/main.dart').writeAsStringSync('''
+      Directory('${app.path}/lib').createSync();
+      File('${app.path}/lib/main.dart').writeAsStringSync('''
 // TODO: wire VeloraOfflinePlugin() into Velora.boot() below.
 Future<void> main() async {
   await Velora.boot(config: config);
 }
 ''');
 
-        final result = await runDoctor(app.path);
-        expect(result.exitCode, 0, reason: result.stderr.toString());
-        final output = result.stdout.toString();
-        expect(output, contains('velora_offline'));
-        expect(output, contains('not wired'));
-      },
-    );
+      final result = await runDoctor(app.path);
+      expect(result.exitCode, 0, reason: result.stderr.toString());
+      final output = result.stdout.toString();
+      expect(output, contains('velora_offline'));
+      expect(output, contains('not wired'));
+    });
 
-    test(
-      'recognizes a Velora project when dependencies: has a trailing '
-      'inline comment',
-      () async {
-        final temp = Directory.systemTemp.createTempSync(
-          'velora_cli_doctor_dep_comment_',
-        );
-        addTearDown(() {
-          if (temp.existsSync()) temp.deleteSync(recursive: true);
-        });
-
-        final app = Directory('${temp.path}/app')..createSync();
-        File('${app.path}/pubspec.yaml').writeAsStringSync('''name: demo
-dependencies: # runtime deps
-  flutter:
-    sdk: flutter
-  velora: ^0.0.1
-''');
-        Directory('${app.path}/lib').createSync();
-        File('${app.path}/lib/main.dart').writeAsStringSync('''
-Future<void> main() async {
-  await Velora.boot(config: config);
-}
-''');
-
-        final result = await runDoctor(app.path);
-        expect(result.exitCode, 0, reason: result.stderr.toString());
-        expect(
-          result.stdout.toString(),
-          contains('pubspec.yaml declares a `velora` dependency'),
-        );
-      },
-    );
-  });
-
-  test(
-    'main() reports a clean message (not a raw stack trace) when a command '
-    'throws an unexpected, non-_CliExit exception',
-    () async {
-      // `velora new <name>` calls `Directory(name).createSync(recursive:
-      // true)`. If a plain *file* already exists at that exact path, the OS
-      // refuses to create a directory there and Dart surfaces a
-      // FileSystemException — a real, uncontrived exception that isn't
-      // routed through `_fail`/`_CliExit`, so it should land in main()'s
-      // `catch (error)` branch.
+    test('recognizes a Velora project when dependencies: has a trailing '
+        'inline comment', () async {
       final temp = Directory.systemTemp.createTempSync(
-        'velora_cli_unexpected_error_',
+        'velora_cli_doctor_dep_comment_',
       );
       addTearDown(() {
         if (temp.existsSync()) temp.deleteSync(recursive: true);
       });
 
-      File('${temp.path}/app').writeAsStringSync('not a directory');
+      final app = Directory('${temp.path}/app')..createSync();
+      File('${app.path}/pubspec.yaml').writeAsStringSync('''name: demo
+dependencies: # runtime deps
+  flutter:
+    sdk: flutter
+  velora: ^0.0.1
+''');
+      Directory('${app.path}/lib').createSync();
+      File('${app.path}/lib/main.dart').writeAsStringSync('''
+Future<void> main() async {
+  await Velora.boot(config: config);
+}
+''');
 
-      final packageRoot = Directory.current.path;
-      final result = await Process.run(Platform.resolvedExecutable, <String>[
-        '$packageRoot/bin/velora_cli.dart',
-        'new',
-        'app',
-      ], workingDirectory: temp.path);
+      final result = await runDoctor(app.path);
+      expect(result.exitCode, 0, reason: result.stderr.toString());
+      expect(
+        result.stdout.toString(),
+        contains('pubspec.yaml declares a `velora` dependency'),
+      );
+    });
+  });
 
-      final combined = result.stdout.toString() + result.stderr.toString();
-      expect(result.exitCode, 1);
-      expect(combined, contains('An unexpected error occurred'));
-      // No raw Dart stack trace should leak to the user.
-      expect(combined, isNot(contains('Unhandled exception')));
-      expect(combined, isNot(contains('#0 ')));
-    },
-  );
+  test('main() reports a clean message (not a raw stack trace) when a command '
+      'throws an unexpected, non-_CliExit exception', () async {
+    // `velora new <name>` calls `Directory(name).createSync(recursive:
+    // true)`. If a plain *file* already exists at that exact path, the OS
+    // refuses to create a directory there and Dart surfaces a
+    // FileSystemException — a real, uncontrived exception that isn't
+    // routed through `_fail`/`_CliExit`, so it should land in main()'s
+    // `catch (error)` branch.
+    final temp = Directory.systemTemp.createTempSync(
+      'velora_cli_unexpected_error_',
+    );
+    addTearDown(() {
+      if (temp.existsSync()) temp.deleteSync(recursive: true);
+    });
+
+    File('${temp.path}/app').writeAsStringSync('not a directory');
+
+    final packageRoot = Directory.current.path;
+    final result = await Process.run(Platform.resolvedExecutable, <String>[
+      '$packageRoot/bin/velora_cli.dart',
+      'new',
+      'app',
+    ], workingDirectory: temp.path);
+
+    final combined = result.stdout.toString() + result.stderr.toString();
+    expect(result.exitCode, 1);
+    expect(combined, contains('An unexpected error occurred'));
+    // No raw Dart stack trace should leak to the user.
+    expect(combined, isNot(contains('Unhandled exception')));
+    expect(combined, isNot(contains('#0 ')));
+  });
 }

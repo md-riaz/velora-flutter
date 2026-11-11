@@ -123,8 +123,9 @@ class _NotificationTile extends StatelessWidget {
                         child: Text(
                           notification.title,
                           style: textTheme.bodyMedium?.copyWith(
-                            fontWeight:
-                                unread ? FontWeight.w600 : FontWeight.w400,
+                            fontWeight: unread
+                                ? FontWeight.w600
+                                : FontWeight.w400,
                           ),
                         ),
                       ),

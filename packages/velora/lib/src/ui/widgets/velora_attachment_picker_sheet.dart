@@ -80,8 +80,9 @@ class VeloraAttachmentPickerSheet extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               child: Text(
                 title,
-                style:
-                    textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                style: textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
             Divider(height: 1, color: scheme.outlineVariant),
@@ -127,7 +128,9 @@ class VeloraAttachmentPickerSheet extends StatelessWidget {
   Future<void> _fromGallery() async {
     final media = Get.find<VeloraMediaService>();
     if (config.allowMultiple) {
-      final list = await media.pickMultiImage(imageQuality: config.imageQuality);
+      final list = await media.pickMultiImage(
+        imageQuality: config.imageQuality,
+      );
       Get.back<List<VeloraAttachment>>(result: list);
     } else {
       final a = await media.pickImage(
@@ -167,10 +170,6 @@ class _PickerTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon),
-      title: Text(label),
-      onTap: onTap,
-    );
+    return ListTile(leading: Icon(icon), title: Text(label), onTap: onTap);
   }
 }

@@ -10,9 +10,9 @@ PluginBase createPlugin() => _VeloraLints();
 class _VeloraLints extends PluginBase {
   @override
   List<LintRule> getLintRules(CustomLintConfigs configs) => const [
-        ObxMissingReactiveRead(),
-        ObxWithNoReads(),
-        EverInWidgetBuild(),
-        RxInBuildWithoutObx(),
-      ];
+    ObxMissingReactiveRead(),
+    ObxWithNoReads(),
+    EverInWidgetBuild(),
+    RxInBuildWithoutObx(),
+  ];
 }

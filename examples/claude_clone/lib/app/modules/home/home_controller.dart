@@ -20,7 +20,7 @@ class HomeController extends VeloraPaginatedController<ConversationModel> {
   static const _loadMoreThreshold = 300.0;
 
   HomeController({ConversationsDataSource? dataSource})
-      : _dataSource = dataSource ?? MockConversationsDataSource();
+    : _dataSource = dataSource ?? MockConversationsDataSource();
 
   @override
   void onInit() {

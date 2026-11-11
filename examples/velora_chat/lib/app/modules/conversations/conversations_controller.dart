@@ -39,9 +39,6 @@ class ConversationsController extends VeloraController {
   void setOnline(bool online) => toggleSource.setOnline(online);
 
   void openConversation(Conversation conversation) {
-    Velora.nav.to(
-      AppRoutes.chatPath(conversation.id),
-      arguments: conversation,
-    );
+    Velora.nav.to(AppRoutes.chatPath(conversation.id), arguments: conversation);
   }
 }

@@ -97,7 +97,7 @@ Future<List<AnalysisError>> _runRule(String source) async {
   File.fromUri(app.uri.resolve('pubspec.yaml')).writeAsStringSync('''
 name: app
 environment:
-  sdk: ^3.11.0
+  sdk: ^3.13.0
 dependencies:
   get:
     path: ../get
@@ -106,7 +106,7 @@ dependencies:
   File.fromUri(getPackage.uri.resolve('pubspec.yaml')).writeAsStringSync('''
 name: get
 environment:
-  sdk: ^3.11.0
+  sdk: ^3.13.0
 ''');
 
   File.fromUri(getLib.uri.resolve('get.dart')).writeAsStringSync('''
@@ -162,27 +162,26 @@ extension ListObs<E> on List<E> {
 
   final packageConfigDir = Directory.fromUri(app.uri.resolve('.dart_tool/'))
     ..createSync();
-  File.fromUri(
-    packageConfigDir.uri.resolve('package_config.json'),
-  ).writeAsStringSync(
-    jsonEncode({
-      'configVersion': 2,
-      'packages': [
-        {
-          'name': 'app',
-          'rootUri': app.uri.toString(),
-          'packageUri': 'lib/',
-          'languageVersion': '3.11',
-        },
-        {
-          'name': 'get',
-          'rootUri': getPackage.uri.toString(),
-          'packageUri': 'lib/',
-          'languageVersion': '3.11',
-        },
-      ],
-    }),
-  );
+  File.fromUri(packageConfigDir.uri.resolve('package_config.json'))
+      .writeAsStringSync(
+        jsonEncode({
+          'configVersion': 2,
+          'packages': [
+            {
+              'name': 'app',
+              'rootUri': app.uri.toString(),
+              'packageUri': 'lib/',
+              'languageVersion': '3.11',
+            },
+            {
+              'name': 'get',
+              'rootUri': getPackage.uri.toString(),
+              'packageUri': 'lib/',
+              'languageVersion': '3.11',
+            },
+          ],
+        }),
+      );
 
   final file = File.fromUri(appLib.uri.resolve('main.dart'))
     ..writeAsStringSync(source);

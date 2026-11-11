@@ -23,7 +23,7 @@ void main() {
     late _RecordingQueue queue;
 
     Future<VeloraOfflineFirstRepository<Map<String, dynamic>, String>>
-        buildRepo({bool online = true}) async {
+    buildRepo({bool online = true}) async {
       db = VeloraSqlDatabase(
         NativeDatabase.memory(),
         schemaVersion: 1,
@@ -85,26 +85,20 @@ void main() {
       },
     );
 
-    test(
-      'watchAll emits the new row after store (reactive read through the '
-      'real drift table)',
-      () async {
-        final repo = await buildRepo();
+    test('watchAll emits the new row after store (reactive read through the '
+        'real drift table)', () async {
+      final repo = await buildRepo();
 
-        final emissions = <List<Map<String, dynamic>>>[];
-        final subscription = repo.watchAll().listen(emissions.add);
-        addTearDown(subscription.cancel);
+      final emissions = <List<Map<String, dynamic>>>[];
+      final subscription = repo.watchAll().listen(emissions.add);
+      addTearDown(subscription.cancel);
 
-        await repo.store({'id': '1', 'title': 'Buy milk'});
-        // Let the watch stream's async emit() complete.
-        await pumpEventQueue();
+      await repo.store({'id': '1', 'title': 'Buy milk'});
+      // Let the watch stream's async emit() complete.
+      await pumpEventQueue();
 
-        expect(
-          emissions.last.map((row) => row['title']),
-          contains('Buy milk'),
-        );
-      },
-    );
+      expect(emissions.last.map((row) => row['title']), contains('Buy milk'));
+    });
 
     test('update mutates the local row and enqueues a matching PUT', () async {
       final repo = await buildRepo();
@@ -170,19 +164,16 @@ void main() {
       expect(shown['title'], 'here');
     });
 
-    test(
-      'store rejects data without a client-generated primary key and writes '
-      'nothing locally',
-      () async {
-        final repo = await buildRepo();
-        await expectLater(
-          repo.store({'title': 'no id'}),
-          throwsA(isA<ArgumentError>()),
-        );
-        expect(await table.all(), isEmpty);
-        expect(queue.enqueued, isEmpty);
-      },
-    );
+    test('store rejects data without a client-generated primary key and writes '
+        'nothing locally', () async {
+      final repo = await buildRepo();
+      await expectLater(
+        repo.store({'title': 'no id'}),
+        throwsA(isA<ArgumentError>()),
+      );
+      expect(await table.all(), isEmpty);
+      expect(queue.enqueued, isEmpty);
+    });
 
     test('a failed enqueue rolls back the optimistic local store', () async {
       final repo = await buildRepo();

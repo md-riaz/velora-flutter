@@ -3,7 +3,7 @@ description: Velora scaffolding command-line tool.
 version: 0.0.1
 
 environment:
-  sdk: ^3.11.1
+  sdk: ^3.13.0
 
 dependencies:
   path: ^1.9.0

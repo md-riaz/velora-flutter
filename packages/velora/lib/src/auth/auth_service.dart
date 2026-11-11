@@ -40,6 +40,7 @@ class AuthService extends GetxService {
     final u = currentUser.value;
     return u is T ? u : null;
   }
+
   bool get check => state.value == SessionState.authenticated;
   bool get isLoggingOut => state.value == SessionState.loggingOut;
 
@@ -85,8 +86,8 @@ class AuthService extends GetxService {
       final rawUser = userExtractor != null
           ? userExtractor(payload)
           : (payload['user'] is Map
-              ? Map<String, dynamic>.from(payload['user'] as Map)
-              : Map<String, dynamic>.from(payload));
+                ? Map<String, dynamic>.from(payload['user'] as Map)
+                : Map<String, dynamic>.from(payload));
 
       if (token == null || token.isEmpty || rawUser == null) {
         throw StateError('Login response must include token and user.');
@@ -167,10 +168,10 @@ class AuthService extends GetxService {
     final rawUser = meUserExtractor != null
         ? meUserExtractor(payload)
         : (payload.containsKey('user')
-            ? (payload['user'] is Map
-                ? Map<String, dynamic>.from(payload['user'] as Map)
-                : null)
-            : Map<String, dynamic>.from(payload));
+              ? (payload['user'] is Map
+                    ? Map<String, dynamic>.from(payload['user'] as Map)
+                    : null)
+              : Map<String, dynamic>.from(payload));
 
     if (rawUser == null) return null;
 

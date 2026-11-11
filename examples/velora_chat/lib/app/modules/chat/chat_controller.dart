@@ -33,8 +33,8 @@ class ChatController extends VeloraController {
     required VeloraOfflineFirstRepository<Message, String> messagesRepository,
     required VeloraTable<Conversation, String> conversationsTable,
     required this.toggleSource,
-  })  : _messages = messagesRepository,
-        _conversations = conversationsTable;
+  }) : _messages = messagesRepository,
+       _conversations = conversationsTable;
 
   @override
   void onInit() {

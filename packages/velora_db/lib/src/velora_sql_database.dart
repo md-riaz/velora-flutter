@@ -42,10 +42,8 @@ class VeloraSqlDatabase extends GeneratedDatabase {
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-    onCreate: (m) => _runner.onCreate(
-      VeloraMigrationContext(m.database),
-      schemaVersion,
-    ),
+    onCreate: (m) =>
+        _runner.onCreate(VeloraMigrationContext(m.database), schemaVersion),
     onUpgrade: (m, from, to) async {
       final context = VeloraMigrationContext(m.database);
       if (to > from) {

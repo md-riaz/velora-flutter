@@ -6,6 +6,8 @@
 
 ## Add the dependency
 
+Velora requires Flutter 3.47.0 or newer (Dart 3.13.0 or newer). See [Toolchain baseline](toolchain.md).
+
 Velora is distributed as a git dependency while in developer preview:
 
 ```yaml title="pubspec.yaml"

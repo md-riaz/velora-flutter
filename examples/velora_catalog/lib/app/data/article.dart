@@ -31,8 +31,8 @@ class Article {
       updatedAt: updatedAtValue == null
           ? 0
           : (updatedAtValue is int
-              ? updatedAtValue
-              : int.parse(updatedAtValue.toString())),
+                ? updatedAtValue
+                : int.parse(updatedAtValue.toString())),
     );
   }
 

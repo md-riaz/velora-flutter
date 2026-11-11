@@ -15,8 +15,7 @@ import 'connectivity_source.dart';
 ///   expose to end users.
 class ToggleConnectivitySource implements ConnectivitySource {
   bool _online;
-  final StreamController<bool> _controller =
-      StreamController<bool>.broadcast();
+  final StreamController<bool> _controller = StreamController<bool>.broadcast();
 
   ToggleConnectivitySource({bool online = true}) : _online = online;
 

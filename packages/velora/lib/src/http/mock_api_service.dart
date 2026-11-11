@@ -67,10 +67,7 @@ class VeloraMockApi {
     final lastPage = (tot / limit).ceil().clamp(1, 999999);
     final start = (currentPage - 1) * limit;
     final end = (start + limit).clamp(0, items.length);
-    final pageItems = items.sublist(
-      start.clamp(0, items.length),
-      end,
-    );
+    final pageItems = items.sublist(start.clamp(0, items.length), end);
     return {
       'data': pageItems,
       'meta': {
@@ -92,6 +89,7 @@ class VeloraMockApi {
     throw ApiException(message: message, statusCode: statusCode);
   }
 
-  static Future<void> _delay(int baseMs) =>
-      Future<void>.delayed(Duration(milliseconds: baseMs + _rng.nextInt(_jitterMs)));
+  static Future<void> _delay(int baseMs) => Future<void>.delayed(
+    Duration(milliseconds: baseMs + _rng.nextInt(_jitterMs)),
+  );
 }

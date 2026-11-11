@@ -19,7 +19,7 @@ class ConnectivityPlusSource implements ConnectivitySource {
   final Connectivity _connectivity;
 
   ConnectivityPlusSource({Connectivity? connectivity})
-      : _connectivity = connectivity ?? Connectivity();
+    : _connectivity = connectivity ?? Connectivity();
 
   @override
   Future<bool> isConnected() async {

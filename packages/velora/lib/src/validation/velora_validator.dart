@@ -1,7 +1,10 @@
 class VeloraValidator {
   const VeloraValidator();
 
-  String? required(String? value, {String message = 'This field is required.'}) {
+  String? required(
+    String? value, {
+    String message = 'This field is required.',
+  }) {
     return value == null || value.trim().isEmpty ? message : null;
   }
 
@@ -13,15 +16,23 @@ class VeloraValidator {
 
   String? min(String? value, int length, {String? message}) {
     if (value == null) return null;
-    return value.length < length ? message ?? 'Minimum length is $length.' : null;
+    return value.length < length
+        ? message ?? 'Minimum length is $length.'
+        : null;
   }
 
   String? max(String? value, int length, {String? message}) {
     if (value == null) return null;
-    return value.length > length ? message ?? 'Maximum length is $length.' : null;
+    return value.length > length
+        ? message ?? 'Maximum length is $length.'
+        : null;
   }
 
-  String? confirmed(String? value, String? other, {String message = 'Values do not match.'}) {
+  String? confirmed(
+    String? value,
+    String? other, {
+    String message = 'Values do not match.',
+  }) {
     return value == other ? null : message;
   }
 }

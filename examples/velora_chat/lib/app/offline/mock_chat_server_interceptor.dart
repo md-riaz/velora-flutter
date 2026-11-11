@@ -22,17 +22,14 @@ import '../data/message.dart';
 /// from a real server exchange, without an actual backend.
 class MockChatServerInterceptor extends VeloraApiInterceptor {
   static const _uuid = Uuid();
-  static const _replies = [
-    'Got it, thanks!',
-    'Sounds good 👍',
-    'On my way.',
-  ];
+  static const _replies = ['Got it, thanks!', 'Sounds good 👍', 'On my way.'];
 
   int _outgoingCount = 0;
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    final isMessageWrite = options.path.contains('messages') &&
+    final isMessageWrite =
+        options.path.contains('messages') &&
         options.method.toUpperCase() == 'POST';
     if (!isMessageWrite) {
       handler.next(options);

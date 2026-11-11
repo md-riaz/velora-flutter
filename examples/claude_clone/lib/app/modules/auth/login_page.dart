@@ -53,7 +53,10 @@ class LoginPage extends GetView<LoginController> {
 
               // Demo notice
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: ClaudeColors.primary.withAlpha(18),
                   borderRadius: BorderRadius.circular(10),
@@ -61,7 +64,11 @@ class LoginPage extends GetView<LoginController> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline, size: 16, color: ClaudeColors.primary),
+                    Icon(
+                      Icons.info_outline,
+                      size: 16,
+                      color: ClaudeColors.primary,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -95,7 +102,11 @@ class LoginPage extends GetView<LoginController> {
               const SizedBox(height: 16),
 
               // Password field
-              _FieldLabel(label: 'Password', textTheme: textTheme, scheme: scheme),
+              _FieldLabel(
+                label: 'Password',
+                textTheme: textTheme,
+                scheme: scheme,
+              ),
               const SizedBox(height: 6),
               TextField(
                 controller: controller.passwordController,
@@ -227,7 +238,8 @@ class _FeatureToggles extends StatelessWidget {
           // Admin role toggle — first item, always visible
           _FeatureRow(
             label: 'Admin role',
-            description: 'Grants admin role + permissions (enables RoleOnly demo)',
+            description:
+                'Grants admin role + permissions (enables RoleOnly demo)',
             scheme: scheme,
             textTheme: textTheme,
             valueBuilder: () => controller.loginAsAdmin.value,
