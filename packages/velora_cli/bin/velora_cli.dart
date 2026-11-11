@@ -31,9 +31,28 @@ void main(List<String> arguments) {
         _install(arguments.skip(1).toList());
       case 'doctor':
         _doctor();
+      case 'make:agents':
+        _makeAgents();
+      case 'search':
+        _search(_Args(arguments.skip(1)));
+      case 'component':
+        _component(_Args(arguments.skip(1)));
+      case 'docs':
+        _docs(_Args(arguments.skip(1)));
+      case 'manifest':
+        _manifest(_Args(arguments.skip(1)));
       default:
-        _fail('Unknown command: ${arguments.first}');
+        throw VeloraCliError(
+          VeloraErrorCode.unknownCommand,
+          'Unknown command: ${arguments.first}',
+          suggestions: suggestNames(
+            arguments.first,
+            veloraCommands.map((c) => c.name),
+          ),
+        );
     }
+  } on VeloraCliError catch (error) {
+    _reportError(error, json: arguments.contains('--json'));
   } on _CliExit {
     // Message already printed by `_fail`; `exitCode` is already set.
   } catch (error) {
@@ -42,6 +61,371 @@ void main(List<String> arguments) {
     stderr.writeln('An unexpected error occurred: $error');
     exitCode = 1;
   }
+}
+
+/// Prints a coded failure: a JSON envelope on stdout under `--json`,
+/// otherwise the message and suggestions on stderr. Exits with 64.
+void _reportError(VeloraCliError error, {required bool json}) {
+  exitCode = 64;
+  if (json) {
+    _printJson(veloraErrorEnvelope(error));
+    return;
+  }
+  stderr.writeln(error.message);
+  if (error.suggestions.isNotEmpty) {
+    stderr.writeln(
+      'Did you mean: ${error.suggestions.map((s) => s.name).join(', ')}?',
+    );
+  }
+}
+
+void _printJson(Object? value) {
+  stdout.writeln(const JsonEncoder.withIndent('  ').convert(value));
+}
+
+/// Parsed arguments of a discovery command: positionals, boolean flags, and
+/// `--name value` / `--name=value` options. Anything not declared is
+/// rejected with `ERR_INVALID_ARGUMENT`.
+class _Args {
+  _Args(Iterable<String> raw) : _raw = raw.toList();
+
+  final List<String> _raw;
+  final List<String> positional = [];
+  final Set<String> _flags = {};
+  final Map<String, String> _options = {};
+
+  bool get json => _flags.contains('json');
+  bool flag(String name) => _flags.contains(name);
+  String? option(String name) => _options[name];
+
+  void parse({
+    Set<String> flags = const {},
+    Set<String> options = const {},
+    int maxPositional = 1,
+  }) {
+    for (var i = 0; i < _raw.length; i++) {
+      final arg = _raw[i];
+      if (!arg.startsWith('--')) {
+        positional.add(arg);
+        continue;
+      }
+      final equals = arg.indexOf('=');
+      final name = arg.substring(2, equals < 0 ? arg.length : equals);
+      if (name == 'json' || flags.contains(name)) {
+        if (equals >= 0) _invalid('--$name does not take a value.');
+        _flags.add(name);
+      } else if (options.contains(name)) {
+        if (equals >= 0) {
+          _options[name] = arg.substring(equals + 1);
+        } else if (i + 1 < _raw.length) {
+          _options[name] = _raw[++i];
+        } else {
+          _invalid('--$name needs a value.');
+        }
+      } else {
+        _invalid('Unknown option: --$name');
+      }
+    }
+    if (positional.length > maxPositional) {
+      _invalid('Unexpected argument: ${positional[maxPositional]}');
+    }
+  }
+}
+
+Never _invalid(String message) =>
+    throw VeloraCliError(VeloraErrorCode.invalidArgument, message);
+
+void _makeAgents() {
+  final file = File(p.join(Directory.current.path, 'AGENTS.md'));
+  final existing = file.existsSync() ? file.readAsStringSync() : '';
+  final updated = upsertVeloraAgentsSection(existing);
+  if (updated == existing) {
+    stdout.writeln('AGENTS.md is already up to date.');
+    return;
+  }
+  file.writeAsStringSync(updated);
+  stdout.writeln(
+    existing.isEmpty
+        ? 'Created AGENTS.md with the Velora section.'
+        : 'Updated the Velora section in AGENTS.md.',
+  );
+}
+
+void _search(_Args args) {
+  args.parse(options: {'type', 'limit'});
+  if (args.positional.isEmpty) _invalid('Missing search query.');
+  final query = args.positional.first;
+
+  Set<String>? types;
+  final type = args.option('type');
+  if (type != null) {
+    types = type.split(',').map((t) => t.trim()).toSet();
+    final unknown = types.difference(veloraSearchTypes.toSet());
+    if (unknown.isNotEmpty) {
+      _invalid(
+        'Unknown --type ${unknown.join(', ')}. '
+        'Use one of: ${veloraSearchTypes.join(', ')}.',
+      );
+    }
+  }
+  final limit = int.tryParse(args.option('limit') ?? '10');
+  if (limit == null || limit < 1) {
+    _invalid('--limit must be a positive integer.');
+  }
+
+  // Components come from the installed velora_ui. Without it the other
+  // kinds are still searched, and the output says components were left out.
+  final project = VeloraProject.find(Directory.current.path);
+  VeloraUiCatalog? catalog;
+  String? componentsSkipped;
+  try {
+    catalog = VeloraUiCatalog.load(project);
+  } on VeloraCliError catch (error) {
+    if (types != null && types.length == 1 && types.contains('component')) {
+      rethrow;
+    }
+    componentsSkipped = error.message;
+  }
+
+  final hits = veloraSearch(
+    query,
+    catalog: catalog,
+    types: types,
+    limit: limit,
+  );
+  if (args.json) {
+    _printJson(
+      veloraEnvelope('search.results', {
+        'query': query,
+        'componentsSearched': catalog != null,
+        'results': [for (final hit in hits) hit.toJson()],
+      }, project),
+    );
+    return;
+  }
+  if (hits.isEmpty) {
+    stdout.writeln('No results for "$query".');
+  } else {
+    final width = hits
+        .map((h) => h.name.length)
+        .reduce((a, b) => a > b ? a : b);
+    for (final hit in hits) {
+      stdout.writeln(
+        '${hit.type.padRight(9)}  ${hit.name.padRight(width)}  ${hit.summary}',
+      );
+    }
+  }
+  if (componentsSkipped != null &&
+      (types == null || types.contains('component'))) {
+    stdout.writeln('Components were not searched: $componentsSkipped');
+  }
+}
+
+void _component(_Args args) {
+  args.parse(flags: {'source'}, options: {'detail'});
+  final detail = args.option('detail') ?? 'full';
+  if (detail != 'brief' && detail != 'full') {
+    _invalid('--detail must be brief or full.');
+  }
+  final project = VeloraProject.find(Directory.current.path);
+  final catalog = VeloraUiCatalog.load(project);
+  final version = catalog.package.version ?? 'unknown version';
+
+  if (args.positional.isEmpty) {
+    if (args.json) {
+      _printJson(
+        veloraEnvelope('component.list', {
+          'components': [for (final c in catalog.components) catalog.brief(c)],
+        }, project),
+      );
+      return;
+    }
+    stdout.writeln('velora_ui $version');
+    String? category;
+    for (final c in catalog.components) {
+      if (c.category != category) {
+        category = c.category;
+        stdout.writeln('\n$category');
+      }
+      stdout.writeln('  ${c.name}');
+    }
+    return;
+  }
+
+  final component = catalog.find(args.positional.first);
+  if (args.flag('source') && !args.json) {
+    stdout.writeln(catalog.sourcePath(component));
+    return;
+  }
+  final data = catalog.detail(component, full: detail == 'full');
+  if (args.json) {
+    _printJson(
+      veloraEnvelope('component.detail', {
+        ...data,
+        if (args.flag('source')) 'sourcePath': catalog.sourcePath(component),
+      }, project),
+    );
+    return;
+  }
+
+  final d = catalog.declaration(component);
+  final out = StringBuffer()
+    ..writeln('${component.name} (${d.kind}) — velora_ui $version')
+    ..writeln(VeloraUiCatalog.importLine)
+    ..writeln('Category: ${component.category}')
+    ..writeln()
+    ..writeln(detail == 'full' ? d.documentation : d.summary);
+  if (d.on != null) out.writeln('\nOn: ${d.on}');
+
+  void writeSignature(DartSignature s) {
+    final returns = s.returnType == null ? '' : ' → ${s.returnType}';
+    out.writeln(
+      '\n${s.isConst ? 'const ' : ''}${s.isFactory ? 'factory ' : ''}'
+      '${s.name}()$returns',
+    );
+    for (final parameter in s.parameters) {
+      final tags = [
+        if (parameter.kind != 'named') parameter.kind,
+        if (parameter.isRequired) 'required',
+        if (parameter.defaultValue != null) 'default ${parameter.defaultValue}',
+      ];
+      out.writeln(
+        '  ${parameter.name}: ${parameter.type ?? '?'}'
+        '${tags.isEmpty ? '' : '  (${tags.join(', ')})'}',
+      );
+      if (detail == 'full' && parameter.documentation.isNotEmpty) {
+        final text = parameter.documentation.replaceAll(RegExp(r'\s+'), ' ');
+        out.writeln('      $text');
+      }
+    }
+  }
+
+  d.constructors.forEach(writeSignature);
+  if (d.signature != null) writeSignature(d.signature!);
+  if (d.staticMethods.isNotEmpty) {
+    out.writeln('\nStatic methods:');
+    d.staticMethods.forEach(writeSignature);
+  }
+  if (d.values.isNotEmpty) {
+    out.writeln('\nValues:');
+    for (final value in d.values) {
+      final text = value.documentation.replaceAll(RegExp(r'\s+'), ' ');
+      out.writeln(
+        detail == 'full' && text.isNotEmpty
+            ? '  ${value.name} — $text'
+            : '  ${value.name}',
+      );
+    }
+  }
+  if (d.members.isNotEmpty) out.writeln('\nMembers: ${d.members.join(', ')}');
+  stdout.write(out);
+}
+
+void _docs(_Args args) {
+  args.parse();
+  final project = VeloraProject.find(Directory.current.path);
+  if (args.positional.isEmpty) {
+    if (args.json) {
+      _printJson(
+        veloraEnvelope('docs.list', {
+          'topics': [for (final t in veloraDocsTopics) t.toJson()],
+        }, project),
+      );
+      return;
+    }
+    final width = veloraDocsTopics
+        .map((t) => t.id.length)
+        .reduce((a, b) => a > b ? a : b);
+    for (final topic in veloraDocsTopics) {
+      stdout.writeln('${topic.id.padRight(width)}  ${topic.title}');
+    }
+    return;
+  }
+
+  final id = args.positional.first;
+  final topic = veloraDocsTopics.where((t) => t.id == id).firstOrNull;
+  if (topic == null) {
+    throw VeloraCliError(
+      VeloraErrorCode.unknownDocsTopic,
+      'No docs topic named $id',
+      suggestions: suggestNames(id, veloraDocsTopics.map((t) => t.id)),
+    );
+  }
+  if (project == null) {
+    throw const VeloraCliError(
+      VeloraErrorCode.projectRequired,
+      'Run this inside a Flutter project so the page matches its installed '
+      'Velora packages.',
+    );
+  }
+
+  // The page is read from the checkout the project's Velora packages come
+  // from. A hosted package does not carry docs/, so then only the online
+  // location is reported, labeled as possibly newer than what is installed.
+  final file = project.docsFile(topic.path);
+  final online = Uri.parse(veloraDocsSiteUrl)
+      .resolve(
+        '${topic.path.substring('docs/'.length, topic.path.length - 3)}/',
+      )
+      .toString();
+  final content = file == null ? null : File(file).readAsStringSync();
+  if (args.json) {
+    _printJson(
+      veloraEnvelope('docs.page', {
+        ...topic.toJson(),
+        'installed': content != null,
+        'file': file,
+        'content': content,
+        'online': online,
+      }, project),
+    );
+    return;
+  }
+  if (content != null) {
+    stdout.write(content);
+  } else {
+    stdout.writeln(
+      '${topic.title}: this page is not part of the installed packages.\n'
+      'Online (latest version, may differ from what is installed): $online',
+    );
+  }
+}
+
+void _manifest(_Args args) {
+  args.parse(maxPositional: 0);
+  final project = VeloraProject.find(Directory.current.path);
+  VeloraUiCatalog? catalog;
+  try {
+    catalog = VeloraUiCatalog.load(project);
+  } on VeloraCliError {
+    // Outside a project, or without velora_ui: the component count is null.
+  }
+  final manifest = veloraManifest(catalog: catalog);
+  if (args.json) {
+    _printJson(veloraEnvelope('manifest', manifest, project));
+    return;
+  }
+  stdout
+    ..writeln(
+      '$veloraCliName $veloraCliVersion (JSON apiVersion '
+      '$veloraApiVersion)',
+    )
+    ..writeln('Commands: ${veloraCommands.map((c) => c.name).join(', ')}')
+    ..writeln(
+      'JSON output: '
+      '${veloraCommands.where((c) => c.json).map((c) => c.name).join(', ')}',
+    )
+    ..writeln('Packages: ${veloraPackageCatalog.keys.join(', ')}')
+    ..writeln('Docs topics: ${veloraDocsTopics.map((t) => t.id).join(', ')}')
+    ..writeln(
+      catalog == null
+          ? 'Components: unknown (no project with velora_ui here)'
+          : 'Components: ${catalog.components.length} in velora_ui '
+                '${catalog.package.version ?? ''}',
+    )
+    ..writeln(
+      'Error codes: ${VeloraErrorCode.all.map((e) => e.code).join(', ')}',
+    );
 }
 
 void _printHelp() {
@@ -163,6 +547,7 @@ void _new(List<String> args) {
     _appTheme(),
   );
   _writeAi(root.path, title);
+  _write(p.join(root.path, 'AGENTS.md'), upsertVeloraAgentsSection(''));
   stdout.writeln('Created Velora app: $rootName');
 }
 
@@ -742,6 +1127,21 @@ void _doctor() {
   // Check 4: toolchain versions against the Velora baseline. Never let a
   // missing executable crash doctor — mirrors the guarded Process.runSync
   // pattern in `_install`.
+  // The managed AGENTS.md section is optional; when present it must match
+  // what this CLI version writes.
+  final agentsFile = File(p.join(Directory.current.path, 'AGENTS.md'));
+  if (agentsFile.existsSync() &&
+      agentsFile.readAsStringSync().contains(veloraAgentsStartMarker)) {
+    if (veloraAgentsSectionIsStale(agentsFile.readAsStringSync())) {
+      warn(
+        'AGENTS.md: the managed Velora section is out of date. '
+        'Run `velora make:agents` to refresh it.',
+      );
+    } else {
+      stdout.writeln('✓ AGENTS.md: the managed Velora section is current.');
+    }
+  }
+
   final dartVersion = parseDartVersion(Platform.version);
   if (dartVersion == null) {
     warn(
@@ -905,6 +1305,9 @@ Rules:
 
 String _pubspec(String name, String root) {
   final veloraPath = _veloraPackagePath(root);
+  // The CLI ships next to `velora`. As a dev dependency, `dart run velora_cli`
+  // works from the app root and answers for the versions the app resolves.
+  final cliPath = p.posix.join(p.posix.dirname(veloraPath), 'velora_cli');
   return '''name: $name
 description: Velora generated app.
 publish_to: 'none'
@@ -924,6 +1327,8 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  velora_cli:
+    path: $cliPath
 
 flutter:
   uses-material-design: true

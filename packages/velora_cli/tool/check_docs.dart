@@ -47,6 +47,7 @@ void main(List<String> args) {
   _checkUiRegistry(ui);
   _checkCommands(markdown);
   _checkPackages();
+  _checkDocsTopics();
   _checkStaleClaims(ui);
   _checkLinksAndPaths(markdown);
   _checkBaselineAndHistory();
@@ -145,6 +146,35 @@ String _packagesTable({required String fromDir}) {
   return rows.join('\n');
 }
 
+String _docsTopicsTable() {
+  final rows = [
+    '| Topic | Page |',
+    '|---|---|',
+    for (final t in veloraDocsTopics)
+      '| `${t.id}` | [${t.title}]'
+          '(${p.posix.relative(t.path, from: 'docs')}) |',
+  ];
+  return rows.join('\n');
+}
+
+String _errorCodesTable() {
+  final rows = [
+    '| Code | Reported when |',
+    '|---|---|',
+    for (final e in VeloraErrorCode.all) '| `${e.code}` | ${e.meaning} |',
+  ];
+  return rows.join('\n');
+}
+
+/// Every `velora docs` topic must point at a page that exists.
+void _checkDocsTopics() {
+  for (final topic in veloraDocsTopics) {
+    if (!_exists(topic.path)) {
+      _fail('veloraDocsTopics: `${topic.id}` points at missing ${topic.path}.');
+    }
+  }
+}
+
 String _uiLayersTable(_UiRegistry ui) {
   final rows = [
     '| Layer | Focus | Exports |',
@@ -184,6 +214,24 @@ void _checkGeneratedBlocks(_UiRegistry ui, {required bool write}) {
       _CoreInventory.scan().toMarkdown(),
     ),
     (_adr, 'package-graph', 'packages/*/pubspec.yaml', _packageGraphTable()),
+    (
+      'docs/agent-tooling.md',
+      'docs-topics',
+      'packages/velora_cli/lib/src/discovery.dart',
+      _docsTopicsTable(),
+    ),
+    (
+      'docs/agent-tooling.md',
+      'error-codes',
+      'packages/velora_cli/lib/src/discovery.dart',
+      _errorCodesTable(),
+    ),
+    (
+      'docs/agent-tooling.md',
+      'agents-section',
+      'packages/velora_cli/lib/src/discovery.dart',
+      '````markdown\n${veloraAgentsSection().trimRight()}\n````',
+    ),
   ];
 
   for (final (file, id, source, body) in blocks) {

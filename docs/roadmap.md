@@ -20,12 +20,14 @@
 - Reactive local database (`velora_db`) on drift — native and web (WASM SQLite, persisted via OPFS/IndexedDB), with an Eloquent-style query API plus `watch*` reactive reads.
 - Offline-first data layer (`velora_offline`) — connectivity awareness, an offline outbox for writes that replays on reconnect, and a reactive, optimistic offline-first repository layered over `velora_db`.
 - Installable, offline-capable web (PWA): `velora make:pwa` scaffolds a manifest and a service worker that caches the app shell and `velora_db`'s WASM assets.
+- Version-aware lookup in the CLI: `velora search`, `component`, `docs`, and `manifest` answer from a project's installed packages, with JSON envelopes and stable error codes — see [Agent Tooling](agent-tooling.md).
 
 ## Later
 
 Not shipped. Tracked as GitHub issues, and subject to change.
 
 - CRUD page templates in `velora make:module` built on the `velora_ui` data table and shell.
+- Page templates (`velora template`), structured accessibility/theme metadata per component, and an MCP wrapper over the same lookup commands.
 - Splitting optional core capabilities into focused packages.
 - Realtime, desktop lifecycle, and Windows notification support.
 - More backend presets.

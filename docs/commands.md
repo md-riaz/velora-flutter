@@ -16,7 +16,12 @@ Run commands from the package or generated app directory they target. No project
 | `velora make:pwa` | Write a production web manifest and an offline service worker. |
 | `velora install:push --fcm \| --local` | Write FCM or local-notification setup placeholders and reminders. |
 | `velora install <package> [--no-pub-get] [--no-wire]` | Add an official Velora package and wire it into Velora.boot() when it can be. |
-| `velora doctor` | Check the velora dependency, Velora.boot() wiring, unwired plugins, and the Flutter/Dart baseline. |
+| `velora doctor` | Check the velora dependency, Velora.boot() wiring, unwired plugins, the managed AGENTS.md section, and the Flutter/Dart baseline. |
+| `velora make:agents` | Write or refresh the managed Velora section in AGENTS.md. |
+| `velora search <query> [--type <type>] [--limit <n>] [--json]` | Search components, docs topics, packages, and commands. |
+| `velora component [<name>] [--detail brief\|full] [--source] [--json]` | Describe a velora_ui component from the installed version, or list them all. |
+| `velora docs [<topic>] [--json]` | Print a documentation topic, or list the topics. |
+| `velora manifest [--json]` | Describe this CLI: commands, packages, output types, and error codes. |
 <!-- /generated:cli-commands -->
 
 ## Runtime package
@@ -62,6 +67,10 @@ flutter test
 ```
 
 `examples/claude_clone` is a hand-built reference app (not CLI-generated) that exercises Velora at a larger scale. Generated apps (from `velora new`) use the same `flutter pub get` / `flutter run` / `flutter test` commands from their own root.
+
+## Lookup commands
+
+`search`, `component`, `docs`, and `manifest` read from the packages the project has installed and accept `--json`. `make:agents` writes the managed section in `AGENTS.md`. See [Agent Tooling](agent-tooling.md) for the options, the JSON envelope, and the error codes.
 
 ## Notification commands
 
