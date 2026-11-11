@@ -13,6 +13,11 @@
 - `velora new` generates apps with the baseline `environment` constraints.
 - CI pins Flutter 3.47.9, rejects older toolchains, checks formatting, resolves every package from a clean checkout with enforced lockfiles, and now also tests `velora_cli` and `velora_lints`.
 
+### Added
+
+- `velora_ui` Layer 7: `VeloraDataTable` (typed columns, selection, sort, row actions, loading/empty/error, compact card layout, keyboard row navigation) with `VeloraPagination`; `VeloraStepper` and `VeloraWizard`; `VeloraAdaptiveShell`, `VeloraMasterDetailShell`, and `VeloraStatusStrip`. All controlled and state-management independent.
+- UI gallery: a data/flows section and a resizable desktop scenario.
+
 ### Removed
 
 - `packages/velora` no longer declares `equatable` or `intl`; neither was imported. Apps that relied on getting them transitively must declare them.

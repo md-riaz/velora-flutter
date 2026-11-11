@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:velora_ui/velora_ui.dart';
 
+import 'sections/data_section.dart';
 import 'sections/display_section.dart';
 import 'sections/feedback_section.dart';
 import 'sections/inputs_section.dart';
@@ -133,6 +134,10 @@ class GalleryHomePage extends StatelessWidget {
             const VeloraDivider(),
             SizedBox(height: tokens.spacingLg),
             const FeedbackSection(),
+            SizedBox(height: tokens.spacingLg),
+            const VeloraDivider(),
+            SizedBox(height: tokens.spacingLg),
+            const DataSection(),
             SizedBox(height: tokens.spacingXl),
           ],
         ),

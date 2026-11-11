@@ -76,6 +76,24 @@
         {"name": "VeloraToast", "file": "src/components/velora_toast.dart"},
         {"name": "VeloraTooltip", "file": "src/components/velora_tooltip.dart"}
       ]
+    },
+    {
+      "layer": 7,
+      "title": "Data, flows & app shell",
+      "components": [
+        {"name": "VeloraDataTable", "file": "src/components/velora_data_table.dart"},
+        {"name": "VeloraDataColumn", "file": "src/components/velora_data_table.dart"},
+        {"name": "VeloraSortState", "file": "src/components/velora_data_table.dart"},
+        {"name": "VeloraPagination", "file": "src/components/velora_data_table.dart"},
+        {"name": "VeloraStepper", "file": "src/components/velora_stepper.dart"},
+        {"name": "VeloraStep", "file": "src/components/velora_stepper.dart"},
+        {"name": "VeloraStepState", "file": "src/components/velora_stepper.dart"},
+        {"name": "VeloraWizard", "file": "src/components/velora_stepper.dart"},
+        {"name": "VeloraAdaptiveShell", "file": "src/components/velora_adaptive_shell.dart"},
+        {"name": "VeloraShellBreakpoint", "file": "src/components/velora_adaptive_shell.dart"},
+        {"name": "VeloraMasterDetailShell", "file": "src/components/velora_adaptive_shell.dart"},
+        {"name": "VeloraStatusStrip", "file": "src/components/velora_adaptive_shell.dart"}
+      ]
     }
   ]
 }

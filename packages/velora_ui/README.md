@@ -1,6 +1,6 @@
 # velora_ui
 
-Velora's token-first design system: theme and tokens plus components for display, form inputs, layout, navigation, and feedback/overlays. Depends only on `flutter`.
+Velora's token-first design system: theme and tokens plus components for display, form inputs, layout, navigation, feedback/overlays, and data tables, wizards, and an adaptive app shell. Depends only on `flutter`.
 
 Not a plugin. Apply it through your app's theme: `MaterialApp(theme: VeloraTheme.light(), darkTheme: VeloraTheme.dark())`. The public surface is registered in `components.json`, which `tool/check_docs.sh` checks against the exports and the docs.
 
