@@ -15,4 +15,6 @@
 
 The templates live in `packages/velora_cli/bin/velora_cli.dart`. They describe the generated app, not the framework: the architecture they summarize is the one in [Architecture](architecture.md), with plain constructor-injected services.
 
+`velora new` also writes an `AGENTS.md` with a short managed section that tells an assistant to look components, docs, and commands up with the CLI instead of guessing. `velora make:agents` adds or refreshes that section in an existing app. See [Agent Tooling](agent-tooling.md).
+
 Keep the files short, and update them when you add modules, API endpoints, permissions, or notification adapters. For framework-level context aimed at assistants, see `docs/llms.txt`.

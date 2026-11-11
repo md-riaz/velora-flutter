@@ -12,7 +12,7 @@ Create a brand new Velora-powered Flutter app:
 dart run velora_cli new my_app
 ```
 
-Writes a Flutter app skeleton with constructor-injected splash/auth/dashboard modules, a `MaterialApp` wired to a hand-written `AppRouter.onGenerateRoute` switch (Navigator-based, not GetX declarative routing), a theme file, and `.ai/` context files for AI-assisted development.
+Writes a Flutter app skeleton with constructor-injected splash/auth/dashboard modules, a `MaterialApp` wired to a hand-written `AppRouter.onGenerateRoute` switch (Navigator-based, not GetX declarative routing), a theme file, `.ai/` context files for AI-assisted development, and an `AGENTS.md` with the managed lookup section described in [Agent Tooling](agent-tooling.md). The generated `pubspec.yaml` lists `velora_cli` under `dev_dependencies`.
 
 ## Scaffold auth
 

@@ -72,6 +72,7 @@ nav:
     - 7. Scaffold a Module: scaffolding.md
   - Reference:
     - CLI Commands: commands.md
+    - Agent Tooling: agent-tooling.md
     - Framework / App Boundary: framework-app-boundary.md
     - Plugins: plugins.md
     - Web & PWA: pwa.md

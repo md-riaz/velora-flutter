@@ -1,3 +1,6 @@
+export 'src/discovery.dart';
+export 'src/source_scan.dart';
+
 const veloraCliName = 'velora_cli';
 const veloraCliVersion = '0.0.1';
 
@@ -49,7 +52,15 @@ class VeloraCommand {
   /// One-line description of what the command does.
   final String summary;
 
-  const VeloraCommand(this.name, this.arguments, this.summary);
+  /// Whether the command accepts `--json` and prints a versioned envelope.
+  final bool json;
+
+  const VeloraCommand(
+    this.name,
+    this.arguments,
+    this.summary, {
+    this.json = false,
+  });
 
   /// The full usage line, e.g. `velora make:module <name> [--crud]`.
   String get usage =>
@@ -91,7 +102,37 @@ const veloraCommands = <VeloraCommand>[
     'doctor',
     '',
     'Check the velora dependency, Velora.boot() wiring, unwired plugins, '
-        'and the Flutter/Dart baseline.',
+        'the managed AGENTS.md section, and the Flutter/Dart baseline.',
+  ),
+  VeloraCommand(
+    'make:agents',
+    '',
+    'Write or refresh the managed Velora section in AGENTS.md.',
+  ),
+  VeloraCommand(
+    'search',
+    '<query> [--type <type>] [--limit <n>] [--json]',
+    'Search components, docs topics, packages, and commands.',
+    json: true,
+  ),
+  VeloraCommand(
+    'component',
+    '[<name>] [--detail brief|full] [--source] [--json]',
+    'Describe a velora_ui component from the installed version, or list '
+        'them all.',
+    json: true,
+  ),
+  VeloraCommand(
+    'docs',
+    '[<topic>] [--json]',
+    'Print a documentation topic, or list the topics.',
+    json: true,
+  ),
+  VeloraCommand(
+    'manifest',
+    '[--json]',
+    'Describe this CLI: commands, packages, output types, and error codes.',
+    json: true,
   ),
 ];
 
