@@ -1,6 +1,42 @@
 const veloraCliName = 'velora_cli';
 const veloraCliVersion = '0.0.1';
 
+/// Minimum Dart SDK every Velora package and generated app requires.
+const veloraMinDartVersion = '3.13.0';
+
+/// Minimum Flutter SDK every Velora package and generated app requires.
+const veloraMinFlutterVersion = '3.47.0';
+
+final RegExp _semverPattern = RegExp(r'(\d+)\.(\d+)\.(\d+)');
+
+/// Returns the Dart SDK version from a `Platform.version` string such as
+/// `3.13.7 (stable) (...) on "linux_x64"`, or `null` when none is found.
+String? parseDartVersion(String platformVersion) =>
+    _semverPattern.firstMatch(platformVersion)?.group(0);
+
+/// Returns the Flutter SDK version from `flutter --version` output, or
+/// `null` when no `Flutter <major>.<minor>.<patch>` line is present. Scans
+/// every line because the tool can print notices before the version line.
+String? parseFlutterVersion(String flutterVersionOutput) => RegExp(
+  r'^Flutter (\d+\.\d+\.\d+)',
+  multiLine: true,
+).firstMatch(flutterVersionOutput)?.group(1);
+
+/// Whether [detected] is at least [minimum], comparing the numeric
+/// `major.minor.patch` parts. Pre-release and build suffixes are ignored.
+/// Returns `false` when either argument has no `major.minor.patch`.
+bool versionAtLeast(String detected, String minimum) {
+  final a = _semverPattern.firstMatch(detected);
+  final b = _semverPattern.firstMatch(minimum);
+  if (a == null || b == null) return false;
+  for (var i = 1; i <= 3; i++) {
+    final x = int.parse(a.group(i)!);
+    final y = int.parse(b.group(i)!);
+    if (x != y) return x > y;
+  }
+  return true;
+}
+
 /// Describes a Velora package that `velora install <package>` knows how to
 /// add to a generated app: its pub dependency, its optional `Velora.boot`
 /// plugin wiring, and human-readable post-install notes.
@@ -334,7 +370,8 @@ String _maskNonCode(String source) {
     if (char == '/' && next == '*') {
       buffer.write('  ');
       i += 2;
-      while (i < len && !(source[i] == '*' && i + 1 < len && source[i + 1] == '/')) {
+      while (i < len &&
+          !(source[i] == '*' && i + 1 < len && source[i + 1] == '/')) {
         buffer.write(source[i] == '\n' ? '\n' : ' ');
         i++;
       }
@@ -400,16 +437,14 @@ PluginWireResult wirePluginIntoBoot(
   }
 
   var content = mainContent;
-  final importUriMatch = RegExp(
-    r'package:[a-zA-Z0-9_]+/[a-zA-Z0-9_.]+\.dart',
-  ).firstMatch(importLine);
+  final importUriMatch = RegExp(r'package:[a-zA-Z0-9_]+/[a-zA-Z0-9_.]+\.dart')
+      .firstMatch(importLine);
   final importUri = importUriMatch?.group(0);
   final importAlreadyPresent =
       content.contains(importLine) ||
       (importUri != null &&
-          RegExp(
-            "import\\s+['\"]${RegExp.escape(importUri)}['\"]",
-          ).hasMatch(content));
+          RegExp("import\\s+['\"]${RegExp.escape(importUri)}['\"]")
+              .hasMatch(content));
   if (!importAlreadyPresent) {
     final importPattern = RegExp(
       r"""^import\s+['"][^'"]*['"];.*$""",

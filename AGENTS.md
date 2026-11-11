@@ -156,7 +156,10 @@ Run `flutter analyze` — violations surface as warnings/errors at the call site
 
 Run focused checks for touched packages when code changes. Docs-only changes do not require analyze/test commands unless specifically requested.
 
+The workspace baseline is Flutter >=3.47.0 / Dart >=3.13.0 (see `docs/toolchain.md`); do not add compatibility code or pins for older SDKs.
+
 ```sh
+tool/check_baseline.sh
 flutter analyze packages/velora
 flutter analyze examples/claude_clone
 dart analyze packages/velora_cli

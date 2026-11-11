@@ -71,7 +71,7 @@ class VeloraMediaService extends GetxService {
         maxWidth: maxWidth,
         maxHeight: maxHeight,
       );
-      return Future.wait(
+      return await Future.wait(
         files.map(
           (f) async => VeloraAttachment.local(
             path: f.path,
@@ -96,17 +96,16 @@ class VeloraMediaService extends GetxService {
     FileType type = FileType.any,
   }) async {
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final f = await FilePicker.pickFile(
         type: allowedExtensions != null ? FileType.custom : type,
         allowedExtensions: allowedExtensions,
       );
-      if (result == null || result.files.isEmpty) return null;
-      final f = result.files.first;
-      if (f.path == null) return null;
+      final path = f?.path;
+      if (f == null || path == null) return null;
       return VeloraAttachment.local(
-        path: f.path!,
+        path: path,
         name: f.name,
-        sizeBytes: f.size,
+        sizeBytes: await f.length(),
       );
     } catch (_) {
       if (rethrowErrors) rethrow;
@@ -120,22 +119,19 @@ class VeloraMediaService extends GetxService {
     FileType type = FileType.any,
   }) async {
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final files = await FilePicker.pickFiles(
         type: allowedExtensions != null ? FileType.custom : type,
         allowedExtensions: allowedExtensions,
-        allowMultiple: true,
       );
-      if (result == null) return [];
-      return result.files
-          .where((f) => f.path != null)
-          .map(
-            (f) => VeloraAttachment.local(
-              path: f.path!,
-              name: f.name,
-              sizeBytes: f.size,
+      return await Future.wait(
+        files.where((f) => f.path != null).map(
+              (f) async => VeloraAttachment.local(
+                path: f.path!,
+                name: f.name,
+                sizeBytes: await f.length(),
+              ),
             ),
-          )
-          .toList();
+      );
     } catch (_) {
       if (rethrowErrors) rethrow;
       return [];

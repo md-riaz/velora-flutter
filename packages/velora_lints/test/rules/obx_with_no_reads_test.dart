@@ -97,7 +97,7 @@ Future<List<AnalysisError>> _runRule(String source) async {
   File.fromUri(app.uri.resolve('pubspec.yaml')).writeAsStringSync('''
 name: app
 environment:
-  sdk: ^3.11.0
+  sdk: ^3.13.0
 dependencies:
   get:
     path: ../get
@@ -106,7 +106,7 @@ dependencies:
   File.fromUri(getPackage.uri.resolve('pubspec.yaml')).writeAsStringSync('''
 name: get
 environment:
-  sdk: ^3.11.0
+  sdk: ^3.13.0
 ''');
 
   File.fromUri(getLib.uri.resolve('get.dart')).writeAsStringSync('''

@@ -4,6 +4,8 @@ Laravel-like productivity for Flutter apps.
 
 Velora is a batteries-included Flutter DX framework for Android, iOS, and Web apps. It works with any JSON API — REST or otherwise — and handles bearer-token auth, storage, routing, permissions, notifications, and more so you can focus on building features.
 
+Requires Flutter 3.47.0+ / Dart 3.13.0+ — see [Toolchain baseline](docs/toolchain.md).
+
 ## Packages
 
 - `packages/velora` — runtime framework package.

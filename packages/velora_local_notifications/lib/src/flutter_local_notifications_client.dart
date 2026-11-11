@@ -66,8 +66,8 @@ class FlutterLocalNotificationsClient implements LocalNotificationsClient {
     if (!_timeZonesInitialized) {
       tz_data.initializeTimeZones();
       try {
-        final name = await FlutterTimezone.getLocalTimezone();
-        tz.setLocalLocation(tz.getLocation(name));
+        final info = await FlutterTimezone.getLocalTimezone();
+        tz.setLocalLocation(tz.getLocation(info.identifier));
       } catch (_) {
         tz.setLocalLocation(tz.getLocation('UTC'));
       }
@@ -82,7 +82,7 @@ class FlutterLocalNotificationsClient implements LocalNotificationsClient {
       macOS: darwinSettings,
     );
 
-    await _plugin.initialize(initializationSettings);
+    await _plugin.initialize(settings: initializationSettings);
     await _requestPermissions();
   }
 
@@ -127,10 +127,10 @@ class FlutterLocalNotificationsClient implements LocalNotificationsClient {
     String? payload,
   }) {
     return _plugin.show(
-      id,
-      title,
-      body,
-      _notificationDetails(),
+      id: id,
+      title: title,
+      body: body,
+      notificationDetails: _notificationDetails(),
       payload: payload,
     );
   }
@@ -145,20 +145,18 @@ class FlutterLocalNotificationsClient implements LocalNotificationsClient {
   }) {
     final scheduledDate = tz.TZDateTime.from(dateTime, tz.local);
     return _plugin.zonedSchedule(
-      id,
-      title,
-      body,
-      scheduledDate,
-      _notificationDetails(),
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
+      id: id,
+      title: title,
+      body: body,
+      scheduledDate: scheduledDate,
+      notificationDetails: _notificationDetails(),
       androidScheduleMode: _androidScheduleMode,
       payload: payload,
     );
   }
 
   @override
-  Future<void> cancel(int id) => _plugin.cancel(id);
+  Future<void> cancel(int id) => _plugin.cancel(id: id);
 
   @override
   Future<void> cancelAll() => _plugin.cancelAll();

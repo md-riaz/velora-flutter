@@ -4,8 +4,8 @@ version: 0.0.1
 publish_to: none
 
 environment:
-  sdk: ^3.11.1
-  flutter: '>=3.27.0'
+  sdk: ^3.13.0
+  flutter: '>=3.47.0'
 
 dependencies:
   flutter:
@@ -14,7 +14,7 @@ dependencies:
     path: ../velora
   velora_db:
     path: ../velora_db
-  connectivity_plus: ^6.0.0
+  connectivity_plus: ^7.3.2
   dio: ^5.9.0
   get: ^4.7.2
 
@@ -22,7 +22,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-  flutter_secure_storage: ^10.3.1
+  flutter_secure_storage: ^11.2.0
   shared_preferences: ^2.5.3
   drift: ^2.34.2
   sqlite3: ^3.4.0

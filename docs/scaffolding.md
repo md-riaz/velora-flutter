@@ -64,7 +64,7 @@ There is no `bindings/` directory and no `Bindings` subclass: `${ClassName}Modul
 dart run velora_cli doctor
 ```
 
-Read-only checks against the current directory: `pubspec.yaml` exists and depends on `velora`; `lib/main.dart` exists and calls `Velora.boot(...)`; any installable plugin package (see `velora install`, below) that's already a pubspec dependency but isn't actually wired into `Velora.boot(plugins: [...])`; and the installed Dart/Flutter toolchain versions. A missing/misconfigured `velora` dependency is a hard failure (nonzero exit); everything else — missing `main.dart`, a missing `Velora.boot()` call, an unwired plugin — is reported as a warning and still exits `0`.
+Read-only checks against the current directory: `pubspec.yaml` exists and depends on `velora`; `lib/main.dart` exists and calls `Velora.boot(...)`; any installable plugin package (see `velora install`, below) that's already a pubspec dependency but isn't actually wired into `Velora.boot(plugins: [...])`; and the detected Dart/Flutter versions against the required baseline (Dart >=3.13.0, Flutter >=3.47.0 — see [Toolchain baseline](toolchain.md)). A missing/misconfigured `velora` dependency is a hard failure (nonzero exit); everything else — missing `main.dart`, a missing `Velora.boot()` call, an unwired plugin, a Flutter or Dart SDK that is missing or below the baseline — is reported as a warning and still exits `0`.
 
 ## Install a plugin package
 
@@ -85,7 +85,7 @@ Adds the package to `pubspec.yaml`, wires its plugin into `Velora.boot(plugins: 
 | `velora_cli install:push --fcm` | Add FCM push setup files |
 | `velora_cli install:push --local` | Add local notifications setup files |
 | `velora_cli install <package>` | Install a Velora plugin package: add the dependency, wire it into `Velora.boot()`, and run `pub get` |
-| `velora_cli doctor` | Check the `velora` dependency, `Velora.boot()` wiring, unwired installed plugins, and toolchain versions |
+| `velora_cli doctor` | Check the `velora` dependency, `Velora.boot()` wiring, unwired installed plugins, and the Flutter/Dart versions against the required baseline |
 
 See [CLI Commands →](commands.md) for the full reference including package-level `flutter analyze` and `flutter test` commands.
 
