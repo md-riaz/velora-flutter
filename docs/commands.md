@@ -107,6 +107,7 @@ Installable packages:
 | `velora_env` | `.env` config and dev/staging/prod flavors. | `plugins: [VeloraEnvPlugin()]` (automatic) | [env](packages/env.md) |
 | `velora_fcm` | Firebase Cloud Messaging push adapter. | `pushAdapter: VeloraFcmAdapter()` (manual) | [fcm](packages/fcm.md) |
 | `velora_local_notifications` | On-device local notifications adapter. | `localAdapter: VeloraLocalNotificationsAdapter()` (manual) | [local-notifications](packages/local-notifications.md) |
+| `velora_desktop` | Desktop lifecycle: close-to-tray, single instance, protocol activation, auto-start, suspend/resume. | Manual — construct `VeloraDesktopCoordinator` in `main()` | [desktop](packages/desktop.md) |
 | `velora_ui` | Token-first design system: theme, tokens, and components. | `theme: VeloraTheme.light()` on your app (manual) | [ui](packages/ui.md) |
 <!-- /generated:installable-packages -->
 

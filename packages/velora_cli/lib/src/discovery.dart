@@ -155,6 +155,11 @@ const veloraDocsTopics = <VeloraDocsTopic>[
     'Agent tooling and JSON contracts',
     'docs/agent-tooling.md',
   ),
+  VeloraDocsTopic(
+    'desktop',
+    'Desktop lifecycle: close-to-tray, single instance, auto-start',
+    'docs/packages/desktop.md',
+  ),
   VeloraDocsTopic('toolchain', 'Toolchain baseline', 'docs/toolchain.md'),
 ];
 

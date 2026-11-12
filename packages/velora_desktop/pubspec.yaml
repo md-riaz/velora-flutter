@@ -1,0 +1,24 @@
+name: velora_desktop
+description: "Desktop lifecycle for Velora apps: close-to-tray, single instance, protocol activation, auto-start, and suspend/resume as one event stream."
+version: 0.0.1
+publish_to: none
+
+environment:
+  sdk: ^3.13.0
+  flutter: '>=3.47.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  window_manager: ^0.6.0
+  tray_manager: ^0.8.3
+  nativeapi: ^0.5.10
+  nativeapi_flutter: ^0.5.10
+  app_links: ^7.2.2
+  windows_single_instance: ^1.2.0
+  power_state_monitor: ^0.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0

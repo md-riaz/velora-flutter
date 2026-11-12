@@ -83,6 +83,9 @@ nav:
     - velora_local_notifications: packages/local-notifications.md
     - velora_env: packages/env.md
     - velora_ui: packages/ui.md
+    - velora_desktop: packages/desktop.md
+  - Decisions:
+    - Desktop Packages: decisions/desktop-packages.md
   - Examples:
     - Example apps: examples.md
   - Project:

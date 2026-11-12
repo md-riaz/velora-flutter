@@ -69,6 +69,7 @@ Not included yet: theme tokens used, accessibility and keyboard notes as structu
 | `ui` | [Theming, components, accessibility, and responsive layout](packages/ui.md) |
 | `commands` | [CLI commands](commands.md) |
 | `agents` | [Agent tooling and JSON contracts](agent-tooling.md) |
+| `desktop` | [Desktop lifecycle: close-to-tray, single instance, auto-start](packages/desktop.md) |
 | `toolchain` | [Toolchain baseline](toolchain.md) |
 <!-- /generated:docs-topics -->
 
