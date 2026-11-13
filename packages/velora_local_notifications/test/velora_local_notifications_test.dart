@@ -293,7 +293,15 @@ class _FakeLocalNotificationsClient implements LocalNotificationsClient {
   final List<int> canceled = <int>[];
 
   @override
-  Future<void> initialize() async {
+  Future<void> initialize({
+    void Function({
+      required int id,
+      String? actionId,
+      String? input,
+      String? payload,
+      Map<String, dynamic> data,
+    })? onActivation,
+  }) async {
     initializeCalls++;
   }
 
@@ -303,6 +311,8 @@ class _FakeLocalNotificationsClient implements LocalNotificationsClient {
     String? title,
     String? body, {
     String? payload,
+    List<Map<String, String?>> actions = const [],
+    bool silent = false,
   }) async {
     shown.add(_ShowCall(id, title, body, payload));
   }

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
@@ -10,8 +12,8 @@ import 'local_notifications_client.dart';
 ///
 /// This is where every `flutter_local_notifications`-specific type lives
 /// (Android/Darwin initialization settings, notification channel/details,
-/// `TZDateTime` conversion) so that [VeloraLocalNotificationsAdapter]'s id
-/// mapping logic stays plugin-agnostic and unit-testable.
+/// `TZDateTime` conversion) so that the adapter's id mapping logic stays
+/// plugin-agnostic and unit-testable.
 ///
 /// [initialize] also requests OS notification permission (Android 13+,
 /// iOS, macOS) -- see its dartdoc.
@@ -24,6 +26,10 @@ class FlutterLocalNotificationsClient implements LocalNotificationsClient {
     String channelDescription = 'Default notification channel for this app.',
     AndroidScheduleMode androidScheduleMode =
         AndroidScheduleMode.inexactAllowWhileIdle,
+    this.windowsAppName,
+    this.windowsAppUserModelId,
+    this.windowsGuid,
+    this.windowsIconPath,
   }) : _plugin = plugin ?? FlutterLocalNotificationsPlugin(),
        _androidDefaultIcon = androidDefaultIcon,
        _channelId = channelId,
@@ -36,33 +42,27 @@ class FlutterLocalNotificationsClient implements LocalNotificationsClient {
   final String _channelId;
   final String _channelName;
   final String _channelDescription;
-
-  /// The Android alarm-scheduling mode used by [zonedSchedule].
-  ///
-  /// Defaults to [AndroidScheduleMode.inexactAllowWhileIdle], which needs no
-  /// special permission and never throws a `SecurityException` on Android
-  /// 12+/14+. Exact alarms
-  /// ([AndroidScheduleMode.exactAllowWhileIdle]/[AndroidScheduleMode.exact])
-  /// require declaring (and, on Android 12+, the user granting) the
-  /// `SCHEDULE_EXACT_ALARM` permission -- only opt into that explicitly (by
-  /// passing it to this constructor) if your notifications truly need
-  /// exact-time delivery; otherwise the inexact default is the safe choice
-  /// and works out of the box.
   final AndroidScheduleMode _androidScheduleMode;
+
+  /// Windows-specific initialization settings. All optional — when null, the
+  /// platform default applies.
+  final String? windowsAppName;
+  final String? windowsAppUserModelId;
+  final String? windowsGuid;
+  final String? windowsIconPath;
 
   bool _timeZonesInitialized = false;
 
-  /// Initializes the plugin and, on Android 13+/iOS/macOS, requests
-  /// notification permission from the OS.
-  ///
-  /// Requesting permission here (rather than only via a push adapter) means
-  /// local notifications work even in apps that have no push/remote
-  /// notification adapter wired up -- otherwise `NotificationService`'s
-  /// `requestPermission()`, which only delegates to the push adapter, would
-  /// leave a local-only app (`NoopPushAdapter`) without OS permission and
-  /// local notifications would silently never appear.
   @override
-  Future<void> initialize() async {
+  Future<void> initialize({
+    void Function({
+      required int id,
+      String? actionId,
+      String? input,
+      String? payload,
+      Map<String, dynamic> data,
+    })? onActivation,
+  }) async {
     if (!_timeZonesInitialized) {
       tz_data.initializeTimeZones();
       try {
@@ -76,20 +76,44 @@ class FlutterLocalNotificationsClient implements LocalNotificationsClient {
 
     final androidSettings = AndroidInitializationSettings(_androidDefaultIcon);
     const darwinSettings = DarwinInitializationSettings();
+
+    WindowsInitializationSettings? windowsSettings;
+    if (Platform.isWindows) {
+      windowsSettings = WindowsInitializationSettings(
+        appName: windowsAppName ?? 'Velora',
+        appUserModelId: windowsAppUserModelId ?? '',
+        guid: windowsGuid ?? '',
+        iconPath: windowsIconPath,
+      );
+    }
+
     final initializationSettings = InitializationSettings(
       android: androidSettings,
       iOS: darwinSettings,
       macOS: darwinSettings,
+      windows: windowsSettings,
     );
 
-    await _plugin.initialize(settings: initializationSettings);
+    void Function(NotificationResponse)? responseCallback;
+    if (onActivation != null) {
+      responseCallback = (response) {
+        onActivation(
+          id: response.id ?? 0,
+          actionId: response.actionId,
+          input: response.input,
+          payload: response.payload,
+          data: response.data,
+        );
+      };
+    }
+
+    await _plugin.initialize(
+      settings: initializationSettings,
+      onDidReceiveNotificationResponse: responseCallback,
+    );
     await _requestPermissions();
   }
 
-  /// Best-effort notification permission request, guarded so that a
-  /// platform without the relevant plugin implementation (e.g. running on
-  /// a platform that doesn't expose it, or under a test harness) never
-  /// throws.
   Future<void> _requestPermissions() async {
     try {
       await _plugin
@@ -97,9 +121,7 @@ class FlutterLocalNotificationsClient implements LocalNotificationsClient {
             AndroidFlutterLocalNotificationsPlugin
           >()
           ?.requestNotificationsPermission();
-    } catch (_) {
-      // Platform doesn't support (or doesn't need) this permission request.
-    }
+    } catch (_) {}
 
     try {
       await _plugin
@@ -107,9 +129,7 @@ class FlutterLocalNotificationsClient implements LocalNotificationsClient {
             IOSFlutterLocalNotificationsPlugin
           >()
           ?.requestPermissions(alert: true, badge: true, sound: true);
-    } catch (_) {
-      // Platform doesn't support (or doesn't need) this permission request.
-    }
+    } catch (_) {}
 
     try {
       await _plugin
@@ -117,18 +137,26 @@ class FlutterLocalNotificationsClient implements LocalNotificationsClient {
             MacOSFlutterLocalNotificationsPlugin
           >()
           ?.requestPermissions(alert: true, badge: true, sound: true);
-    } catch (_) {
-      // Platform doesn't support (or doesn't need) this permission request.
-    }
+    } catch (_) {}
   }
 
   @override
-  Future<void> show(int id, String? title, String? body, {String? payload}) {
+  Future<void> show(
+    int id,
+    String? title,
+    String? body, {
+    String? payload,
+    List<Map<String, String?>> actions = const [],
+    bool silent = false,
+  }) {
     return _plugin.show(
       id: id,
       title: title,
       body: body,
-      notificationDetails: _notificationDetails(),
+      notificationDetails: _notificationDetails(
+        actions: actions,
+        silent: silent,
+      ),
       payload: payload,
     );
   }
@@ -159,15 +187,51 @@ class FlutterLocalNotificationsClient implements LocalNotificationsClient {
   @override
   Future<void> cancelAll() => _plugin.cancelAll();
 
-  NotificationDetails _notificationDetails() {
+  NotificationDetails _notificationDetails({
+    List<Map<String, String?>> actions = const [],
+    bool silent = false,
+  }) {
+    final windowsActions = <WindowsAction>[];
+    final windowsInputs = <WindowsInput>[];
+    for (final action in actions) {
+      final id = action['id'];
+      final label = action['label'];
+      if (id == null || label == null) continue;
+
+      final placeholder = action['textInputPlaceholder'];
+      if (placeholder != null) {
+        windowsInputs.add(
+          WindowsTextInput(id: id, placeHolderContent: placeholder),
+        );
+        windowsActions.add(WindowsAction(
+          content: label,
+          arguments: id,
+          inputId: id,
+        ));
+      } else {
+        windowsActions.add(WindowsAction(
+          content: label,
+          arguments: id,
+        ));
+      }
+    }
+
     return NotificationDetails(
       android: AndroidNotificationDetails(
         _channelId,
         _channelName,
         channelDescription: _channelDescription,
+        playSound: !silent,
+        enableVibration: !silent,
       ),
-      iOS: const DarwinNotificationDetails(),
-      macOS: const DarwinNotificationDetails(),
+      iOS: DarwinNotificationDetails(presentSound: !silent),
+      macOS: DarwinNotificationDetails(presentSound: !silent),
+      windows: (windowsActions.isNotEmpty || windowsInputs.isNotEmpty)
+          ? WindowsNotificationDetails(
+              actions: windowsActions,
+              inputs: windowsInputs,
+            )
+          : null,
     );
   }
 }
