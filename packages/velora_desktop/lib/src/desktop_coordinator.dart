@@ -227,7 +227,11 @@ class VeloraDesktopCoordinator implements VeloraDesktopService {
     if (_disposed) return;
     _disposed = true;
     // Wait for any in-flight initialization to finish before tearing down.
-    await _initializing;
+    try {
+      await _initializing;
+    } on Object {
+      // Initialization may have failed; still clean up whatever was set up.
+    }
     for (final subscription in _subscriptions) {
       await subscription.cancel();
     }

@@ -26,7 +26,11 @@ class NativeApiAutoStartAdapter implements VeloraDesktopAutoStartPort {
       );
       if (_launcher == null) return false;
       if (arguments.isNotEmpty) {
-        _launcher!.setProgram(Platform.resolvedExecutable, arguments);
+        final ok = _launcher!.setProgram(Platform.resolvedExecutable, arguments);
+        if (!ok) {
+          _launcher = null;
+          return false;
+        }
       }
       return true;
     } on Object {
