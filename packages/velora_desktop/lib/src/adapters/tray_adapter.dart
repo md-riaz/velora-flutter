@@ -52,6 +52,7 @@ class TrayManagerAdapter implements VeloraDesktopTrayPort {
     if (separator != null) menu.addItem(separator);
     menu.addItem(quitItem);
     _icon!.setContextMenu(menu);
+    _icon!.setContextMenuTrigger(nativeapi.ContextMenuTrigger.rightClicked);
 
     _listenerId = _icon!.addListener((event) {
       if (event is nativeapi.TrayIconClickedEvent ||

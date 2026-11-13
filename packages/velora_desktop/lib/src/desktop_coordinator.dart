@@ -66,8 +66,11 @@ class VeloraDesktopCoordinator implements VeloraDesktopService {
   Future<void> initialize() => _initializing ??= _initialize();
 
   Future<void> _initialize() async {
+    if (_disposed) return;
+
     final problems = <String, String>{};
     Future<bool> attempt(String name, Future<bool> Function() body) async {
+      if (_disposed) return false;
       try {
         final ok = await body();
         if (!ok) problems[name] = 'Not supported on this platform.';
@@ -94,8 +97,7 @@ class VeloraDesktopCoordinator implements VeloraDesktopService {
         );
 
     final window = await attempt('window', () async {
-      await _window.attach(onCloseRequested: _onCloseRequested);
-      return true;
+      return _window.attach(onCloseRequested: _onCloseRequested);
     });
 
     final trayPort = _tray;
@@ -130,19 +132,35 @@ class VeloraDesktopCoordinator implements VeloraDesktopService {
         powerPort != null &&
         await attempt('powerEvents', () async {
           if (!await powerPort.start()) return false;
-          _subscriptions.add(powerPort.signals.listen(_onPowerSignal));
+          _subscriptions.add(
+            powerPort.signals.listen(
+              _onPowerSignal,
+              onError: (_) {/* degraded; already started */},
+            ),
+          );
           return true;
         });
 
     final linkPort = _links;
+    StreamSubscription<Uri>? linkSub;
     final links =
         linkPort != null &&
         await attempt('protocolLinks', () async {
-          _subscriptions.add(linkPort.links.listen(_onLink));
+          linkSub = linkPort.links.listen(
+            _onLink,
+            onError: (_) {/* degraded; stream stays open */},
+          );
           final initial = await linkPort.initialLink();
           if (initial != null) _onLink(initial);
           return true;
         });
+    if (linkSub != null) {
+      if (links) {
+        _subscriptions.add(linkSub!);
+      } else {
+        await linkSub!.cancel();
+      }
+    }
 
     _capabilities = VeloraDesktopCapabilities(
       window: window,
@@ -208,6 +226,8 @@ class VeloraDesktopCoordinator implements VeloraDesktopService {
   Future<void> dispose() async {
     if (_disposed) return;
     _disposed = true;
+    // Wait for any in-flight initialization to finish before tearing down.
+    await _initializing;
     for (final subscription in _subscriptions) {
       await subscription.cancel();
     }

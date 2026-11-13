@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:nativeapi/nativeapi.dart' as nativeapi;
 
 import '../desktop_ports.dart';
@@ -22,7 +24,11 @@ class NativeApiAutoStartAdapter implements VeloraDesktopAutoStartPort {
         appId,
         appName,
       );
-      return _launcher != null;
+      if (_launcher == null) return false;
+      if (arguments.isNotEmpty) {
+        _launcher!.setProgram(Platform.resolvedExecutable, arguments);
+      }
+      return true;
     } on Object {
       return false;
     }

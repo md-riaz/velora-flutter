@@ -15,10 +15,15 @@ class FakeWindowPort implements VeloraDesktopWindowPort {
   bool closed = false;
   bool Function()? onCloseRequested;
 
+  /// Set to `false` before [attach] to simulate a platform without a window.
+  bool supported = true;
+
   @override
-  Future<void> attach({required bool Function() onCloseRequested}) async {
+  Future<bool> attach({required bool Function() onCloseRequested}) async {
+    if (!supported) return false;
     attached = true;
     this.onCloseRequested = onCloseRequested;
+    return true;
   }
 
   @override

@@ -61,7 +61,7 @@ Each native capability has a **port interface** in `desktop_ports.dart`, impleme
 | `resumed` | System woke up | — |
 | `secondaryLaunch` | Another instance started | `arguments` |
 | `protocolActivation` | App opened via URI scheme | `uri`, `id` |
-| `notificationActivation` | Notification tapped | `id`, `data` |
+| `notificationActivation` | App calls `reportNotificationActivation` when the user taps a notification | `id`, `data` |
 
 ## Configuration
 

@@ -29,5 +29,5 @@ Not shipped. Tracked as GitHub issues, and subject to change.
 - CRUD page templates in `velora make:module` built on the `velora_ui` data table and shell.
 - Page templates (`velora template`), structured accessibility/theme metadata per component, and an MCP wrapper over the same lookup commands.
 - Splitting optional core capabilities into focused packages.
-- Realtime, desktop lifecycle, and Windows notification support.
+- Realtime and Windows notification support.
 - More backend presets.

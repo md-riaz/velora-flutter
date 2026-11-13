@@ -7,9 +7,10 @@ import 'desktop_service.dart';
 
 /// The app's main window.
 abstract interface class VeloraDesktopWindowPort {
-  /// Starts intercepting close requests. [onCloseRequested] returns whether
+  /// Starts intercepting close requests. Returns `false` when the platform has
+  /// no window (e.g. headless or test). [onCloseRequested] returns whether
   /// the window may close.
-  Future<void> attach({required bool Function() onCloseRequested});
+  Future<bool> attach({required bool Function() onCloseRequested});
 
   Future<void> show({required bool focus});
 

@@ -335,6 +335,7 @@ void main() {
 
       coordinator.reportNotificationActivation(id: 'notif-1');
       coordinator.reportNotificationActivation(id: 'notif-1');
+      await Future<void>.delayed(Duration.zero);
 
       expect(events, hasLength(1));
     });

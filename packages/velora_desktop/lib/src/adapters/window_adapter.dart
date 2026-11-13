@@ -14,24 +14,29 @@ class WindowManagerAdapter implements VeloraDesktopWindowPort {
   nativeapi.ListenerId? _listenerId;
 
   @override
-  Future<void> attach({required bool Function() onCloseRequested}) async {
+  Future<bool> attach({required bool Function() onCloseRequested}) async {
     _onCloseRequested = onCloseRequested;
     _window = nativeapi.WindowManager.instance.getCurrent();
-    if (_window == null) return;
+    if (_window == null) return false;
     _listenerId = _window!.addListener((event) {
       if (event is nativeapi.WindowCloseRequestedEvent) {
         final mayClose = _onCloseRequested?.call() ?? true;
         if (!mayClose) event.request.cancel();
       }
     });
+    return true;
   }
 
   @override
   Future<void> show({required bool focus}) async {
     final w = _window;
     if (w == null) return;
-    w.show();
-    if (focus) w.focus();
+    if (focus) {
+      w.show();
+      w.focus();
+    } else {
+      w.showInactive();
+    }
   }
 
   @override

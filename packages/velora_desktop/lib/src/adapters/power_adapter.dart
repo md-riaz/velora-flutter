@@ -40,6 +40,7 @@ class PowerStateMonitorAdapter implements VeloraDesktopPowerPort {
   Future<void> stop() async {
     await _subscription?.cancel();
     _subscription = null;
+    psm.PowerStateMonitor.instance.dispose();
     await _controller.close();
   }
 }
