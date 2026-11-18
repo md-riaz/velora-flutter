@@ -14,11 +14,10 @@ void main() {
   late FakePowerPort power;
   late DateTime clock;
 
-  VeloraDesktopCoordinator buildCoordinator({
-    VeloraDesktopConfig? config,
-  }) {
+  VeloraDesktopCoordinator buildCoordinator({VeloraDesktopConfig? config}) {
     return VeloraDesktopCoordinator(
-      config: config ??
+      config:
+          config ??
           VeloraDesktopConfig(
             appId: 'com.test.app',
             appName: 'Test',
@@ -409,10 +408,7 @@ void main() {
     });
 
     test('false when no auto-start flag', () {
-      const config = VeloraDesktopConfig(
-        appId: 'test',
-        appName: 'Test',
-      );
+      const config = VeloraDesktopConfig(appId: 'test', appName: 'Test');
       expect(config.launchedByAutoStart, isFalse);
     });
   });

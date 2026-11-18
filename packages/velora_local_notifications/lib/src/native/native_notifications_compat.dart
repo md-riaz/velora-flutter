@@ -9,8 +9,10 @@ import 'velora_native_notifications.dart';
 /// New code should use [VeloraNativeNotifications] directly. This adapter lets
 /// existing code that depends on [LocalNotificationAdapter] keep working while
 /// it migrates.
-@Deprecated('Use VeloraNativeNotifications directly. '
-    'This compatibility adapter will be removed in a future release.')
+@Deprecated(
+  'Use VeloraNativeNotifications directly. '
+  'This compatibility adapter will be removed in a future release.',
+)
 class NativeNotificationsCompat implements LocalNotificationAdapter {
   NativeNotificationsCompat(this._native);
 
@@ -34,12 +36,14 @@ class NativeNotificationsCompat implements LocalNotificationAdapter {
     Map<String, dynamic> payload = const {},
   }) {
     final id = 'compat-show-${_getAndIncrementShowId()}';
-    return _native.show(VeloraNativeNotification(
-      id: id,
-      title: title,
-      body: body,
-      payload: payload,
-    ));
+    return _native.show(
+      VeloraNativeNotification(
+        id: id,
+        title: title,
+        body: body,
+        payload: payload,
+      ),
+    );
   }
 
   @override
@@ -54,12 +58,14 @@ class NativeNotificationsCompat implements LocalNotificationAdapter {
     // "add scheduling only when the readiness app requires it"). Fall back to
     // an immediate show with the scheduled id so that the cancel path still
     // works.
-    return _native.show(VeloraNativeNotification(
-      id: id,
-      title: title,
-      body: body,
-      payload: payload,
-    ));
+    return _native.show(
+      VeloraNativeNotification(
+        id: id,
+        title: title,
+        body: body,
+        payload: payload,
+      ),
+    );
   }
 
   @override

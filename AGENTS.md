@@ -168,6 +168,11 @@ Docs must match shipped code; `tool/check_docs.sh` enforces it in CI. A PR that 
 
 Then run `tool/check_docs.sh --write` and commit the regenerated tables. Blocks between `<!-- generated:… -->` markers are never edited by hand. Describe what ships, not what is planned; put plans in `docs/roadmap.md` under *Later*.
 
+## Quality gates for multi-agent workflows
+
+- Every finding from a scan or review agent gets an independent verifier agent before it is reported or acted on. The verifier must confirm the finding against the actual code — unverified findings are dropped.
+- Fix loops (agent retries the same failing check) stop after two rounds with no progress. If two consecutive fix attempts leave the same failure, escalate to the orchestrator instead of retrying.
+
 ## Verification
 
 Run focused checks for touched packages when code changes. Docs-only changes do not require analyze/test commands unless specifically requested.

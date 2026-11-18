@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'desktop_event.dart';
 import 'desktop_ports.dart';
@@ -25,6 +26,7 @@ class VeloraDesktopCoordinator implements VeloraDesktopService {
     VeloraDesktopSingleInstancePort? singleInstance,
     VeloraDesktopLinkPort? links,
     VeloraDesktopPowerPort? power,
+    VeloraDesktopStoragePort? storage,
     DateTime Function() now = DateTime.now,
   }) : _window = window,
        _tray = tray,
@@ -32,6 +34,7 @@ class VeloraDesktopCoordinator implements VeloraDesktopService {
        _singleInstance = singleInstance,
        _links = links,
        _power = power,
+       _storage = storage,
        _now = now;
 
   final VeloraDesktopConfig config;
@@ -41,6 +44,10 @@ class VeloraDesktopCoordinator implements VeloraDesktopService {
   final VeloraDesktopSingleInstancePort? _singleInstance;
   final VeloraDesktopLinkPort? _links;
   final VeloraDesktopPowerPort? _power;
+  final VeloraDesktopStoragePort? _storage;
+
+  /// Storage key under which the window bounds are saved.
+  static const boundsKey = 'velora_desktop.window_bounds';
   final DateTime Function() _now;
 
   late final StreamController<VeloraDesktopEvent> _events =
@@ -100,6 +107,8 @@ class VeloraDesktopCoordinator implements VeloraDesktopService {
       return _window.attach(onCloseRequested: _onCloseRequested);
     });
 
+    if (window) await _restoreBounds();
+
     final trayPort = _tray;
     final trayConfig = config.tray;
     _trayReady =
@@ -135,7 +144,9 @@ class VeloraDesktopCoordinator implements VeloraDesktopService {
           _subscriptions.add(
             powerPort.signals.listen(
               _onPowerSignal,
-              onError: (_) {/* degraded; already started */},
+              onError: (_) {
+                /* degraded; already started */
+              },
             ),
           );
           return true;
@@ -148,7 +159,9 @@ class VeloraDesktopCoordinator implements VeloraDesktopService {
         await attempt('protocolLinks', () async {
           linkSub = linkPort.links.listen(
             _onLink,
-            onError: (_) {/* degraded; stream stays open */},
+            onError: (_) {
+              /* degraded; stream stays open */
+            },
           );
           final initial = await linkPort.initialLink();
           if (initial != null) _onLink(initial);
@@ -261,8 +274,38 @@ class VeloraDesktopCoordinator implements VeloraDesktopService {
         data: {'hidden': hideInstead},
       ),
     );
-    if (hideInstead) unawaited(hide());
+    if (hideInstead) {
+      unawaited(hide());
+    } else {
+      unawaited(_saveBounds());
+    }
     return !hideInstead;
+  }
+
+  Future<void> _restoreBounds() async {
+    final storage = _storage;
+    if (storage == null) return;
+    try {
+      final raw = await storage.get(boundsKey);
+      if (raw == null) return;
+      final json = jsonDecode(raw);
+      if (json is! Map<String, Object?>) return;
+      await _window.setBounds(WindowBounds.fromJson(json));
+    } on Object {
+      // A missing or corrupt record just means the default window size.
+    }
+  }
+
+  Future<void> _saveBounds() async {
+    final storage = _storage;
+    if (storage == null) return;
+    try {
+      final bounds = await _window.getBounds();
+      if (bounds == null) return;
+      await storage.set(boundsKey, jsonEncode(bounds.toJson()));
+    } on Object {
+      // Closing must not depend on persistence.
+    }
   }
 
   void _onSecondaryLaunch(List<String> arguments) {

@@ -28,7 +28,8 @@ abstract class LocalNotificationsClient {
       String? input,
       String? payload,
       Map<String, dynamic> data,
-    })? onActivation,
+    })?
+    onActivation,
   });
 
   /// Shows an immediate notification with the given integer [id].

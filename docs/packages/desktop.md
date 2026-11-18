@@ -78,6 +78,81 @@ VeloraDesktopConfig(
 )
 ```
 
+## Plugin integration
+
+Wire `VeloraDesktopPlugin` into your app's boot sequence:
+
+```dart
+await Velora.boot(
+  config: VeloraConfig(
+    // ... your config ...
+    extensions: [
+      VeloraDesktopConfigExtension(
+        VeloraDesktopConfig(
+          appId: 'com.example.myapp',
+          appName: 'My App',
+          tray: VeloraTrayConfig(iconAsset: 'assets/tray.ico'),
+          closeToTray: true,
+          protocolSchemes: {'myapp'},
+        ),
+        windowsNotificationGuid: '{YOUR-GUID}',  // optional
+        windowsAppUserModelId: 'com.example.myapp', // optional
+      ),
+    ],
+  ),
+  plugins: [const VeloraDesktopPlugin()],
+);
+```
+
+The plugin reads `VeloraDesktopConfigExtension` from `VeloraConfig.extensions`. Alternatively, pass config directly: `VeloraDesktopPlugin(config: desktopConfig)`.
+
+On non-desktop platforms an inert service is registered — `VeloraDesktop` calls stay safe with no platform checks needed in app code.
+
+## VeloraDesktop facade
+
+Static accessors for the registered desktop service:
+
+```dart
+// Access the full service
+VeloraDesktop.service
+
+// Listen to desktop lifecycle events
+VeloraDesktop.events.listen((event) {
+  if (event.type == VeloraDesktopEventType.protocolActivation) {
+    handleDeepLink(event.data['uri'] as String);
+  }
+});
+
+// Query capabilities
+if (VeloraDesktop.capabilities.tray) { /* ... */ }
+
+// Window control
+await VeloraDesktop.show();
+await VeloraDesktop.hide();
+await VeloraDesktop.quit();
+```
+
+## Window persistence
+
+When a `VeloraDesktopStoragePort` is provided to the coordinator, the window's position and size are saved on close and restored on the next launch.
+
+- **Storage key:** `velora_desktop.window_bounds`
+- **Format:** JSON `{ "x": ..., "y": ..., "width": ..., "height": ... }`
+- Corrupt or missing storage is handled gracefully — the OS default window size is used
+- Bounds are saved only on a real close, not when hiding to tray
+
+To disable persistence, omit the `storage` parameter from the coordinator (or don't provide it in a custom plugin setup).
+
 ## Testing
 
-Import `package:velora_desktop/src/testing.dart` for in-memory fakes of every port. The coordinator is fully testable without native dependencies or a desktop environment.
+Import `package:velora_desktop/velora_desktop.dart` — the barrel exports `testing.dart` with in-memory fakes of every port:
+
+- `FakeWindowPort` — tracks show/hide/close/bounds state
+- `FakeTrayPort` — exposes `onActivate`/`onShow`/`onQuit` triggers
+- `FakeAutoStartPort` — in-memory enabled flag
+- `FakeSingleInstancePort` — controllable claim success
+- `FakeLinkPort` — settable initial link and stream
+- `FakePowerPort` — emits power signals on demand
+- `FakeDesktopStoragePort` — `Map<String, String>` backed storage
+
+The coordinator is fully testable without native dependencies or a desktop environment.
