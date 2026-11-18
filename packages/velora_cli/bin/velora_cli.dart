@@ -181,7 +181,8 @@ void _search(_Args args) {
   try {
     catalog = VeloraUiCatalog.load(project);
   } on VeloraCliError catch (error) {
-    if (types != null && types.length == 1 && types.contains('component')) {
+    if (error.code == VeloraErrorCode.invalidRegistry ||
+        (types != null && types.length == 1 && types.contains('component'))) {
       rethrow;
     }
     componentsSkipped = error.message;

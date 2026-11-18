@@ -38,8 +38,11 @@ enum VeloraShellBreakpoint {
 /// current page as [body]. Anything that should select a destination — a
 /// tap, a deep link, a notification — does so by changing [selectedIndex].
 ///
-/// **State survives resizing.** [body] and [secondaryPane] keep their
-/// `State` when the window crosses a breakpoint and the navigation moves.
+/// **State survives resizing.** [body] keeps its `State` when the window
+/// crosses a breakpoint and the navigation moves. [secondaryPane] is
+/// unmounted below the expanded breakpoint, so its `State` is not preserved
+/// there; hold any pane state (form, focus, scroll) in a parent the caller
+/// owns.
 ///
 /// **Slots.** [status] is a full-width strip under the app bar for
 /// caller-supplied connectivity or sync state; the shell does not detect

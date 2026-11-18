@@ -194,6 +194,7 @@ class VeloraDesktopCoordinator implements VeloraDesktopService {
 
   @override
   Future<void> quit() async {
+    await _saveBounds();
     _quitting = true;
     await _window.close();
   }

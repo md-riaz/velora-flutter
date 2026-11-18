@@ -6,8 +6,8 @@ Usage: tool/affected_packages.py <base-ref>     (e.g. origin/main)
 
 A package is affected when a file inside it changed, or when a local package
 it depends on (directly or transitively, including dev dependencies) is
-affected. A change to CI workflows, tool/, or the root analysis options
-affects everything. Markdown changes affect nothing.
+affected. A change to CI workflows, tool/, third_party/, or the root analysis
+options affects everything. Markdown changes affect nothing.
 
 CI uses the output as a job matrix, so a PR only analyzes and tests what it
 can break.
@@ -30,6 +30,7 @@ GLOBAL = (
     "tool/check_baseline.sh",
     "tool/pub_get_all.sh",
     "analysis_options.yaml",
+    "third_party/",
 )
 
 
