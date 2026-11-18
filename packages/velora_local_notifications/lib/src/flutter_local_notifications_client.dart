@@ -61,7 +61,8 @@ class FlutterLocalNotificationsClient implements LocalNotificationsClient {
       String? input,
       String? payload,
       Map<String, dynamic> data,
-    })? onActivation,
+    })?
+    onActivation,
   }) async {
     if (!_timeZonesInitialized) {
       tz_data.initializeTimeZones();
@@ -203,16 +204,11 @@ class FlutterLocalNotificationsClient implements LocalNotificationsClient {
         windowsInputs.add(
           WindowsTextInput(id: id, placeHolderContent: placeholder),
         );
-        windowsActions.add(WindowsAction(
-          content: label,
-          arguments: id,
-          inputId: id,
-        ));
+        windowsActions.add(
+          WindowsAction(content: label, arguments: id, inputId: id),
+        );
       } else {
-        windowsActions.add(WindowsAction(
-          content: label,
-          arguments: id,
-        ));
+        windowsActions.add(WindowsAction(content: label, arguments: id));
       }
     }
 

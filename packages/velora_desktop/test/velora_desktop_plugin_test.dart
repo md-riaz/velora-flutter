@@ -22,7 +22,8 @@ void main() {
     VeloraDesktopStoragePort? storageOverride,
   }) {
     return VeloraDesktopCoordinator(
-      config: config ??
+      config:
+          config ??
           VeloraDesktopConfig(
             appId: 'com.test.app',
             appName: 'Test',
@@ -72,8 +73,9 @@ void main() {
   group('window persistence', () {
     test('restores saved bounds on initialize', () async {
       const saved = WindowBounds(x: 50, y: 60, width: 1024, height: 768);
-      storage.values[VeloraDesktopCoordinator.boundsKey] =
-          jsonEncode(saved.toJson());
+      storage.values[VeloraDesktopCoordinator.boundsKey] = jsonEncode(
+        saved.toJson(),
+      );
 
       final coordinator = buildCoordinator();
       await coordinator.initialize();
@@ -101,8 +103,12 @@ void main() {
     });
 
     test('saves bounds on real close (not hide-to-tray)', () async {
-      window.currentBounds =
-          const WindowBounds(x: 10, y: 20, width: 640, height: 480);
+      window.currentBounds = const WindowBounds(
+        x: 10,
+        y: 20,
+        width: 640,
+        height: 480,
+      );
 
       final coordinator = buildCoordinator(
         config: VeloraDesktopConfig(
@@ -126,8 +132,12 @@ void main() {
     });
 
     test('does not save bounds when hiding to tray', () async {
-      window.currentBounds =
-          const WindowBounds(x: 10, y: 20, width: 640, height: 480);
+      window.currentBounds = const WindowBounds(
+        x: 10,
+        y: 20,
+        width: 640,
+        height: 480,
+      );
 
       final coordinator = buildCoordinator();
       await coordinator.initialize();

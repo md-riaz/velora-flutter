@@ -35,21 +35,23 @@ void main() {
   group('show', () {
     test('maps string id to hashed int and forwards all fields', () async {
       await adapter.initialize();
-      await adapter.show(const VeloraNativeNotification(
-        id: 'msg-42',
-        title: 'New message',
-        body: 'Hello there',
-        payload: {'threadId': '7'},
-        actions: [
-          VeloraNativeAction(id: 'reply', label: 'Reply'),
-          VeloraNativeAction(
-            id: 'quick-reply',
-            label: 'Quick Reply',
-            textInputPlaceholder: 'Type a reply...',
-          ),
-        ],
-        silent: true,
-      ));
+      await adapter.show(
+        const VeloraNativeNotification(
+          id: 'msg-42',
+          title: 'New message',
+          body: 'Hello there',
+          payload: {'threadId': '7'},
+          actions: [
+            VeloraNativeAction(id: 'reply', label: 'Reply'),
+            VeloraNativeAction(
+              id: 'quick-reply',
+              label: 'Quick Reply',
+              textInputPlaceholder: 'Type a reply...',
+            ),
+          ],
+          silent: true,
+        ),
+      );
 
       expect(client.shown, hasLength(1));
       final call = client.shown.single;
@@ -74,14 +76,12 @@ void main() {
 
     test('replacing a notification reuses the same int id', () async {
       await adapter.initialize();
-      await adapter.show(const VeloraNativeNotification(
-        id: 'notif-1',
-        title: 'v1',
-      ));
-      await adapter.show(const VeloraNativeNotification(
-        id: 'notif-1',
-        title: 'v2',
-      ));
+      await adapter.show(
+        const VeloraNativeNotification(id: 'notif-1', title: 'v1'),
+      );
+      await adapter.show(
+        const VeloraNativeNotification(id: 'notif-1', title: 'v2'),
+      );
 
       expect(client.shown[0].id, client.shown[1].id);
       expect(client.shown[0].id, _expectedHash('notif-1'));
@@ -89,10 +89,9 @@ void main() {
 
     test('empty payload still includes veloraId', () async {
       await adapter.initialize();
-      await adapter.show(const VeloraNativeNotification(
-        id: 'bare',
-        title: 'Bare',
-      ));
+      await adapter.show(
+        const VeloraNativeNotification(id: 'bare', title: 'Bare'),
+      );
 
       final payload = jsonDecode(client.shown.single.payload!) as Map;
       expect(payload['veloraId'], 'bare');
@@ -124,10 +123,7 @@ void main() {
 
       // Simulate a body tap from the plugin.
       final payload = jsonEncode({'veloraId': 'msg-42', 'threadId': '7'});
-      client.onActivation!(
-        id: _expectedHash('msg-42'),
-        payload: payload,
-      );
+      client.onActivation!(id: _expectedHash('msg-42'), payload: payload);
       await Future<void>.delayed(Duration.zero);
 
       expect(activations, hasLength(1));
@@ -241,10 +237,9 @@ void main() {
     test('falls back to in-memory id map when payload is malformed', () async {
       await adapter.initialize();
       // Show a notification to populate the in-memory map.
-      await adapter.show(const VeloraNativeNotification(
-        id: 'mapped',
-        title: 'Test',
-      ));
+      await adapter.show(
+        const VeloraNativeNotification(id: 'mapped', title: 'Test'),
+      );
 
       final activations = <VeloraNotificationActivation>[];
       adapter.activations.listen(activations.add);
@@ -279,10 +274,9 @@ void main() {
       final fake = FakeNativeNotifications();
       await fake.initialize();
 
-      await fake.show(const VeloraNativeNotification(
-        id: 'test-1',
-        title: 'Test',
-      ));
+      await fake.show(
+        const VeloraNativeNotification(id: 'test-1', title: 'Test'),
+      );
 
       expect(fake.initialized, isTrue);
       expect(fake.shown, hasLength(1));
@@ -297,10 +291,9 @@ void main() {
       final activations = <VeloraNotificationActivation>[];
       fake.activations.listen(activations.add);
 
-      fake.simulateActivation(const VeloraNotificationActivation(
-        id: 'test-1',
-        actionId: 'reply',
-      ));
+      fake.simulateActivation(
+        const VeloraNotificationActivation(id: 'test-1', actionId: 'reply'),
+      );
       await Future<void>.delayed(Duration.zero);
 
       expect(activations, hasLength(1));
@@ -311,28 +304,30 @@ void main() {
   });
 
   group('NativeNotificationsCompat', () {
-    test('wraps VeloraNativeNotifications into LocalNotificationAdapter',
-        () async {
-      final fake = FakeNativeNotifications();
-      // ignore: deprecated_member_use_from_same_package
-      final compat = NativeNotificationsCompat(fake);
+    test(
+      'wraps VeloraNativeNotifications into LocalNotificationAdapter',
+      () async {
+        final fake = FakeNativeNotifications();
+        // ignore: deprecated_member_use_from_same_package
+        final compat = NativeNotificationsCompat(fake);
 
-      await compat.init();
-      expect(fake.initialized, isTrue);
+        await compat.init();
+        expect(fake.initialized, isTrue);
 
-      await compat.show(title: 'Hello', body: 'World');
-      expect(fake.shown, hasLength(1));
-      expect(fake.shown[0].title, 'Hello');
-      expect(fake.shown[0].body, 'World');
+        await compat.show(title: 'Hello', body: 'World');
+        expect(fake.shown, hasLength(1));
+        expect(fake.shown[0].title, 'Hello');
+        expect(fake.shown[0].body, 'World');
 
-      await compat.cancel('some-id');
-      expect(fake.canceled, ['some-id']);
+        await compat.cancel('some-id');
+        expect(fake.canceled, ['some-id']);
 
-      await compat.cancelAll();
-      expect(fake.cancelAllCalls, 1);
+        await compat.cancelAll();
+        expect(fake.cancelAllCalls, 1);
 
-      await fake.dispose();
-    });
+        await fake.dispose();
+      },
+    );
 
     test('schedule falls back to immediate show', () async {
       final fake = FakeNativeNotifications();
@@ -355,8 +350,14 @@ void main() {
 }
 
 class _ShowCall {
-  _ShowCall(this.id, this.title, this.body, this.payload, this.actions,
-      this.silent);
+  _ShowCall(
+    this.id,
+    this.title,
+    this.body,
+    this.payload,
+    this.actions,
+    this.silent,
+  );
   final int id;
   final String? title;
   final String? body;
@@ -377,7 +378,8 @@ class _FakeClient implements LocalNotificationsClient {
     String? input,
     String? payload,
     Map<String, dynamic> data,
-  })? onActivation;
+  })?
+  onActivation;
 
   @override
   Future<void> initialize({
@@ -387,7 +389,8 @@ class _FakeClient implements LocalNotificationsClient {
       String? input,
       String? payload,
       Map<String, dynamic> data,
-    })? onActivation,
+    })?
+    onActivation,
   }) async {
     initializeCalls++;
     this.onActivation = onActivation;

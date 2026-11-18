@@ -144,7 +144,9 @@ class VeloraDesktopCoordinator implements VeloraDesktopService {
           _subscriptions.add(
             powerPort.signals.listen(
               _onPowerSignal,
-              onError: (_) {/* degraded; already started */},
+              onError: (_) {
+                /* degraded; already started */
+              },
             ),
           );
           return true;
@@ -157,7 +159,9 @@ class VeloraDesktopCoordinator implements VeloraDesktopService {
         await attempt('protocolLinks', () async {
           linkSub = linkPort.links.listen(
             _onLink,
-            onError: (_) {/* degraded; stream stays open */},
+            onError: (_) {
+              /* degraded; stream stays open */
+            },
           );
           final initial = await linkPort.initialLink();
           if (initial != null) _onLink(initial);

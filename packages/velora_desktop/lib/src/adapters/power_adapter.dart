@@ -17,16 +17,17 @@ class PowerStateMonitorAdapter implements VeloraDesktopPowerPort {
     try {
       final ok = await psm.PowerStateMonitor.instance.initialize();
       if (!ok) return false;
-      _subscription =
-          psm.PowerStateMonitor.instance.onPowerStateChanged.listen((event) {
-        switch (event) {
-          case psm.PowerStateEvent.suspend:
-            _controller.add(VeloraPowerSignal.suspending);
-          case psm.PowerStateEvent.resumeSuspend:
-          case psm.PowerStateEvent.resumeAutomatic:
-            _controller.add(VeloraPowerSignal.resumed);
-        }
-      });
+      _subscription = psm.PowerStateMonitor.instance.onPowerStateChanged.listen(
+        (event) {
+          switch (event) {
+            case psm.PowerStateEvent.suspend:
+              _controller.add(VeloraPowerSignal.suspending);
+            case psm.PowerStateEvent.resumeSuspend:
+            case psm.PowerStateEvent.resumeAutomatic:
+              _controller.add(VeloraPowerSignal.resumed);
+          }
+        },
+      );
       return true;
     } on Object {
       return false;

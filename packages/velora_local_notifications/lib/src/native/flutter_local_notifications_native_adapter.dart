@@ -38,9 +38,7 @@ class FlutterLocalNotificationsNativeAdapter
 
   @override
   Future<void> initialize() async {
-    await _client.initialize(
-      onActivation: _handleActivation,
-    );
+    await _client.initialize(onActivation: _handleActivation);
   }
 
   @override
@@ -48,11 +46,15 @@ class FlutterLocalNotificationsNativeAdapter
     final intId = _hashId(notification.id);
     _idMap[intId] = notification.id;
 
-    final actions = notification.actions.map((a) => {
-      'id': a.id,
-      'label': a.label,
-      'textInputPlaceholder': a.textInputPlaceholder,
-    }).toList();
+    final actions = notification.actions
+        .map(
+          (a) => {
+            'id': a.id,
+            'label': a.label,
+            'textInputPlaceholder': a.textInputPlaceholder,
+          },
+        )
+        .toList();
 
     final payload = <String, dynamic>{
       'veloraId': notification.id,
@@ -102,7 +104,8 @@ class FlutterLocalNotificationsNativeAdapter
     if (payload != null && payload.isNotEmpty) {
       try {
         final decoded = jsonDecode(payload) as Map<String, dynamic>;
-        stringId = (decoded.remove('veloraId') as String?) ??
+        stringId =
+            (decoded.remove('veloraId') as String?) ??
             (_idMap[id] ?? id.toString());
         payloadMap = decoded;
       } on Object {
@@ -126,13 +129,15 @@ class FlutterLocalNotificationsNativeAdapter
       (_, ts) => now.difference(ts) > _deduplicationWindow,
     );
 
-    _activations.add(VeloraNotificationActivation(
-      id: stringId,
-      actionId: actionId,
-      input: input,
-      payload: payloadMap,
-      data: data,
-    ));
+    _activations.add(
+      VeloraNotificationActivation(
+        id: stringId,
+        actionId: actionId,
+        input: input,
+        payload: payloadMap,
+        data: data,
+      ),
+    );
   }
 
   /// Deterministically hashes [id] to a positive 32-bit int using FNV-1a.

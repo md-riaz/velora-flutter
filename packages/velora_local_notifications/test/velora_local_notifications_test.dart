@@ -300,7 +300,8 @@ class _FakeLocalNotificationsClient implements LocalNotificationsClient {
       String? input,
       String? payload,
       Map<String, dynamic> data,
-    })? onActivation,
+    })?
+    onActivation,
   }) async {
     initializeCalls++;
   }
