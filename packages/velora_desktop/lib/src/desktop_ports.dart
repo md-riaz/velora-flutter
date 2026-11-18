@@ -5,6 +5,49 @@ library;
 
 import 'desktop_service.dart';
 
+/// A window's position and size in screen coordinates.
+class WindowBounds {
+  const WindowBounds({
+    required this.x,
+    required this.y,
+    required this.width,
+    required this.height,
+  });
+
+  factory WindowBounds.fromJson(Map<String, Object?> json) => WindowBounds(
+    x: (json['x']! as num).toDouble(),
+    y: (json['y']! as num).toDouble(),
+    width: (json['width']! as num).toDouble(),
+    height: (json['height']! as num).toDouble(),
+  );
+
+  final double x;
+  final double y;
+  final double width;
+  final double height;
+
+  Map<String, Object?> toJson() => {
+    'x': x,
+    'y': y,
+    'width': width,
+    'height': height,
+  };
+
+  @override
+  bool operator ==(Object other) =>
+      other is WindowBounds &&
+      other.x == x &&
+      other.y == y &&
+      other.width == width &&
+      other.height == height;
+
+  @override
+  int get hashCode => Object.hash(x, y, width, height);
+
+  @override
+  String toString() => 'WindowBounds($x, $y, $width x $height)';
+}
+
 /// The app's main window.
 abstract interface class VeloraDesktopWindowPort {
   /// Starts intercepting close requests. Returns `false` when the platform has
@@ -20,6 +63,18 @@ abstract interface class VeloraDesktopWindowPort {
   Future<void> close();
 
   Future<void> detach();
+
+  /// The window's current bounds, or `null` when unavailable.
+  Future<WindowBounds?> getBounds();
+
+  Future<void> setBounds(WindowBounds bounds);
+}
+
+/// Small string key-value storage, used to remember the window bounds.
+abstract interface class VeloraDesktopStoragePort {
+  Future<String?> get(String key);
+
+  Future<void> set(String key, String value);
 }
 
 /// The tray icon.

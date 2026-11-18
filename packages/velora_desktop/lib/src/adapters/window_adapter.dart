@@ -46,6 +46,23 @@ class WindowManagerAdapter implements VeloraDesktopWindowPort {
   Future<void> close() async => _window?.close();
 
   @override
+  Future<WindowBounds?> getBounds() async {
+    final b = _window?.bounds;
+    if (b == null) return null;
+    return WindowBounds(x: b.x, y: b.y, width: b.width, height: b.height);
+  }
+
+  @override
+  Future<void> setBounds(WindowBounds bounds) async {
+    _window?.bounds = nativeapi.Rectangle(
+      x: bounds.x,
+      y: bounds.y,
+      width: bounds.width,
+      height: bounds.height,
+    );
+  }
+
+  @override
   Future<void> detach() async {
     final id = _listenerId;
     if (id != null) _window?.removeListener(id);

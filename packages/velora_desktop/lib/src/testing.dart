@@ -14,6 +14,7 @@ class FakeWindowPort implements VeloraDesktopWindowPort {
   bool focused = true;
   bool closed = false;
   bool Function()? onCloseRequested;
+  WindowBounds? currentBounds;
 
   /// Set to `false` before [attach] to simulate a platform without a window.
   bool supported = true;
@@ -45,10 +46,27 @@ class FakeWindowPort implements VeloraDesktopWindowPort {
   }
 
   @override
+  Future<WindowBounds?> getBounds() async => currentBounds;
+
+  @override
+  Future<void> setBounds(WindowBounds bounds) async => currentBounds = bounds;
+
+  @override
   Future<void> detach() async {
     onCloseRequested = null;
     attached = false;
   }
+}
+
+/// In-memory [VeloraDesktopStoragePort].
+class FakeDesktopStoragePort implements VeloraDesktopStoragePort {
+  final Map<String, String> values = {};
+
+  @override
+  Future<String?> get(String key) async => values[key];
+
+  @override
+  Future<void> set(String key, String value) async => values[key] = value;
 }
 
 /// In-memory [VeloraDesktopTrayPort].
