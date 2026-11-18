@@ -163,7 +163,6 @@ void main() {
         ),
         child: MaterialApp(
           theme: VeloraTheme.light(),
-          useInheritedMediaQuery: true,
           home: const DesktopScenarioPage(),
         ),
       ),
