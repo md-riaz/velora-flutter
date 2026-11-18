@@ -62,9 +62,10 @@ class VeloraDesktopPlugin extends VeloraPlugin {
     }
 
     context.put<VeloraDesktopService>(service);
+    // The desktop service is app-wide (tray, window, protocol links), not
+    // user-scoped, so it is intentionally not disposed on logout: it could not
+    // be revived after re-login.
     await service.initialize();
-
-    context.onBeforeLogout(service.dispose);
   }
 
   static bool get _isDesktop =>
