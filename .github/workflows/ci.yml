@@ -96,6 +96,15 @@ jobs:
         working-directory: .
         run: tool/check_baseline.sh
 
+      # Packages that depend on nativeapi/cnativeapi need the GTK 3, X11 and
+      # Xi development headers for the native build hook.
+      - name: Install Linux desktop dependencies
+        if: contains(fromJSON('["packages/velora_desktop"]'), matrix.package)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            libgtk-3-dev libx11-dev libxi-dev
+
       # Flutter packages use the flutter tool; pure Dart ones use dart.
       - name: Install dependencies
         run: |
