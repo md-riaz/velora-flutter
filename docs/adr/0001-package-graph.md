@@ -46,6 +46,7 @@ Bold pub packages ship native code. Folder pairs that import each other (7): aut
 | `velora` | — | `dio`, `file_picker`, `flutter_secure_storage`, `get`, `image_picker`, `logger`, `shared_preferences` |
 | `velora_cli` | — | `path` |
 | `velora_db` | `velora` | `dio`, `drift`, `get`, `path`, `path_provider`, `sqlite3` |
+| `velora_desktop` | — | `app_links`, `nativeapi`, `nativeapi_flutter`, `power_state_monitor`, `tray_manager`, `window_manager`, `windows_single_instance` |
 | `velora_env` | `velora` | `get` |
 | `velora_fcm` | `velora` | `firebase_core`, `firebase_messaging` |
 | `velora_lints` | — | `analyzer`, `custom_lint_builder` |

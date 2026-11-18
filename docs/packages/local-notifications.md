@@ -138,6 +138,82 @@ test('show() synthesizes an id and forwards it to the client', () async {
 
 Because the id-mapping logic (the interesting part of this adapter) only ever touches plain `int`/`String`/`DateTime` values, it's fully exercised this way with no platform channel involved.
 
+## Native notifications (new API)
+
+`VeloraNativeNotifications` is the provider-neutral facade for showing notifications with action buttons, text inputs, and activation tracking. New code should use it instead of `LocalNotificationAdapter`.
+
+```dart
+import 'package:velora_local_notifications/velora_local_notifications.dart';
+
+final notifications = FlutterLocalNotificationsNativeAdapter();
+await notifications.initialize();
+
+// Listen for activations (body taps, action buttons, text input).
+notifications.activations.listen((activation) {
+  print('Notification ${activation.id} tapped');
+  if (activation.actionId != null) {
+    print('Action: ${activation.actionId}');
+  }
+  if (activation.input != null) {
+    print('User typed: ${activation.input}');
+  }
+});
+
+// Show a notification with actions.
+await notifications.show(VeloraNativeNotification(
+  id: 'msg-42',
+  title: 'New message',
+  body: 'Hello there',
+  payload: {'threadId': '7'},
+  actions: [
+    VeloraNativeAction(id: 'reply', label: 'Reply'),
+    VeloraNativeAction(
+      id: 'quick-reply',
+      label: 'Quick Reply',
+      textInputPlaceholder: 'Type a reply...',
+    ),
+  ],
+));
+```
+
+### Models
+
+- **`VeloraNativeNotification`** — content, stable string ID (same ID replaces), actions, silent flag, payload.
+- **`VeloraNativeAction`** — action button with optional text input placeholder.
+- **`VeloraNotificationActivation`** — delivered when the user taps a notification or action. Includes the original string ID, action ID, user input, payload, and platform-specific data.
+
+### Activation stream
+
+The `activations` stream merges cold-start (app launched by a notification tap) and live (app already running) activations. Duplicate activations within a 2-second window are suppressed.
+
+### Windows support
+
+`FlutterLocalNotificationsClient` accepts `windowsAppName`, `windowsAppUserModelId`, `windowsGuid`, and `windowsIconPath` for Windows toast configuration. On Windows, text input values arrive in `VeloraNotificationActivation.data` keyed by the action's input ID (not in `input`), matching `flutter_local_notifications_windows` behavior.
+
+### Compatibility
+
+`NativeNotificationsCompat` (deprecated) wraps `VeloraNativeNotifications` into the old `LocalNotificationAdapter` interface for one deprecation cycle:
+
+```dart
+// ignore: deprecated_member_use
+final adapter = NativeNotificationsCompat(nativeNotifications);
+await Velora.boot(config: myConfig, localAdapter: adapter);
+```
+
+### Testing
+
+Use `FakeNativeNotifications` for unit tests:
+
+```dart
+final fake = FakeNativeNotifications();
+await fake.initialize();
+await fake.show(VeloraNativeNotification(id: 'test', title: 'Test'));
+expect(fake.shown, hasLength(1));
+
+// Simulate an activation.
+fake.simulateActivation(VeloraNotificationActivation(id: 'test'));
+```
+
 ---
 
-**See also:** [Notifications →](../notifications.md) for `NotificationService`/`Velora.notify`, [Plugins →](../plugins.md) for why this package wires via `localAdapter:` instead of `plugins: [...]`, and [velora_fcm →](fcm.md) for the matching remote-push adapter.
+**See also:** [Notifications →](../notifications.md) for `NotificationService`/`Velora.notify`, [Plugins →](../plugins.md) for why this package wires via `localAdapter:` instead of `plugins: [...]`, [velora_fcm →](fcm.md) for the matching remote-push adapter, and [velora_desktop →](desktop.md) for forwarding activations to the desktop coordinator.

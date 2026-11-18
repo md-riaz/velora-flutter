@@ -13,10 +13,40 @@
 /// types (`int` ids, `String`, `DateTime`).
 abstract class LocalNotificationsClient {
   /// Performs one-time plugin/platform initialization.
-  Future<void> initialize();
+  ///
+  /// When [onActivation] is non-null, it is called for every notification tap
+  /// or action button press (both cold-start and live). The parameters are:
+  /// - [id]: the platform int notification id
+  /// - [actionId]: the action button id, or `null` for a body tap
+  /// - [input]: the text the user typed, when the action has a text field
+  /// - [payload]: the opaque payload string stored with the notification
+  /// - [data]: platform-specific extra data (Windows input values, etc.)
+  Future<void> initialize({
+    void Function({
+      required int id,
+      String? actionId,
+      String? input,
+      String? payload,
+      Map<String, dynamic> data,
+    })? onActivation,
+  });
 
   /// Shows an immediate notification with the given integer [id].
-  Future<void> show(int id, String? title, String? body, {String? payload});
+  ///
+  /// [actions] is a list of action descriptors. Each entry is a map with:
+  /// - `id` (String): the action identifier
+  /// - `label` (String): the button text
+  /// - `textInputPlaceholder` (String?): when present, a text field is shown
+  ///
+  /// [silent] suppresses sound and vibration when `true`.
+  Future<void> show(
+    int id,
+    String? title,
+    String? body, {
+    String? payload,
+    List<Map<String, String?>> actions = const [],
+    bool silent = false,
+  });
 
   /// Schedules a notification with the given integer [id] to be shown at
   /// [dateTime].
