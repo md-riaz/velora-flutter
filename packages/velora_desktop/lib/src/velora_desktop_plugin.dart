@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:velora/velora.dart';
 
 import 'adapters/auto_start_adapter.dart';
 import 'adapters/link_adapter.dart';
 import 'adapters/power_adapter.dart';
 import 'adapters/single_instance_adapter.dart';
+import 'adapters/storage_adapter.dart';
 import 'adapters/tray_adapter.dart';
 import 'adapters/window_adapter.dart';
 import 'desktop_config_extension.dart';
@@ -48,12 +50,14 @@ class VeloraDesktopPlugin extends VeloraPlugin {
           'or as a VeloraDesktopConfigExtension on VeloraConfig.extensions.',
         );
       }
+      final prefs = await SharedPreferences.getInstance();
       service = VeloraDesktopCoordinator(
         config: resolved,
         window: WindowManagerAdapter(),
         tray: TrayManagerAdapter(),
         autoStart: NativeApiAutoStartAdapter(),
         singleInstance: WindowsSingleInstanceAdapter(),
+        storage: SharedPreferencesStorageAdapter(prefs),
         links: AppLinksAdapter(),
         power: PowerStateMonitorAdapter(),
       );

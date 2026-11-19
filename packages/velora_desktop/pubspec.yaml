@@ -19,6 +19,7 @@ dependencies:
   app_links: ^7.2.2
   windows_single_instance: ^1.2.0
   power_state_monitor: ^0.1.2
+  shared_preferences: ^2.5.3
 
 dev_dependencies:
   flutter_test:
