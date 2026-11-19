@@ -1,5 +1,30 @@
 import 'desktop_event.dart';
 
+/// A custom entry in the tray context menu, inserted between the built-in
+/// Show and Quit items.
+final class VeloraTrayMenuItem {
+  const VeloraTrayMenuItem({
+    required this.id,
+    required this.label,
+    this.onTap,
+    this.enabled = true,
+    this.checked,
+  });
+
+  /// Stable identifier used by the coordinator to match updates to existing
+  /// native menu items.
+  final String id;
+  final String label;
+
+  /// Called when the user clicks this entry. `null` makes the item inert
+  /// (useful for status display).
+  final void Function()? onTap;
+  final bool enabled;
+
+  /// `null` -> normal item, `true`/`false` -> checkbox item.
+  final bool? checked;
+}
+
 /// The tray icon and its two built-in menu entries.
 final class VeloraTrayConfig {
   const VeloraTrayConfig({
@@ -7,6 +32,7 @@ final class VeloraTrayConfig {
     this.tooltip,
     this.showLabel = 'Show',
     this.quitLabel = 'Quit',
+    this.customItems = const [],
   });
 
   /// Flutter asset path of the tray icon, e.g. `assets/tray.ico`.
@@ -18,6 +44,9 @@ final class VeloraTrayConfig {
 
   /// Label of the menu entry that quits the app.
   final String quitLabel;
+
+  /// Custom menu entries inserted between Show and Quit.
+  final List<VeloraTrayMenuItem> customItems;
 }
 
 /// How [VeloraDesktopService] behaves for one app.
@@ -142,6 +171,16 @@ abstract interface class VeloraDesktopService {
 
   /// Whether the app launches at login. `false` when unsupported.
   Future<bool> isAutoStartEnabled();
+
+  /// Replaces the tray icon. Throws [UnsupportedError] when tray is off.
+  Future<void> setTrayIcon(String assetPath);
+
+  /// Updates the tray tooltip. Throws [UnsupportedError] when tray is off.
+  Future<void> setTrayTooltip(String? tooltip);
+
+  /// Replaces the custom menu entries between Show and Quit.
+  /// Throws [UnsupportedError] when tray is off.
+  Future<void> setTrayMenuItems(List<VeloraTrayMenuItem> items);
 
   Future<void> dispose();
 }

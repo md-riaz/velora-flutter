@@ -88,6 +88,21 @@ abstract interface class VeloraDesktopTrayPort {
     required void Function() onQuit,
   });
 
+  /// Replaces the tray icon image. [assetPath] is a Flutter asset path.
+  Future<void> setIcon(String assetPath);
+
+  /// Updates the hover tooltip.
+  Future<void> setTooltip(String? tooltip);
+
+  /// Rebuilds the context menu with custom items between Show and Quit.
+  Future<void> setMenuItems({
+    required String showLabel,
+    required String quitLabel,
+    required List<VeloraTrayMenuItem> items,
+    required void Function() onShow,
+    required void Function() onQuit,
+  });
+
   Future<void> dispose();
 }
 

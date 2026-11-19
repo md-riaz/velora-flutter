@@ -124,6 +124,16 @@ class VeloraDesktopCoordinator implements VeloraDesktopService {
           ),
         );
 
+    if (_trayReady && trayConfig!.customItems.isNotEmpty) {
+      await trayPort!.setMenuItems(
+        showLabel: trayConfig.showLabel,
+        quitLabel: trayConfig.quitLabel,
+        items: trayConfig.customItems,
+        onShow: () => unawaited(show()),
+        onQuit: () => unawaited(quit()),
+      );
+    }
+
     final autoStartPort = _autoStart;
     final autoStart =
         autoStartPort != null &&
@@ -233,6 +243,43 @@ class VeloraDesktopCoordinator implements VeloraDesktopService {
         data: data,
       ),
       key: 'notification:$id',
+    );
+  }
+
+  @override
+  Future<void> setTrayIcon(String assetPath) async {
+    final port = _tray;
+    if (port == null || !_trayReady) {
+      throw UnsupportedError('Tray is not available');
+    }
+    await port.setIcon(assetPath);
+  }
+
+  @override
+  Future<void> setTrayTooltip(String? tooltip) async {
+    final port = _tray;
+    if (port == null || !_trayReady) {
+      throw UnsupportedError('Tray is not available');
+    }
+    await port.setTooltip(tooltip);
+  }
+
+  @override
+  Future<void> setTrayMenuItems(List<VeloraTrayMenuItem> items) async {
+    final port = _tray;
+    if (port == null || !_trayReady) {
+      throw UnsupportedError('Tray is not available');
+    }
+    final trayConfig = config.tray;
+    if (trayConfig == null) {
+      throw UnsupportedError('Tray is not available');
+    }
+    await port.setMenuItems(
+      showLabel: trayConfig.showLabel,
+      quitLabel: trayConfig.quitLabel,
+      items: items,
+      onShow: () => unawaited(show()),
+      onQuit: () => unawaited(quit()),
     );
   }
 
