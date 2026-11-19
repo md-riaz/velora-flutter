@@ -47,6 +47,7 @@ Each native capability has a **port interface** in `desktop_ports.dart`, impleme
 | Deep links | app_links | 7.2.2 | |
 | Single instance | windows_single_instance | 1.2.0 | Windows only |
 | Sleep/wake | power_state_monitor | 0.1.2 | Windows only |
+| Window storage | shared_preferences | 2.5.3 | Persists window bounds |
 
 ### Why not launch_at_startup?
 
@@ -172,14 +173,14 @@ Throws `UnsupportedError` when tray is not available.
 
 ## Window persistence
 
-When a `VeloraDesktopStoragePort` is provided to the coordinator, the window's position and size are saved on close and restored on the next launch.
+The plugin automatically persists the window's position and size via `SharedPreferences`. Bounds are saved on close and restored on the next launch.
 
 - **Storage key:** `velora_desktop.window_bounds`
 - **Format:** JSON `{ "x": ..., "y": ..., "width": ..., "height": ... }`
 - Corrupt or missing storage is handled gracefully — the OS default window size is used
-- Bounds are saved only on a real close, not when hiding to tray
+- Bounds are saved only on a real close or quit, not when hiding to tray
 
-To disable persistence, omit the `storage` parameter from the coordinator (or don't provide it in a custom plugin setup).
+Custom setups can pass any `VeloraDesktopStoragePort` implementation to the coordinator, or omit the `storage` parameter to disable persistence.
 
 ## Testing
 

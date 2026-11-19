@@ -6,6 +6,7 @@ export 'src/adapters/auto_start_adapter.dart';
 export 'src/adapters/link_adapter.dart';
 export 'src/adapters/power_adapter.dart';
 export 'src/adapters/single_instance_adapter.dart';
+export 'src/adapters/storage_adapter.dart';
 export 'src/adapters/tray_adapter.dart';
 export 'src/adapters/window_adapter.dart';
 export 'src/desktop_config_extension.dart';
