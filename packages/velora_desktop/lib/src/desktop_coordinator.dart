@@ -20,22 +20,15 @@ import 'desktop_service.dart';
 class VeloraDesktopCoordinator implements VeloraDesktopService {
   VeloraDesktopCoordinator({
     required this.config,
-    required VeloraDesktopWindowPort window,
-    VeloraDesktopTrayPort? tray,
-    VeloraDesktopAutoStartPort? autoStart,
-    VeloraDesktopSingleInstancePort? singleInstance,
-    VeloraDesktopLinkPort? links,
-    VeloraDesktopPowerPort? power,
-    VeloraDesktopStoragePort? storage,
-    DateTime Function() now = DateTime.now,
-  }) : _window = window,
-       _tray = tray,
-       _autoStart = autoStart,
-       _singleInstance = singleInstance,
-       _links = links,
-       _power = power,
-       _storage = storage,
-       _now = now;
+    required this._window,
+    this._tray,
+    this._autoStart,
+    this._singleInstance,
+    this._links,
+    this._power,
+    this._storage,
+    this._now = DateTime.now,
+  });
 
   final VeloraDesktopConfig config;
   final VeloraDesktopWindowPort _window;
