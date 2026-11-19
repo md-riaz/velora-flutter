@@ -99,6 +99,14 @@ class _InertDesktopService implements VeloraDesktopService {
   Future<void> quit() async {}
 
   @override
+  void reportNotificationActivation({
+    required String id,
+    Map<String, Object?> data = const {},
+  }) {
+    // No-op on non-desktop platforms.
+  }
+
+  @override
   Future<void> setAutoStart(bool enabled) async {
     throw UnsupportedError('Auto-start is not available on this platform.');
   }

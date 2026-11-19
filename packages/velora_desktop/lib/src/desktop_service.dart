@@ -172,6 +172,14 @@ abstract interface class VeloraDesktopService {
   /// Whether the app launches at login. `false` when unsupported.
   Future<bool> isAutoStartEnabled();
 
+  /// Reports that the user activated a notification. The activation joins the
+  /// same ordered, de-duplicated event stream as protocol activations and
+  /// secondary launches.
+  void reportNotificationActivation({
+    required String id,
+    Map<String, Object?> data = const {},
+  });
+
   /// Replaces the tray icon. Throws [UnsupportedError] when tray is off.
   Future<void> setTrayIcon(String assetPath);
 

@@ -22,6 +22,11 @@ class VeloraDesktop {
 
   static Future<void> quit() => service.quit();
 
+  static void reportNotificationActivation({
+    required String id,
+    Map<String, Object?> data = const {},
+  }) => service.reportNotificationActivation(id: id, data: data);
+
   static Future<void> setTrayIcon(String assetPath) =>
       service.setTrayIcon(assetPath);
 

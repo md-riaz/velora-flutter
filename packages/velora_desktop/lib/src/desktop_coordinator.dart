@@ -221,10 +221,7 @@ class VeloraDesktopCoordinator implements VeloraDesktopService {
     return port.isEnabled();
   }
 
-  /// Reports that the user activated a notification, so it joins the same
-  /// ordered, de-duplicated stream as the other activations. [id] must be
-  /// unique per activation (not per notification) for a repeat tap on the same
-  /// notification to be reported again.
+  @override
   void reportNotificationActivation({
     required String id,
     Map<String, Object?> data = const {},
@@ -318,9 +315,10 @@ class VeloraDesktopCoordinator implements VeloraDesktopService {
     if (hideInstead) {
       unawaited(hide());
     } else {
-      unawaited(_saveBounds());
+      // Defer to quit() so bounds are persisted before the window is destroyed.
+      unawaited(quit());
     }
-    return !hideInstead;
+    return false;
   }
 
   Future<void> _restoreBounds() async {

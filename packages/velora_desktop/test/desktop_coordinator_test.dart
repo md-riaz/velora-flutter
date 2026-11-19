@@ -111,7 +111,7 @@ void main() {
       expect(events[0].data['hidden'], isTrue);
     });
 
-    test('closes window when close-to-tray is off', () async {
+    test('defers close via quit() when close-to-tray is off', () async {
       final coordinator = buildCoordinator(
         config: const VeloraDesktopConfig(
           appId: 'com.test.app',
@@ -125,14 +125,14 @@ void main() {
       coordinator.events.listen(events.add);
 
       final mayClose = window.onCloseRequested!();
-      expect(mayClose, isTrue);
+      expect(mayClose, isFalse);
       await Future<void>.delayed(Duration.zero);
 
       expect(events, hasLength(1));
       expect(events[0].data['hidden'], isFalse);
     });
 
-    test('closes window when tray setup failed', () async {
+    test('defers close via quit() when tray setup failed', () async {
       tray.supported = false;
       final coordinator = buildCoordinator();
       await coordinator.initialize();
@@ -141,7 +141,37 @@ void main() {
       coordinator.events.listen(events.add);
 
       final mayClose = window.onCloseRequested!();
-      expect(mayClose, isTrue);
+      expect(mayClose, isFalse);
+    });
+
+    test('saves bounds before window destruction on close', () async {
+      final storage = FakeDesktopStoragePort();
+      window.currentBounds = const WindowBounds(
+        x: 10,
+        y: 20,
+        width: 800,
+        height: 600,
+      );
+      final coordinator = VeloraDesktopCoordinator(
+        config: const VeloraDesktopConfig(
+          appId: 'com.test.app',
+          appName: 'Test',
+          closeToTray: false,
+        ),
+        window: window,
+        storage: storage,
+      );
+      await coordinator.initialize();
+
+      // Close request defers to quit(), which awaits _saveBounds().
+      final mayClose = window.onCloseRequested!();
+      expect(mayClose, isFalse);
+      expect(window.closed, isFalse);
+
+      // Let quit() complete — it saves bounds then closes.
+      await Future<void>.delayed(Duration.zero);
+      expect(storage.values[VeloraDesktopCoordinator.boundsKey], isNotNull);
+      expect(window.closed, isTrue);
     });
   });
 
