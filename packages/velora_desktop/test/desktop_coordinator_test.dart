@@ -143,6 +143,36 @@ void main() {
       final mayClose = window.onCloseRequested!();
       expect(mayClose, isFalse);
     });
+
+    test('saves bounds before window destruction on close', () async {
+      final storage = FakeDesktopStoragePort();
+      window.currentBounds = const WindowBounds(
+        x: 10,
+        y: 20,
+        width: 800,
+        height: 600,
+      );
+      final coordinator = VeloraDesktopCoordinator(
+        config: const VeloraDesktopConfig(
+          appId: 'com.test.app',
+          appName: 'Test',
+          closeToTray: false,
+        ),
+        window: window,
+        storage: storage,
+      );
+      await coordinator.initialize();
+
+      // Close request defers to quit(), which awaits _saveBounds().
+      final mayClose = window.onCloseRequested!();
+      expect(mayClose, isFalse);
+      expect(window.closed, isFalse);
+
+      // Let quit() complete — it saves bounds then closes.
+      await Future<void>.delayed(Duration.zero);
+      expect(storage.values[VeloraDesktopCoordinator.boundsKey], isNotNull);
+      expect(window.closed, isTrue);
+    });
   });
 
   group('quit', () {

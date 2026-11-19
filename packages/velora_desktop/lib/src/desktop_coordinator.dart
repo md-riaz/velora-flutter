@@ -221,10 +221,7 @@ class VeloraDesktopCoordinator implements VeloraDesktopService {
     return port.isEnabled();
   }
 
-  /// Reports that the user activated a notification, so it joins the same
-  /// ordered, de-duplicated stream as the other activations. [id] must be
-  /// unique per activation (not per notification) for a repeat tap on the same
-  /// notification to be reported again.
+  @override
   void reportNotificationActivation({
     required String id,
     Map<String, Object?> data = const {},

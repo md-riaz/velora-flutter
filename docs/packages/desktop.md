@@ -182,6 +182,69 @@ The plugin automatically persists the window's position and size via `SharedPref
 
 Custom setups can pass any `VeloraDesktopStoragePort` implementation to the coordinator, or omit the `storage` parameter to disable persistence.
 
+## Protocol / deep-link registration
+
+`VeloraDesktopConfig.protocolSchemes` tells the coordinator which URI schemes to watch for, but the OS must know about them too. Registration is per-platform:
+
+| Platform | Where | Example for `myapp://` |
+|---|---|---|
+| **Windows** | HKCU registry via the app's MSIX manifest or an installer script | `<Protocol Name="myapp" />` in `Package.appxmanifest`, or `HKCU\Software\Classes\myapp\shell\open\command` → `"C:\...\app.exe" "%1"` |
+| **macOS** | `Info.plist` under `CFBundleURLTypes` | `<key>CFBundleURLSchemes</key><array><string>myapp</string></array>` |
+| **Linux** | `.desktop` file `MimeType` field | `MimeType=x-scheme-handler/myapp;` and `xdg-mime default myapp.desktop x-scheme-handler/myapp` |
+
+The `app_links` package handles incoming URIs once the scheme is registered. Cold-start links are delivered as the first event; links received while running arrive on the stream. Both are de-duplicated within the configured `deduplicationWindow`.
+
+## Notification activation
+
+When the user taps a desktop notification, report the activation so it joins the same ordered, de-duplicated event stream as protocol activations and secondary launches:
+
+```dart
+// From anywhere in the app:
+VeloraDesktop.reportNotificationActivation(
+  id: notification.id,          // unique per tap, not per notification
+  data: notification.payload,   // passed through to listeners
+);
+
+// Listen alongside other desktop events:
+VeloraDesktop.events.listen((event) {
+  if (event.type == VeloraDesktopEventType.notificationActivation) {
+    final payload = event.data; // the map you passed above
+    navigateTo(payload);
+  }
+});
+```
+
+The bridge between your notification package (`velora_fcm`, `flutter_local_notifications`, or the system API) and the desktop event stream is a single `reportNotificationActivation` call in your notification handler. This keeps the desktop package free of notification-library dependencies.
+
+**De-duplication**: the `id` parameter is the de-duplication key — a repeat tap on the same notification within `deduplicationWindow` is reported once. Use a unique id per *activation* (not per notification) if a second tap on the same notification should be reported again.
+
+## Sleep / wake events
+
+The coordinator reports `suspending` before the system sleeps and `resumed` after it wakes, once per cycle:
+
+```dart
+VeloraDesktop.events.listen((event) {
+  switch (event.type) {
+    case VeloraDesktopEventType.suspending:
+      pauseBackgroundSync();
+    case VeloraDesktopEventType.resumed:
+      resumeBackgroundSync();
+    default:
+      break;
+  }
+});
+```
+
+### Platform support
+
+| Platform | Status | Package |
+|---|---|---|
+| **Windows** | Supported | `power_state_monitor` — listens for `WM_POWERBROADCAST` |
+| **macOS** | Not yet supported | Needs `NSWorkspace` `willSleepNotification` / `didWakeNotification` |
+| **Linux** | Not yet supported | Needs D-Bus `org.freedesktop.login1.Manager` `PrepareForSleep` |
+
+On unsupported platforms the capability degrades gracefully: `capabilities.powerEvents` is `false` and no events are emitted. The `problems` map says why.
+
 ## Testing
 
 Import `package:velora_desktop/velora_desktop.dart` — the barrel exports `testing.dart` with in-memory fakes of every port:
