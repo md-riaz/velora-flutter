@@ -21,4 +21,13 @@ class VeloraDesktop {
   static Future<void> hide() => service.hide();
 
   static Future<void> quit() => service.quit();
+
+  static Future<void> setTrayIcon(String assetPath) =>
+      service.setTrayIcon(assetPath);
+
+  static Future<void> setTrayTooltip(String? tooltip) =>
+      service.setTrayTooltip(tooltip);
+
+  static Future<void> setTrayMenuItems(List<VeloraTrayMenuItem> items) =>
+      service.setTrayMenuItems(items);
 }

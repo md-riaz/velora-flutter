@@ -412,4 +412,86 @@ void main() {
       expect(config.launchedByAutoStart, isFalse);
     });
   });
+
+  group('tray updates', () {
+    test('setTrayIcon delegates to port', () async {
+      final coordinator = buildCoordinator();
+      await coordinator.initialize();
+
+      await coordinator.setTrayIcon('assets/new_icon.ico');
+      expect(tray.iconAsset, 'assets/new_icon.ico');
+    });
+
+    test('setTrayTooltip delegates to port', () async {
+      final coordinator = buildCoordinator();
+      await coordinator.initialize();
+
+      await coordinator.setTrayTooltip('New tooltip');
+      expect(tray.tooltip, 'New tooltip');
+    });
+
+    test('setTrayMenuItems delegates to port', () async {
+      final coordinator = buildCoordinator();
+      await coordinator.initialize();
+
+      final items = [
+        VeloraTrayMenuItem(id: 'status', label: 'Online', enabled: false),
+        VeloraTrayMenuItem(
+          id: 'mute',
+          label: 'Mute',
+          checked: false,
+          onTap: () {},
+        ),
+      ];
+      await coordinator.setTrayMenuItems(items);
+      expect(tray.menuItems, hasLength(2));
+      expect(tray.menuItems[0].id, 'status');
+      expect(tray.menuItems[1].checked, isFalse);
+    });
+
+    test('setTrayIcon throws when tray is unavailable', () async {
+      tray.supported = false;
+      final coordinator = buildCoordinator();
+      await coordinator.initialize();
+
+      expect(
+        () => coordinator.setTrayIcon('assets/icon.ico'),
+        throwsA(isA<UnsupportedError>()),
+      );
+    });
+
+    test('setTrayMenuItems throws when tray config is null', () async {
+      final coordinator = buildCoordinator(
+        config: const VeloraDesktopConfig(
+          appId: 'com.test.app',
+          appName: 'Test',
+        ),
+      );
+      await coordinator.initialize();
+
+      expect(
+        () => coordinator.setTrayMenuItems([]),
+        throwsA(isA<UnsupportedError>()),
+      );
+    });
+
+    test('initial customItems applied during setup', () async {
+      final coordinator = buildCoordinator(
+        config: VeloraDesktopConfig(
+          appId: 'com.test.app',
+          appName: 'Test',
+          tray: VeloraTrayConfig(
+            iconAsset: 'assets/icon.ico',
+            customItems: [
+              VeloraTrayMenuItem(id: 'a', label: 'Item A', onTap: () {}),
+            ],
+          ),
+          closeToTray: true,
+        ),
+      );
+      await coordinator.initialize();
+      expect(tray.menuItems, hasLength(1));
+      expect(tray.menuItems[0].id, 'a');
+    });
+  });
 }

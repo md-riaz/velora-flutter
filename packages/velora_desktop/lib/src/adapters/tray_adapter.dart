@@ -15,6 +15,89 @@ class TrayManagerAdapter implements VeloraDesktopTrayPort {
   nativeapi.ListenerId? _listenerId;
 
   @override
+  Future<void> setIcon(String assetPath) async {
+    _icon?.icon = ImageAsset.fromAsset(assetPath);
+  }
+
+  @override
+  Future<void> setTooltip(String? tooltip) async {
+    _icon?.setTooltip(tooltip);
+  }
+
+  @override
+  Future<void> setMenuItems({
+    required String showLabel,
+    required String quitLabel,
+    required List<VeloraTrayMenuItem> items,
+    required void Function() onShow,
+    required void Function() onQuit,
+  }) async {
+    final icon = _icon;
+    if (icon == null) return;
+
+    final menu = nativeapi.Menu.create();
+    if (menu == null) return;
+
+    final showItem = nativeapi.MenuItem.createWithLabelAndType(
+      showLabel,
+      nativeapi.MenuItemType.normal,
+    );
+    showItem?.addListener((event) {
+      if (event is nativeapi.MenuItemClickedEvent) onShow();
+    });
+    if (showItem != null) menu.addItem(showItem);
+
+    if (items.isNotEmpty) {
+      final sep = nativeapi.MenuItem.createWithLabelAndType(
+        '',
+        nativeapi.MenuItemType.separator,
+      );
+      if (sep != null) menu.addItem(sep);
+
+      for (final item in items) {
+        final type = item.checked != null
+            ? nativeapi.MenuItemType.checkbox
+            : nativeapi.MenuItemType.normal;
+        final native = nativeapi.MenuItem.createWithLabelAndType(
+          item.label,
+          type,
+        );
+        if (native == null) continue;
+        native.isEnabled = item.enabled;
+        if (item.checked != null) {
+          native.state = item.checked!
+              ? nativeapi.MenuItemState.checked
+              : nativeapi.MenuItemState.unchecked;
+        }
+        final onTap = item.onTap;
+        if (onTap != null) {
+          native.addListener((event) {
+            if (event is nativeapi.MenuItemClickedEvent) onTap();
+          });
+        }
+        menu.addItem(native);
+      }
+    }
+
+    final quitSep = nativeapi.MenuItem.createWithLabelAndType(
+      '',
+      nativeapi.MenuItemType.separator,
+    );
+    if (quitSep != null) menu.addItem(quitSep);
+
+    final quitItem = nativeapi.MenuItem.createWithLabelAndType(
+      quitLabel,
+      nativeapi.MenuItemType.normal,
+    );
+    quitItem?.addListener((event) {
+      if (event is nativeapi.MenuItemClickedEvent) onQuit();
+    });
+    if (quitItem != null) menu.addItem(quitItem);
+
+    icon.setContextMenu(menu);
+  }
+
+  @override
   Future<bool> setup({
     required VeloraTrayConfig config,
     required void Function() onActivate,

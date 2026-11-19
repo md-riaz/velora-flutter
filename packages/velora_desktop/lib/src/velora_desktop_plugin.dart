@@ -103,5 +103,20 @@ class _InertDesktopService implements VeloraDesktopService {
   Future<bool> isAutoStartEnabled() async => false;
 
   @override
+  Future<void> setTrayIcon(String assetPath) async {
+    throw UnsupportedError('Tray is not available on this platform.');
+  }
+
+  @override
+  Future<void> setTrayTooltip(String? tooltip) async {
+    throw UnsupportedError('Tray is not available on this platform.');
+  }
+
+  @override
+  Future<void> setTrayMenuItems(List<VeloraTrayMenuItem> items) async {
+    throw UnsupportedError('Tray is not available on this platform.');
+  }
+
+  @override
   Future<void> dispose() => _events.close();
 }

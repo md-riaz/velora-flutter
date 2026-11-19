@@ -80,6 +80,35 @@ class FakeTrayPort implements VeloraDesktopTrayPort {
   /// Set to `false` before [setup] to simulate a platform without tray.
   bool supported = true;
 
+  String? iconAsset;
+  String? tooltip;
+  List<VeloraTrayMenuItem> menuItems = [];
+  void Function()? menuOnShow;
+  void Function()? menuOnQuit;
+
+  @override
+  Future<void> setIcon(String assetPath) async {
+    iconAsset = assetPath;
+  }
+
+  @override
+  Future<void> setTooltip(String? tooltip) async {
+    this.tooltip = tooltip;
+  }
+
+  @override
+  Future<void> setMenuItems({
+    required String showLabel,
+    required String quitLabel,
+    required List<VeloraTrayMenuItem> items,
+    required void Function() onShow,
+    required void Function() onQuit,
+  }) async {
+    menuItems = items;
+    menuOnShow = onShow;
+    menuOnQuit = onQuit;
+  }
+
   @override
   Future<bool> setup({
     required VeloraTrayConfig config,
