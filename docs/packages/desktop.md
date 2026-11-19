@@ -130,7 +130,45 @@ if (VeloraDesktop.capabilities.tray) { /* ... */ }
 await VeloraDesktop.show();
 await VeloraDesktop.hide();
 await VeloraDesktop.quit();
+
+// Dynamic tray updates (after setup)
+await VeloraDesktop.setTrayIcon('assets/new_icon.ico');
+await VeloraDesktop.setTrayTooltip('Syncing…');
+await VeloraDesktop.setTrayMenuItems([
+  VeloraTrayMenuItem(id: 'status', label: 'Online', enabled: false),
+  VeloraTrayMenuItem(
+    id: 'mute',
+    label: 'Mute notifications',
+    checked: false,
+    onTap: () => toggleMute(),
+  ),
+]);
 ```
+
+## Tray menu items
+
+Custom menu items sit between the built-in Show and Quit entries. Pass them in `VeloraTrayConfig.customItems` for the initial menu, or call `setTrayMenuItems()` at any time to replace them:
+
+```dart
+VeloraTrayConfig(
+  iconAsset: 'assets/tray.ico',
+  customItems: [
+    VeloraTrayMenuItem(id: 'pause', label: 'Pause', onTap: pause),
+  ],
+)
+```
+
+Each `VeloraTrayMenuItem` has:
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `id` | `String` | required | Stable identifier |
+| `label` | `String` | required | Display text |
+| `onTap` | `void Function()?` | `null` | Click handler; `null` → inert |
+| `enabled` | `bool` | `true` | Greyed out when `false` |
+| `checked` | `bool?` | `null` | `null` → normal item; `true`/`false` → checkbox |
+
+Throws `UnsupportedError` when tray is not available.
 
 ## Window persistence
 
@@ -148,7 +186,7 @@ To disable persistence, omit the `storage` parameter from the coordinator (or do
 Import `package:velora_desktop/velora_desktop.dart` — the barrel exports `testing.dart` with in-memory fakes of every port:
 
 - `FakeWindowPort` — tracks show/hide/close/bounds state
-- `FakeTrayPort` — exposes `onActivate`/`onShow`/`onQuit` triggers
+- `FakeTrayPort` — exposes `onActivate`/`onShow`/`onQuit` triggers; tracks `iconAsset`, `tooltip`, `menuItems`
 - `FakeAutoStartPort` — in-memory enabled flag
 - `FakeSingleInstancePort` — controllable claim success
 - `FakeLinkPort` — settable initial link and stream
