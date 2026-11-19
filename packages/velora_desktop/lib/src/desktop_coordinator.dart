@@ -318,9 +318,10 @@ class VeloraDesktopCoordinator implements VeloraDesktopService {
     if (hideInstead) {
       unawaited(hide());
     } else {
-      unawaited(_saveBounds());
+      // Defer to quit() so bounds are persisted before the window is destroyed.
+      unawaited(quit());
     }
-    return !hideInstead;
+    return false;
   }
 
   Future<void> _restoreBounds() async {

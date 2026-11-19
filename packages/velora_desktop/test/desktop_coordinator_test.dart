@@ -111,7 +111,7 @@ void main() {
       expect(events[0].data['hidden'], isTrue);
     });
 
-    test('closes window when close-to-tray is off', () async {
+    test('defers close via quit() when close-to-tray is off', () async {
       final coordinator = buildCoordinator(
         config: const VeloraDesktopConfig(
           appId: 'com.test.app',
@@ -125,14 +125,14 @@ void main() {
       coordinator.events.listen(events.add);
 
       final mayClose = window.onCloseRequested!();
-      expect(mayClose, isTrue);
+      expect(mayClose, isFalse);
       await Future<void>.delayed(Duration.zero);
 
       expect(events, hasLength(1));
       expect(events[0].data['hidden'], isFalse);
     });
 
-    test('closes window when tray setup failed', () async {
+    test('defers close via quit() when tray setup failed', () async {
       tray.supported = false;
       final coordinator = buildCoordinator();
       await coordinator.initialize();
@@ -141,7 +141,7 @@ void main() {
       coordinator.events.listen(events.add);
 
       final mayClose = window.onCloseRequested!();
-      expect(mayClose, isTrue);
+      expect(mayClose, isFalse);
     });
   });
 
