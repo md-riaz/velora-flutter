@@ -41,9 +41,9 @@ Each native capability has a **port interface** in `desktop_ports.dart`, impleme
 
 | Capability | Package | Version | Notes |
 |---|---|---|---|
-| Window | window_manager (nativeapi) | 0.6.0 | nativeapi-backed; legacy API deprecated |
-| Tray | tray_manager (nativeapi) | 0.8.3 | Re-exports nativeapi TrayIcon |
-| Auto-start | nativeapi `LaunchAtLogin` | 0.5.10 | Not `launch_at_startup` — see below |
+| Window | window_manager (nativeapi) | 0.7.1 | nativeapi-backed; legacy API deprecated |
+| Tray | tray_manager (nativeapi) | 0.9.1 | Re-exports nativeapi TrayIcon |
+| Auto-start | nativeapi `LaunchAtLogin` | 0.6.2 | Not `launch_at_startup` — see below |
 | Deep links | app_links | 7.2.2 | |
 | Single instance | windows_single_instance | 1.2.0 | Windows only |
 | Sleep/wake | power_state_monitor | 0.1.2 | Windows only |
