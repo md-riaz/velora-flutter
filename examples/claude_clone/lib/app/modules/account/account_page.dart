@@ -493,8 +493,7 @@ class _AdminSection extends StatelessWidget {
                     ? _AdminAction(
                         icon: Icons.people_outline,
                         label: 'Manage users',
-                        description:
-                            'Visible via Velora.permission.can(\'users.manage\')',
+                        description: 'Visible via Velora.permission.can(\'users.manage\')',
                         scheme: scheme,
                         textTheme: textTheme,
                       )

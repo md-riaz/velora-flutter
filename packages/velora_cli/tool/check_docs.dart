@@ -22,10 +22,12 @@ final _problems = <String>[];
 
 void _fail(String message) => _problems.add(message);
 
-String _read(String relative) => utf8.decode(
-  File(p.join(_root, relative)).readAsBytesSync(),
-  allowMalformed: true,
-).replaceAll('\r\n', '\n');
+String _read(String relative) => utf8
+    .decode(
+      File(p.join(_root, relative)).readAsBytesSync(),
+      allowMalformed: true,
+    )
+    .replaceAll('\r\n', '\n');
 
 bool _exists(String relative) =>
     FileSystemEntity.typeSync(p.join(_root, relative)) !=
@@ -569,9 +571,18 @@ List<String> _dartFiles(String dir) {
       .toSet();
   final directory = Directory(p.join(_root, dir));
   if (directory.existsSync()) {
-    files.addAll(directory.listSync(recursive: true).whereType<File>()
-        .where((f) => f.path.endsWith('.dart'))
-        .map((f) => p.posix.join(dir, p.relative(f.path, from: directory.path).replaceAll('\\', '/'))));
+    files.addAll(
+      directory
+          .listSync(recursive: true)
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.dart'))
+          .map(
+            (f) => p.posix.join(
+              dir,
+              p.relative(f.path, from: directory.path).replaceAll('\\', '/'),
+            ),
+          ),
+    );
   }
   return files.toList();
 }

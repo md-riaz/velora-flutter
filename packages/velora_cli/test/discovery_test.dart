@@ -565,9 +565,21 @@ typedef Callback = void Function(int);
       final main = File(p.join(app, 'lib', 'main.dart')).readAsStringSync();
       expect(main, contains('GetMaterialApp('));
       expect(main, contains('feedback: MaterialFeedback()'));
-      final theme = File(p.join(app, 'lib', 'resources', 'theme', 'app_theme.dart')).readAsStringSync();
+      final theme = File(
+        p.join(app, 'lib', 'resources', 'theme', 'app_theme.dart'),
+      ).readAsStringSync();
       expect(theme, isNot(contains('VeloraTheme')));
-      final login = File(p.join(app, 'lib', 'app', 'modules', 'auth', 'controllers', 'login_controller.dart')).readAsStringSync();
+      final login = File(
+        p.join(
+          app,
+          'lib',
+          'app',
+          'modules',
+          'auth',
+          'controllers',
+          'login_controller.dart',
+        ),
+      ).readAsStringSync();
       expect(login, isNot(contains('showLoader')));
       final agents = File(p.join(app, 'AGENTS.md')).readAsStringSync();
       expect(veloraAgentsSectionIsStale(agents), isFalse);

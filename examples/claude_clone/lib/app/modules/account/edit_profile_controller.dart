@@ -68,7 +68,9 @@ class EditProfileController extends VeloraFormController {
         Velora.feedback.success('Profile updated');
         Velora.nav.back();
       } else {
-        Velora.feedback.error('Failed to update profile: User session not found');
+        Velora.feedback.error(
+          'Failed to update profile: User session not found',
+        );
       }
     } catch (e) {
       Velora.feedback.error(e.toString());

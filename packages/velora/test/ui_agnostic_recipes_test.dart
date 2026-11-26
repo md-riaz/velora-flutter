@@ -9,15 +9,12 @@ class _CounterController extends VeloraController {
   final count = 0.obs;
 
   Future<void> increment({bool shouldFail = false}) async {
-    await run<void>(
-      () async {
-        if (shouldFail) {
-          throw StateError('increment failed');
-        }
-        count.value++;
-      },
-      successMessage: 'Incremented',
-    );
+    await run<void>(() async {
+      if (shouldFail) {
+        throw StateError('increment failed');
+      }
+      count.value++;
+    }, successMessage: 'Incremented');
   }
 }
 
@@ -86,7 +83,9 @@ void main() {
     expect(presenter.events, ['material:success:Incremented']);
   });
 
-  testWidgets('same VeloraController renders with CupertinoApp', (tester) async {
+  testWidgets('same VeloraController renders with CupertinoApp', (
+    tester,
+  ) async {
     final presenter = _RecordingFeedbackPresenter('cupertino');
     await bootWithPresenter(tester, presenter);
     final controller = _CounterController();
