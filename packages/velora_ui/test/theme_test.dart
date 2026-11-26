@@ -36,6 +36,14 @@ void main() {
           theme.checkboxTheme.fillColor!.resolve({WidgetState.selected}),
           theme.colorScheme.primary,
         );
+        expect(
+          theme.switchTheme.thumbColor!.resolve({WidgetState.selected}),
+          isNot(theme.switchTheme.trackColor!.resolve({WidgetState.selected})),
+        );
+        expect(
+          theme.switchTheme.thumbColor!.resolve({}),
+          isNot(theme.switchTheme.trackColor!.resolve({})),
+        );
       });
     }
   }

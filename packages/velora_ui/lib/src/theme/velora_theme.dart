@@ -121,8 +121,32 @@ class ThemePreset {
         indicatorColor: colorScheme.secondaryContainer,
       ),
       switchTheme: SwitchThemeData(
-        thumbColor: stateColor,
-        trackColor: stateColor,
+        thumbColor: WidgetStateProperty.resolveWith<Color?>((states) {
+          if (states.contains(WidgetState.disabled)) {
+            return states.contains(WidgetState.selected)
+                ? colorScheme.surface
+                : colorScheme.onSurface.withValues(alpha: 0.38);
+          }
+          return states.contains(WidgetState.selected)
+              ? colorScheme.onPrimary
+              : colorScheme.outline;
+        }),
+        trackColor: WidgetStateProperty.resolveWith<Color?>((states) {
+          if (states.contains(WidgetState.disabled)) {
+            return states.contains(WidgetState.selected)
+                ? colorScheme.onSurface.withValues(alpha: 0.12)
+                : colorScheme.surfaceContainerHighest.withValues(alpha: 0.12);
+          }
+          return states.contains(WidgetState.selected)
+              ? colorScheme.primary
+              : colorScheme.surfaceContainerHighest;
+        }),
+        trackOutlineColor: WidgetStateProperty.resolveWith<Color?>((states) {
+          if (states.contains(WidgetState.selected)) return Colors.transparent;
+          return states.contains(WidgetState.disabled)
+              ? colorScheme.onSurface.withValues(alpha: 0.12)
+              : colorScheme.outline;
+        }),
       ),
       checkboxTheme: CheckboxThemeData(fillColor: stateColor),
       radioTheme: RadioThemeData(fillColor: stateColor),
