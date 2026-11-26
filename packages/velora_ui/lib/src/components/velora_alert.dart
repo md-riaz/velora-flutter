@@ -51,59 +51,56 @@ class InlineAlert extends StatelessWidget {
     final colors = StatusColors.of(context).forTone(status);
     final radius = BorderRadius.circular(tokens.radiusLg);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.color.withValues(alpha: 0.10),
-        borderRadius: radius,
-        border: Border(left: BorderSide(color: colors.color, width: 4)),
-      ),
-      padding: EdgeInsets.all(tokens.spacingMd),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon ?? status.icon, color: colors.color, size: 20),
-          SizedBox(width: tokens.spacingSm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (title != null) ...[
+    return Semantics(
+      liveRegion: true,
+      label: status.name,
+      child: Container(
+        decoration: BoxDecoration(
+          color: colors.color.withValues(alpha: 0.10),
+          borderRadius: radius,
+          border: Border(left: BorderSide(color: colors.color, width: 4)),
+        ),
+        padding: EdgeInsets.all(tokens.spacingMd),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon ?? status.icon, color: colors.color, size: 20),
+            SizedBox(width: tokens.spacingSm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (title != null) ...[
+                    Text(
+                      title!,
+                      style: textTheme.titleSmall?.copyWith(
+                        color: scheme.onSurface,
+                      ),
+                    ),
+                    SizedBox(height: tokens.spacingXs),
+                  ],
                   Text(
-                    title!,
-                    style: textTheme.titleSmall?.copyWith(
-                      color: scheme.onSurface,
+                    message,
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
                     ),
                   ),
-                  SizedBox(height: tokens.spacingXs),
                 ],
-                Text(
-                  message,
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (onClose != null)
-            Semantics(
-              button: true,
-              label: 'Dismiss',
-              child: InkResponse(
-                onTap: onClose,
-                radius: 18,
-                child: Padding(
-                  padding: EdgeInsets.only(left: tokens.spacingSm),
-                  child: Icon(
-                    Icons.close,
-                    size: 18,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
               ),
             ),
-        ],
+            if (onClose != null)
+              IconButton(
+                tooltip: 'Dismiss',
+                onPressed: onClose,
+                icon: Icon(
+                  Icons.close,
+                  size: 18,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

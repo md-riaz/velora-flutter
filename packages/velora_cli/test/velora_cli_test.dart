@@ -54,6 +54,33 @@ void main() {
       ).readAsStringSync(),
       contains('SecondFeatureModule.controller()'),
     );
+    for (final flags in [
+      <String>['--form'],
+      <String>['--crud', '--form'],
+    ]) {
+      final name = flags.length == 1 ? 'simple_form' : 'crud_form';
+      result = await run(['make:module', name, ...flags]);
+      expect(result.exitCode, 0, reason: result.stderr.toString());
+      final base = '${app.path}/lib/app/modules/$name';
+      expect(
+        File('$base/controllers/${name}_form_controller.dart')
+            .readAsStringSync(),
+        contains('extends VeloraFormController'),
+      );
+      expect(
+        File('$base/pages/${name}_form_page.dart').readAsStringSync(),
+        contains("firstError('name')"),
+      );
+      expect(
+        File('$base/pages/${name}_index_page.dart').readAsStringSync(),
+        contains('Open form'),
+      );
+      expect(
+        File('${app.path}/test/modules/$name/${name}_form_controller_test.dart')
+            .readAsStringSync(),
+        contains("validate('Example')"),
+      );
+    }
   });
 
   test('exposes CLI metadata', () {

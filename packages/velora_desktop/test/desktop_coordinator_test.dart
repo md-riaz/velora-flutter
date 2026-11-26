@@ -46,6 +46,51 @@ void main() {
   });
 
   group('initialize', () {
+    test('config defaults to normal title bar and visible buttons', () {
+      const config = VeloraDesktopConfig(appId: 'test', appName: 'Test');
+      expect(config.titleBarStyle, VeloraTitleBarStyle.normal);
+      expect(config.windowButtonVisibility, isTrue);
+    });
+
+    test('applies window configuration only when attached', () async {
+      const config = VeloraDesktopConfig(
+        appId: 'test',
+        appName: 'Test',
+        titleBarStyle: VeloraTitleBarStyle.customTitleBar,
+        windowButtonVisibility: false,
+      );
+      final coordinator = buildCoordinator(config: config);
+      await coordinator.initialize();
+      expect(window.titleBarStyle, VeloraTitleBarStyle.customTitleBar);
+      expect(window.windowButtonVisibility, isFalse);
+
+      window = FakeWindowPort()..supported = false;
+      final unsupported = buildCoordinator(config: config);
+      await unsupported.initialize();
+      expect(window.titleBarStyle, VeloraTitleBarStyle.normal);
+      expect(window.windowButtonVisibility, isTrue);
+    });
+
+    test('updates title bar and buttons at runtime', () async {
+      final coordinator = buildCoordinator();
+      await coordinator.initialize();
+      await coordinator.setTitleBarStyle(VeloraTitleBarStyle.hidden);
+      await coordinator.setWindowButtonVisibility(false);
+      expect(window.titleBarStyle, VeloraTitleBarStyle.hidden);
+      expect(window.windowButtonVisibility, isFalse);
+      await coordinator.setTitleBarStyle(VeloraTitleBarStyle.normal);
+      await coordinator.setWindowButtonVisibility(true);
+      expect(window.titleBarStyle, VeloraTitleBarStyle.normal);
+      expect(window.windowButtonVisibility, isTrue);
+    });
+
+    test('fake tracks title bar and button changes', () async {
+      await window.setTitleBarStyle(VeloraTitleBarStyle.customTitleBar);
+      await window.setWindowButtonVisibility(false);
+      expect(window.titleBarStyle, VeloraTitleBarStyle.customTitleBar);
+      expect(window.windowButtonVisibility, isFalse);
+    });
+
     test('sets up all ports and reports capabilities', () async {
       final coordinator = buildCoordinator();
       await coordinator.initialize();

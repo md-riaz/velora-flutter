@@ -556,6 +556,7 @@ void _makeModule(List<String> args) {
   if (args.isEmpty) _fail('Missing module name.');
   final name = _snake(args.first);
   final crud = args.contains('--crud');
+  final form = args.contains('--form');
   final className = _pascal(name);
   final title = _title(name);
   final base = p.join('lib', 'app', 'modules', name);
@@ -584,8 +585,22 @@ void _makeModule(List<String> args) {
   );
   _write(
     p.join(base, 'pages', '${name}_index_page.dart'),
-    _indexPage(name, className, title, crud),
+    _indexPage(name, className, title, crud, form),
   );
+  if (form) {
+    _write(
+      p.join(base, 'controllers', '${name}_form_controller.dart'),
+      _formController(className),
+    );
+    _write(
+      p.join(base, 'pages', '${name}_form_page.dart'),
+      _formPage(name, className, title),
+    );
+    _write(
+      p.join('test', 'modules', name, '${name}_form_controller_test.dart'),
+      _formControllerTest(name, className),
+    );
+  }
   if (crud) {
     _write(
       p.join(base, 'pages', '${name}_show_page.dart'),
@@ -2014,7 +2029,97 @@ void main() {
 }
 ''';
 
-String _indexPage(String name, String className, String title, bool crud) {
+String _indexPage(
+  String name,
+  String className,
+  String title,
+  bool crud,
+  bool form,
+) {
+  final page = _indexPageTemplate(name, className, title, crud);
+  if (!form) return page;
+  final button =
+      "IconButton(tooltip: 'Open form', icon: const Icon(Icons.edit_note), onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const ${className}FormPage()))),";
+  return "import '${name}_form_page.dart';\n$page".replaceFirst(
+    crud ? 'actions: <Widget>[' : "appBar: AppBar(title: const Text('$title'))",
+    crud
+        ? 'actions: <Widget>[$button'
+        : "appBar: AppBar(title: const Text('$title'), actions: [$button])",
+  );
+}
+
+String _formController(String className) =>
+    '''import 'package:velora/velora.dart';
+
+class ${className}FormController extends VeloraFormController {
+  bool validate(String name) {
+    final error = const VeloraValidator().required(name);
+    setErrors(error == null ? {} : {'name': [error]});
+    return error == null;
+  }
+}
+''';
+
+String _formPage(String name, String className, String title) =>
+    '''import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import '../controllers/${name}_form_controller.dart';
+
+class ${className}FormPage extends StatefulWidget {
+  const ${className}FormPage({super.key});
+  @override
+  State<${className}FormPage> createState() => _${className}FormPageState();
+}
+
+class _${className}FormPageState extends State<${className}FormPage> {
+  final controller = ${className}FormController();
+  final name = TextEditingController();
+
+  @override
+  void dispose() {
+    name.dispose();
+    controller.onClose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('$title form')),
+    body: SingleChildScrollView(child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(children: [
+        Obx(() => TextField(controller: name, decoration: InputDecoration(
+          labelText: 'Name', errorText: controller.firstError('name'),
+        ))),
+        FilledButton(onPressed: () => controller.validate(name.text), child: const Text('Validate')),
+      ]),
+    )),
+  );
+}
+''';
+
+String _formControllerTest(String name, String className) =>
+    '''import 'package:flutter_test/flutter_test.dart';
+import '../../../lib/app/modules/$name/controllers/${name}_form_controller.dart';
+
+void main() {
+  test('validates the name field', () {
+    final controller = ${className}FormController();
+    expect(controller.validate('  '), isFalse);
+    expect(controller.firstError('name'), isNotNull);
+    expect(controller.validate('Example'), isTrue);
+    expect(controller.firstError('name'), isNull);
+    controller.onClose();
+  });
+}
+''';
+
+String _indexPageTemplate(
+  String name,
+  String className,
+  String title,
+  bool crud,
+) {
   if (!crud) {
     return r'''import 'package:flutter/material.dart';
 

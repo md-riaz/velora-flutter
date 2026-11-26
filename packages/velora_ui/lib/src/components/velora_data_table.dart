@@ -429,7 +429,7 @@ class _ResponsiveDataTableState<T> extends State<ResponsiveDataTable<T>> {
             child: Text(
               column.label,
               style: style?.copyWith(color: sorted ? scheme.primary : null),
-              overflow: TextOverflow.ellipsis,
+              softWrap: true,
             ),
           ),
           if (canSort) ...[

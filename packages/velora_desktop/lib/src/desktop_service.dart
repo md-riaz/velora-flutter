@@ -1,5 +1,8 @@
 import 'desktop_event.dart';
 
+/// Native title bar, no title bar, or content underneath the title bar.
+enum VeloraTitleBarStyle { normal, hidden, customTitleBar }
+
 /// A custom entry in the tray context menu, inserted between the built-in
 /// Show and Quit items.
 final class VeloraTrayMenuItem {
@@ -61,6 +64,8 @@ final class VeloraDesktopConfig {
     this.protocolSchemes = const {},
     this.autoStartArgument = '--autostart',
     this.deduplicationWindow = const Duration(seconds: 2),
+    this.titleBarStyle = VeloraTitleBarStyle.normal,
+    this.windowButtonVisibility = true,
   }) : assert(
          !closeToTray || tray != null,
          'closeToTray needs a tray configuration',
@@ -98,6 +103,9 @@ final class VeloraDesktopConfig {
 
   /// How long an activation is remembered for duplicate suppression.
   final Duration deduplicationWindow;
+
+  final VeloraTitleBarStyle titleBarStyle;
+  final bool windowButtonVisibility;
 
   /// Whether this process was started by the auto-start entry.
   bool get launchedByAutoStart => launchArguments.contains(autoStartArgument);
@@ -161,6 +169,12 @@ abstract interface class VeloraDesktopService {
 
   /// Hides the window.
   Future<void> hide();
+
+  /// Updates the title bar style.
+  Future<void> setTitleBarStyle(VeloraTitleBarStyle style);
+
+  /// Updates native window control button visibility.
+  Future<void> setWindowButtonVisibility(bool visible);
 
   /// Closes the window for real, bypassing close-to-tray.
   Future<void> quit();

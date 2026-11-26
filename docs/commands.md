@@ -10,7 +10,7 @@ Run commands from the package or generated app directory they target. No project
 | Command | What it does |
 |---|---|
 | `velora new <name>` | Create a new Velora app skeleton. |
-| `velora make:module <name> [--crud]` | Generate a module: factory, routes, model, data source, repository, service, controller, and pages. |
+| `velora make:module <name> [--crud] [--form]` | Generate a module: factory, routes, model, data source, repository, service, controller, and pages. |
 | `velora make:auth --sanctum` | Scaffold the login and auth flow. |
 | `velora make:notifications` | Generate the in-app notification center module. |
 | `velora make:pwa` | Write a production web manifest and an offline service worker. |

@@ -84,12 +84,17 @@ class _SkeletonState extends State<Skeleton>
       widget._circle ? widget.height : (widget.radius ?? tokens.radiusSm),
     );
 
-    Widget box(double opacity) => Opacity(
-      opacity: opacity,
-      child: Container(
-        width: widget.width,
-        height: widget.height,
-        decoration: BoxDecoration(color: baseColor, borderRadius: borderRadius),
+    Widget box(double opacity) => ExcludeSemantics(
+      child: Opacity(
+        opacity: opacity,
+        child: Container(
+          width: widget.width,
+          height: widget.height,
+          decoration: BoxDecoration(
+            color: baseColor,
+            borderRadius: borderRadius,
+          ),
+        ),
       ),
     );
 

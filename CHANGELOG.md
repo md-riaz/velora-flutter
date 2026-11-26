@@ -4,6 +4,8 @@
 
 ### Breaking
 
+- Custom `VeloraDesktopWindowPort` and `VeloraDesktopService` implementations must implement title bar style and window button visibility setters.
+
 - Core visual APIs, feedback renderers, theme service, permission widgets, responsive helper and attachment widgets were removed; `run(showErrorToast:)` is now `run(reportError:)` and `showLoader` was removed. Apps own presentation through `FeedbackPresenter`. `velora_ui` now uses native widgets, `ThemePreset`, `DesignTokens`, `StatusColors`, and renamed composite components. The complete removed and renamed API list and replacements are in [the migration guide](docs/migration/v-next.md).
 - Removed `VeloraApp`, `ThemeService`, core `VeloraTheme`, `Velora.toast`, `Velora.dialog`, `Velora.loader`, `VeloraToast`, `VeloraDialog`, `VeloraLoader`, `Can`, `Responsive`, `VeloraResponsive`, `VeloraResponsiveContext`, `VeloraEmptyState`, `VeloraErrorView`, `VeloraFormField`, `VeloraLoadingButton`, `VeloraLoadingOutlinedButton`, `VeloraAttachmentChip`, `VeloraAttachmentStrip`, and `VeloraAttachmentPickerSheet`.
 - Removed UI `VeloraButton`, `VeloraButtonVariant`, `VeloraButtonSize`, `VeloraTextField`, `VeloraCard`, `VeloraCheckbox`, `VeloraSwitch`, `VeloraRadioGroup`, `VeloraRadioOption`, `VeloraSelect`, `VeloraSelectOption`, `VeloraChip`, `VeloraBadge`, `VeloraBadgeStyle`, `VeloraAvatar`, `VeloraDivider`, `VeloraTooltip`, `VeloraDialog`, `VeloraBottomSheet`, `VeloraToast`, `VeloraNavRail`, `VeloraNavBar`, `VeloraTabs`, `VeloraStepper`, `VeloraStep`, `VeloraStepState`, `VeloraProgress`, `VeloraListTile`, `VeloraScaffold`, `VeloraSectionHeader`, `VeloraPagination`, `VeloraWizard`, `VeloraMasterDetailShell`, and `VeloraStatusStrip`.
@@ -21,6 +23,8 @@
 - CI pins Flutter 3.47.9, rejects older toolchains, checks formatting, resolves every package from a clean checkout with enforced lockfiles, and now also tests `velora_cli` and `velora_lints`.
 
 ### Added
+
+- `velora_desktop` supports title bar style and native window button visibility configuration and runtime updates.
 
 - `velora search`, `velora component`, `velora docs`, and `velora manifest`: look up components, guides, packages, and commands from the versions a project has installed. Each takes `--json` and prints a versioned envelope; failures carry stable `ERR_*` codes. See `docs/agent-tooling.md`.
 - `velora make:agents` writes a managed lookup section into `AGENTS.md`; `velora new` includes it, and `velora doctor` warns when it is out of date.
