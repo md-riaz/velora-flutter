@@ -21,6 +21,8 @@ void main(List<String> arguments) {
         _makeModule(arguments.skip(1).toList());
       case 'make:auth':
         _makeAuth(arguments.skip(1).toList());
+      case 'make:theme':
+        _makeTheme(arguments.skip(1).toList());
       case 'make:notifications':
         _makeNotifications(arguments.skip(1).toList());
       case 'make:pwa':
@@ -149,6 +151,36 @@ void _makeAgents() {
         ? 'Created AGENTS.md with the Velora section.'
         : 'Updated the Velora section in AGENTS.md.',
   );
+}
+
+void _makeTheme(List<String> arguments) {
+  final args = _Args(arguments)
+    ..parse(flags: {'force'}, options: {'preset', 'font'}, maxPositional: 0);
+  final preset = args.option('preset') ?? 'aurora';
+  if (!{'aurora', 'meadow', 'neutral', 'corporate'}.contains(preset)) {
+    _invalid(
+      'Unknown preset: $preset. Use aurora, meadow, neutral, or corporate.',
+    );
+  }
+  final path = p.join('lib', 'resources', 'theme', 'app_theme.dart');
+  if (File(path).existsSync() && !args.flag('force')) {
+    _fail('$path already exists. Use --force to overwrite it.');
+  }
+  final font = args.option('font');
+  final fontArgument = font == null
+      ? ''
+      : 'textTheme: ThemeData(fontFamily: ${jsonEncode(font).replaceAll(r'$', r'\$')}).textTheme';
+  _write(path, '''import 'package:flutter/material.dart';
+import 'package:velora_ui/velora_ui.dart';
+
+class AppTheme {
+  const AppTheme._();
+
+  static ThemeData light() => ThemePreset.$preset.light($fontArgument);
+  static ThemeData dark() => ThemePreset.$preset.dark($fontArgument);
+}
+''');
+  stdout.writeln('Created $path');
 }
 
 void _search(_Args args) {

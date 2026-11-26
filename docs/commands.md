@@ -12,6 +12,7 @@ Run commands from the package or generated app directory they target. No project
 | `velora new <name>` | Create a new Velora app skeleton. |
 | `velora make:module <name> [--crud] [--form]` | Generate a module: factory, routes, model, data source, repository, service, controller, and pages. |
 | `velora make:auth --sanctum` | Scaffold the login and auth flow. |
+| `velora make:theme [--preset <aurora\|meadow\|neutral\|corporate>] [--font <family>] [--force]` | Generate an app theme from a velora_ui preset. |
 | `velora make:notifications` | Generate the in-app notification center module. |
 | `velora make:pwa` | Write a production web manifest and an offline service worker. |
 | `velora install:push --fcm \| --local` | Write FCM or local-notification setup placeholders and reminders. |

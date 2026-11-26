@@ -78,6 +78,11 @@ const veloraCommands = <VeloraCommand>[
   ),
   VeloraCommand('make:auth', '--sanctum', 'Scaffold the login and auth flow.'),
   VeloraCommand(
+    'make:theme',
+    '[--preset <aurora|meadow|neutral|corporate>] [--font <family>] [--force]',
+    'Generate an app theme from a velora_ui preset.',
+  ),
+  VeloraCommand(
     'make:notifications',
     '',
     'Generate the in-app notification center module.',
