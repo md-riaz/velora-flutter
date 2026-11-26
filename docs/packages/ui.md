@@ -18,7 +18,7 @@ MaterialApp(
 );
 ```
 
-Presets are `aurora`, `meadow`, `neutral`, and `corporate`. Their methods accept `colorScheme`, `seedColor`, `visualDensity`, and `textTheme`; the scheme takes precedence over the seed. Pass colors to the preset method: `ThemeData.copyWith(colorScheme: ...)` does not re-derive component themes.
+Presets are `aurora`, `meadow`, `neutral`, and `corporate`. Their `light()` and `dark()` methods accept `colorScheme`, `seedColor`, `visualDensity`, `textTheme`, `fontFamily`, `tokens`, `statusColors`, and `extensions`; `colorScheme` takes precedence over `seedColor`. You can also derive a custom preset with `ThemePreset.aurora.copyWith(...)`. Pass overrides to the preset method rather than calling `ThemeData.copyWith(colorScheme: ...)` so component themes re-derive from the final scheme and tokens. Any `extensions` passed are merged alongside `DesignTokens` and `StatusColors`.
 
 `DesignTokens.of(context)` reads spacing, radius, elevation and motion. `StatusColors.of(context)` provides success, warning, info and error `StatusColorPair`s; select one with `forTone(StatusTone.warning)`. Both require a preset theme.
 
@@ -26,7 +26,7 @@ Composite exports: `AdaptiveShell`, `ShellBreakpoint`, `ShellDestination`, `Resp
 
 ## Fonts
 
-Presets use the platform font. Declare your font under `flutter: fonts:` in the app's pubspec, then pass a `TextTheme` with that family to `textTheme:`.
+Presets use the platform font. Declare your font under `flutter: fonts:` in the app's pubspec, then pass `fontFamily:` (or a custom `textTheme:`) to `light()` / `dark()` or `ThemePreset.copyWith(...)`.
 
 ## Persist theme mode
 

@@ -255,4 +255,84 @@ void main() {
     handle.dispose();
     await tester.pumpWidget(const SizedBox());
   });
+
+  test(
+    'ThemePreset.copyWith and native customization options re-derive themes',
+    () {
+      final customPreset = ThemePreset.aurora.copyWith(
+        name: 'brand',
+        seedColor: Colors.teal,
+        radius: 14,
+        fontFamily: 'Roboto',
+      );
+      expect(customPreset.name, 'brand');
+      expect(customPreset.seedColor, Colors.teal);
+      expect(customPreset.radius, 14);
+      expect(customPreset.fontFamily, 'Roboto');
+
+      final customTokens = DesignTokens.light.copyWith(
+        radiusMd: 20,
+        radiusLg: 28,
+      );
+      const customStatus = StatusColors(
+        success: StatusColorPair(Color(0xFF1B5E20), Color(0xFFFFFFFF)),
+        warning: StatusColorPair(Color(0xFFE65100), Color(0xFFFFFFFF)),
+        info: StatusColorPair(Color(0xFF0D47A1), Color(0xFFFFFFFF)),
+        error: StatusColorPair(Color(0xFFB71C1C), Color(0xFFFFFFFF)),
+      );
+      final theme = ThemePreset.aurora.light(
+        tokens: customTokens,
+        statusColors: customStatus,
+        fontFamily: 'Inter',
+        extensions: const [_AppExtension(tag: 'voip')],
+      );
+
+      expect(theme.extension<DesignTokens>()?.radiusMd, 20);
+      expect(theme.extension<StatusColors>(), customStatus);
+      expect(theme.extension<_AppExtension>()?.tag, 'voip');
+      expect(theme.textTheme.bodyMedium?.fontFamily, 'Inter');
+      final cardShape = theme.cardTheme.shape as RoundedRectangleBorder;
+      expect(cardShape.borderRadius, BorderRadius.circular(28));
+    },
+  );
+
+  testWidgets('AdaptiveShell forwards Scaffold and NavigationRail options', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemePreset.aurora.light(),
+        home: AdaptiveShell(
+          destinations: const [
+            ShellDestination(icon: Icons.call, label: 'Calls'),
+            ShellDestination(icon: Icons.contacts, label: 'Contacts'),
+          ],
+          selectedIndex: 0,
+          onDestinationSelected: (_) {},
+          backgroundColor: Colors.amber.shade50,
+          drawer: const Drawer(child: Text('Menu')),
+          extendedRail: true,
+          body: const Text('Body'),
+        ),
+      ),
+    );
+    final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
+    expect(scaffold.backgroundColor, Colors.amber.shade50);
+    expect(scaffold.drawer, isNotNull);
+    final rail = tester.widget<NavigationRail>(find.byType(NavigationRail));
+    expect(rail.extended, isTrue);
+    expect(rail.labelType, NavigationRailLabelType.none);
+  });
+}
+
+class _AppExtension extends ThemeExtension<_AppExtension> {
+  const _AppExtension({required this.tag});
+  final String tag;
+
+  @override
+  _AppExtension copyWith({String? tag}) => _AppExtension(tag: tag ?? this.tag);
+
+  @override
+  _AppExtension lerp(covariant _AppExtension? other, double t) =>
+      t < 0.5 ? this : (other ?? this);
 }
