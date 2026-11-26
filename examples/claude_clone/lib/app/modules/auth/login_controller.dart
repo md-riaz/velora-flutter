@@ -37,7 +37,7 @@ class LoginController extends VeloraController {
   Future<void> login() async {
     final email = emailController.text.trim();
     if (email.isEmpty) {
-      Velora.toast.error('Enter an email to continue');
+      Velora.feedback.error('Enter an email to continue');
       return;
     }
     await run(() => _mockLogin(email));

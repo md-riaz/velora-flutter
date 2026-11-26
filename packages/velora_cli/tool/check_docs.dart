@@ -22,10 +22,12 @@ final _problems = <String>[];
 
 void _fail(String message) => _problems.add(message);
 
-String _read(String relative) => utf8.decode(
-  File(p.join(_root, relative)).readAsBytesSync(),
-  allowMalformed: true,
-);
+String _read(String relative) => utf8
+    .decode(
+      File(p.join(_root, relative)).readAsBytesSync(),
+      allowMalformed: true,
+    )
+    .replaceAll('\r\n', '\n');
 
 bool _exists(String relative) =>
     FileSystemEntity.typeSync(p.join(_root, relative)) !=
@@ -82,7 +84,7 @@ List<String> _trackedMarkdown() {
   const skipPrefixes = ['third_party/', '.claude/', 'docs/planning/'];
   const skipFiles = {'velora.md', 'velora.part2.md'};
   return LineSplitter.split(result.stdout.toString())
-      .where((f) => f.isNotEmpty)
+      .where((f) => f.isNotEmpty && _exists(f))
       .where((f) => !skipPrefixes.any(f.startsWith))
       .where((f) => !skipFiles.contains(f))
       .toList();
@@ -564,9 +566,25 @@ List<String> _dartFiles(String dir) {
     'ls-files',
     '$dir/*.dart',
   ], workingDirectory: _root);
-  return LineSplitter.split(result.stdout.toString())
-      .where((f) => f.isNotEmpty)
-      .toList();
+  final files = LineSplitter.split(result.stdout.toString())
+      .where((f) => f.isNotEmpty && _exists(f))
+      .toSet();
+  final directory = Directory(p.join(_root, dir));
+  if (directory.existsSync()) {
+    files.addAll(
+      directory
+          .listSync(recursive: true)
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.dart'))
+          .map(
+            (f) => p.posix.join(
+              dir,
+              p.relative(f.path, from: directory.path).replaceAll('\\', '/'),
+            ),
+          ),
+    );
+  }
+  return files.toList();
 }
 
 /// What `packages/velora` exports and how its capability folders depend on

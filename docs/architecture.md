@@ -4,6 +4,10 @@
 
 ---
 
+## UI boundary
+
+Core is UI-agnostic. The app owns its root, theme, widgets, and FeedbackPresenter passed to Velora.boot. Without a presenter, messages are no-ops and confirmation throws. velora_ui is an optional Material theme foundation; see [velora_ui](packages/ui.md).
+
 ## The stack
 
 Every Velora feature follows the same vertical slice, from a user action down to the network:
@@ -58,7 +62,7 @@ Services in this pattern are **plain Dart classes — not `GetxService`** — th
 
 ## Controllers own their own Rx state
 
-`VeloraController` gives every controller `loading` (`RxBool`) and `error` (`RxString`), plus a `run()` helper that wraps async work with loading/error bookkeeping and an optional success/error toast:
+`VeloraController` gives every controller `loading` (`RxBool`) and `error` (`RxString`), plus a `run()` helper that wraps async work with loading/error bookkeeping and optional success/error reporting through FeedbackPresenter:
 
 ```dart
 class UsersController extends VeloraController {

@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 
-/// A single destination in a [VeloraNavBar] or [VeloraNavRail] — an icon
+/// A single destination in a Material widget or a Material widget — an icon
 /// (with an optional distinct selected variant) and a label.
 ///
 /// This is a plain, immutable model shared by both navigation surfaces, not a
-/// widget itself: build a `List<VeloraNavDestination>` once and hand it to
-/// whichever of [VeloraNavBar] (compact/mobile) or [VeloraNavRail]
-/// (wide-screen) fits the current layout — both read [selectedIndex] from the
+/// widget itself: build a `List<ShellDestination>` once and hand it to
+/// whichever of a Material widget (compact/mobile) or a Material widget
+/// (wide-screen) fits the current layout — both read the selected index from the
 /// caller, so switching between them at a breakpoint doesn't require
 /// duplicating the destination list.
 @immutable
-class VeloraNavDestination {
+class ShellDestination {
   /// The icon shown when this destination is not selected.
   final IconData icon;
 
@@ -23,7 +23,7 @@ class VeloraNavDestination {
   final String label;
 
   /// Creates a Velora nav destination.
-  const VeloraNavDestination({
+  const ShellDestination({
     required this.icon,
     this.selectedIcon,
     required this.label,

@@ -24,7 +24,7 @@ import 'package:custom_lint_builder/custom_lint_builder.dart';
 /// @override
 /// void onInit() {
 ///   super.onInit();
-///   ever(error, (v) { if ((v as String).isNotEmpty) Velora.toast.error(v); });
+///   ever(error, (v) { if ((v as String).isNotEmpty) Velora.feedback.error(v); });
 /// }
 /// ```
 class EverInWidgetBuild extends DartLintRule {

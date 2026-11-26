@@ -1,7 +1,5 @@
-import 'package:flutter/widgets.dart' show Color;
 import 'package:get/get.dart';
 
-import '../ui/widgets/velora_attachment_picker_sheet.dart';
 import 'velora_attachment.dart';
 import 'velora_upload_adapter.dart';
 
@@ -55,18 +53,10 @@ mixin VeloraAttachmentsMixin {
     if (config.uploadImmediately) await uploadAll();
   }
 
-  /// Presents the picker UI and returns the chosen attachments (empty on
-  /// cancel, `null` if dismissed). Override to supply your own picker UI
-  /// without touching the pick/upload orchestration above.
+  /// Presents the app's picker and returns its chosen attachments.
   Future<List<VeloraAttachment>?> presentAttachmentPicker(
     VeloraPickerConfig config,
-  ) {
-    return Get.bottomSheet<List<VeloraAttachment>>(
-      VeloraAttachmentPickerSheet(config: config),
-      backgroundColor: const Color(0x00000000),
-      isScrollControlled: true,
-    );
-  }
+  );
 
   /// Append a pre-built attachment (e.g. loaded from remote).
   void addAttachment(VeloraAttachment attachment) {

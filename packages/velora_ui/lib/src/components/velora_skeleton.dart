@@ -1,38 +1,38 @@
 import 'package:flutter/material.dart';
 
-import '../theme/velora_tokens_context.dart';
+import '../tokens/velora_tokens.dart';
 
 /// A pulsing placeholder block shown while real content loads.
 ///
 /// It gently animates its opacity between two values (a "pulse", not a
-/// gradient shimmer — cheaper and calmer) using [VeloraTokens.motionSlow] for
+/// gradient shimmer — cheaper and calmer) using [DesignTokens.motionSlow] for
 /// timing and the theme's surface colors for the fill, so skeletons match the
 /// rest of the kit. The animation is automatically disabled when the platform
 /// requests reduced motion (`MediaQuery.disableAnimations`), falling back to a
 /// static block.
 ///
-/// Use the default constructor for an arbitrary box, [VeloraSkeleton.circle]
-/// for avatars, and [VeloraSkeleton.text] for a single text line.
-class VeloraSkeleton extends StatefulWidget {
+/// Use the default constructor for an arbitrary box, [Skeleton.circle]
+/// for avatars, and [Skeleton.text] for a single text line.
+class Skeleton extends StatefulWidget {
   /// The placeholder's width. Null lets it size to its parent's constraints.
   final double? width;
 
   /// The placeholder's height.
   final double height;
 
-  /// The corner radius. Defaults to [VeloraTokens.radiusSm] when null.
+  /// The corner radius. Defaults to [DesignTokens.radiusSm] when null.
   final double? radius;
 
   /// When true the placeholder is a circle of diameter [height] (ignoring
-  /// [width]/[radius]). Set by [VeloraSkeleton.circle].
+  /// [width]/[radius]). Set by [Skeleton.circle].
   final bool _circle;
 
   /// Creates a rectangular skeleton block.
-  const VeloraSkeleton({super.key, this.width, this.height = 16, this.radius})
+  const Skeleton({super.key, this.width, this.height = 16, this.radius})
     : _circle = false;
 
   /// A circular skeleton (for avatars) of the given [diameter].
-  const VeloraSkeleton.circle({super.key, required double diameter})
+  const Skeleton.circle({super.key, required double diameter})
     : width = diameter,
       height = diameter,
       radius = null,
@@ -41,15 +41,15 @@ class VeloraSkeleton extends StatefulWidget {
   /// A single skeleton text line. [width] is an explicit width in logical
   /// pixels (passed straight to the underlying box); leave it null to size to
   /// the parent's constraints.
-  const VeloraSkeleton.text({super.key, this.width, this.height = 12})
+  const Skeleton.text({super.key, this.width, this.height = 12})
     : radius = null,
       _circle = false;
 
   @override
-  State<VeloraSkeleton> createState() => _VeloraSkeletonState();
+  State<Skeleton> createState() => _SkeletonState();
 }
 
-class _VeloraSkeletonState extends State<VeloraSkeleton>
+class _SkeletonState extends State<Skeleton>
     with SingleTickerProviderStateMixin {
   // One controller for the whole state lifetime — SingleTickerProviderStateMixin
   // only permits a single ticker to ever be created, so we never dispose and
@@ -64,7 +64,7 @@ class _VeloraSkeletonState extends State<VeloraSkeleton>
     // including MediaQuery, so a live reduced-motion toggle lands here.
     final reduceMotion =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-    _controller.duration = context.veloraTokens.motionSlow;
+    _controller.duration = DesignTokens.of(context).motionSlow;
     if (reduceMotion) {
       if (_controller.isAnimating) _controller.stop();
     } else if (!_controller.isAnimating) {
@@ -74,7 +74,7 @@ class _VeloraSkeletonState extends State<VeloraSkeleton>
 
   @override
   Widget build(BuildContext context) {
-    final tokens = context.veloraTokens;
+    final tokens = DesignTokens.of(context);
     final scheme = Theme.of(context).colorScheme;
     final reduceMotion =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;

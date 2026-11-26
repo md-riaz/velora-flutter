@@ -118,7 +118,7 @@ const veloraCommands = <VeloraCommand>[
   VeloraCommand(
     'component',
     '[<name>] [--detail brief|full] [--source] [--json]',
-    'Describe a velora_ui component from the installed version, or list '
+    'Describe a velora_ui export from the installed version, or list '
         'them all.',
     json: true,
   ),
@@ -309,18 +309,17 @@ const veloraPackageCatalog = <String, VeloraPackageInstall>{
   ),
   'velora_ui': VeloraPackageInstall(
     name: 'velora_ui',
-    summary: 'Token-first design system: theme, tokens, and components.',
-    wiring: '`theme: VeloraTheme.light()` on your app (manual)',
+    summary: 'Material theme presets, tokens, and composite components.',
+    wiring: '`theme: ThemePreset.aurora.light()` on your app (manual)',
     docs: 'docs/packages/ui.md',
     constraint: '^0.0.1',
     importLine: null,
     pluginExpr: null,
     notes: [
       'Added velora_ui to pubspec.yaml. This package is not a VeloraPlugin -- it is not wired into Velora.boot(plugins: [...]) or any named boot argument. It is applied via your app\'s theme, exactly like any other ThemeData:',
-      "1. Import `package:velora_ui/velora_ui.dart` and pass `theme: VeloraTheme.light()` / `darkTheme: VeloraTheme.dark()` to your MaterialApp (or VeloraApp, if your app uses one).",
-      'For a specific brand preset or brightness, call `buildVeloraTheme(brightness: ..., preset: VeloraThemePreset.aurora | VeloraThemePreset.meadow)` directly instead of the light()/dark() shortcuts.',
-      'Read design tokens (spacing, radius, success/warning/info colors, elevation, motion) anywhere below that theme via `context.veloraTokens`.',
-      'Components ship too: buttons, cards, form inputs, layout, navigation, dialogs, sheets, and toasts. See docs/packages/ui.md for the full list.',
+      "1. Import `package:velora_ui/velora_ui.dart` and pass `theme: ThemePreset.aurora.light()` / `darkTheme: ThemePreset.aurora.dark()` to your app.",
+      'Read spacing and status colors with `DesignTokens.of(context)` and `StatusColors.of(context)`.',
+      'Use native Flutter widgets and the composite components in docs/packages/ui.md.',
       'Note: until velora_ui is published to pub.dev, use a git or path dependency override.',
     ],
   ),

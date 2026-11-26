@@ -31,7 +31,7 @@ class ArticleController extends VeloraController {
   Future<void> load() async {
     await run(() async {
       article.value = await _repository.show(articleId);
-    }, showErrorToast: false);
+    }, reportError: false);
   }
 
   /// Re-runs [load] -- used by the page's pull-to-refresh gesture. Named

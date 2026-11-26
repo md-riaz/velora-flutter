@@ -43,11 +43,12 @@ class AccountPage extends GetView<AccountController> {
           ),
 
           // ----------------------------------------------------------------
-          // Admin-only section (RoleOnly widget demo)
+          // Admin-only section (permission role check)
           // ----------------------------------------------------------------
-          RoleOnly(
-            role: 'admin',
-            child: _AdminSection(scheme: scheme, textTheme: textTheme),
+          Obx(
+            () => Velora.permission.hasRole('admin')
+                ? _AdminSection(scheme: scheme, textTheme: textTheme)
+                : const SizedBox.shrink(),
           ),
 
           // ----------------------------------------------------------------
@@ -487,15 +488,16 @@ class _AdminSection extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              Can(
-                permission: 'users.manage',
-                child: _AdminAction(
-                  icon: Icons.people_outline,
-                  label: 'Manage users',
-                  description: 'Visible via Can(permission: \'users.manage\')',
-                  scheme: scheme,
-                  textTheme: textTheme,
-                ),
+              Obx(
+                () => Velora.permission.can('users.manage')
+                    ? _AdminAction(
+                        icon: Icons.people_outline,
+                        label: 'Manage users',
+                        description: 'Visible via Velora.permission.can(\'users.manage\')',
+                        scheme: scheme,
+                        textTheme: textTheme,
+                      )
+                    : const SizedBox.shrink(),
               ),
             ],
           ),

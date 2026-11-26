@@ -68,7 +68,7 @@ class UsersController extends VeloraController {
       users.add(user);
     });
     if (error.value.isNotEmpty) return; // validation/network error shown by UI
-    Velora.toast.success('User created');
+    Velora.feedback.success('User created');
   }
 }
 ```

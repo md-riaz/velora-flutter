@@ -7,21 +7,24 @@ import 'package:flutter/material.dart';
 /// [ColorScheme] and [TextTheme] already cover most of what a Material 3
 /// theme needs (primary/secondary/surface colors, type scale, ...) — those
 /// are generated from a brand seed color by [ColorScheme.fromSeed] and don't
-/// need to be duplicated here. [VeloraTokens] carries everything Velora's
+/// need to be duplicated here. [DesignTokens] carries everything Velora's
 /// design system needs *in addition* to that: spacing, radius, a few
 /// semantic colors Material's scheme doesn't define (success/warning/info),
 /// elevation presets, and motion durations.
 ///
 /// Attach a token set to a [ThemeData] via its `extensions:` list (see
-/// `buildVeloraTheme` in `velora_theme.dart`), then read it back anywhere
-/// below that `Theme` with `Theme.of(context).extension<VeloraTokens>()!` —
-/// or, more conveniently, via the `context.veloraTokens` extension getter.
+/// `buildtheme` in `velora_theme.dart`), then read it back anywhere
+/// below that `Theme` with `Theme.of(context).extension<DesignTokens>()!` —
+/// or with `DesignTokens.of(context)`.
 ///
 /// All fields are `final` and every token set here is `const`, so the
-/// default token sets ([VeloraTokens.light] / [VeloraTokens.dark]) can be
+/// default token sets ([DesignTokens.light] / [DesignTokens.dark]) can be
 /// used directly as compile-time constants.
 @immutable
-class VeloraTokens extends ThemeExtension<VeloraTokens> {
+class DesignTokens extends ThemeExtension<DesignTokens> {
+  static DesignTokens of(BuildContext context) =>
+      Theme.of(context).extension<DesignTokens>() ??
+      (throw StateError("DesignTokens missing from theme"));
   // ---------------------------------------------------------------------
   // Spacing — a linear-ish scale for padding/gaps. Values are logical
   // pixels, meant to be used directly (`SizedBox(height: tokens.spacingMd)`)
@@ -142,7 +145,7 @@ class VeloraTokens extends ThemeExtension<VeloraTokens> {
   /// Creates a token set. All fields are required — use [light] or [dark]
   /// for Velora's default values, then [copyWith] to override individual
   /// tokens.
-  const VeloraTokens({
+  const DesignTokens({
     required this.spacingXs,
     required this.spacingSm,
     required this.spacingMd,
@@ -195,7 +198,7 @@ class VeloraTokens extends ThemeExtension<VeloraTokens> {
   static const Duration _motionSlow = Duration(milliseconds: 360);
 
   /// Velora's default light-mode token set.
-  static const light = VeloraTokens(
+  static const light = DesignTokens(
     spacingXs: _spacingXs,
     spacingSm: _spacingSm,
     spacingMd: _spacingMd,
@@ -230,7 +233,7 @@ class VeloraTokens extends ThemeExtension<VeloraTokens> {
   /// Velora's default dark-mode token set. Spacing/radius/elevation/motion
   /// match [light]; only the semantic colors and shadow opacities change so
   /// they read correctly against dark surfaces.
-  static const dark = VeloraTokens(
+  static const dark = DesignTokens(
     spacingXs: _spacingXs,
     spacingSm: _spacingSm,
     spacingMd: _spacingMd,
@@ -263,7 +266,7 @@ class VeloraTokens extends ThemeExtension<VeloraTokens> {
   );
 
   @override
-  VeloraTokens copyWith({
+  DesignTokens copyWith({
     double? spacingXs,
     double? spacingSm,
     double? spacingMd,
@@ -290,7 +293,7 @@ class VeloraTokens extends ThemeExtension<VeloraTokens> {
     Duration? motionNormal,
     Duration? motionSlow,
   }) {
-    return VeloraTokens(
+    return DesignTokens(
       spacingXs: spacingXs ?? this.spacingXs,
       spacingSm: spacingSm ?? this.spacingSm,
       spacingMd: spacingMd ?? this.spacingMd,
@@ -320,9 +323,9 @@ class VeloraTokens extends ThemeExtension<VeloraTokens> {
   }
 
   @override
-  VeloraTokens lerp(ThemeExtension<VeloraTokens>? other, double t) {
-    if (other is! VeloraTokens) return this;
-    return VeloraTokens(
+  DesignTokens lerp(ThemeExtension<DesignTokens>? other, double t) {
+    if (other is! DesignTokens) return this;
+    return DesignTokens(
       spacingXs: lerpDouble(spacingXs, other.spacingXs, t)!,
       spacingSm: lerpDouble(spacingSm, other.spacingSm, t)!,
       spacingMd: lerpDouble(spacingMd, other.spacingMd, t)!,
@@ -356,7 +359,7 @@ class VeloraTokens extends ThemeExtension<VeloraTokens> {
   }
 
   /// Interpolates two [Duration]s by lerping their millisecond counts —
-  /// there's no `Duration.lerp` in the SDK, so this is [VeloraTokens]'
+  /// there's no `Duration.lerp` in the SDK, so this is [DesignTokens]'
   /// equivalent for the motion tokens.
   static Duration _lerpDuration(Duration a, Duration b, double t) {
     final ms = lerpDouble(

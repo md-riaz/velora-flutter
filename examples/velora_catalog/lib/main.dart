@@ -1,3 +1,5 @@
+import 'material_feedback_presenter.dart';
+
 import 'package:flutter/material.dart';
 import 'package:velora/velora.dart';
 import 'package:velora_db/velora_db.dart';
@@ -13,6 +15,7 @@ Future<void> main() async {
   final toggleSource = ToggleConnectivitySource();
 
   await Velora.boot(
+    feedback: const MaterialFeedbackPresenter(),
     config: const VeloraConfig(
       appName: 'Velora Catalog',
       // No real backend -- MockArticlesRemoteDataSource (constructed by
@@ -49,10 +52,10 @@ class VeloraCatalogApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return VeloraApp(
+    return GetMaterialApp(
       title: 'Velora Catalog',
       initialRoute: AppRoutes.catalog,
-      routes: AppPages.routes,
+      getPages: AppPages.routes,
       theme: ThemeData(
         useMaterial3: true,
         colorSchemeSeed: const Color(0xFF6750A4),

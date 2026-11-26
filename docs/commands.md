@@ -19,7 +19,7 @@ Run commands from the package or generated app directory they target. No project
 | `velora doctor` | Check the velora dependency, Velora.boot() wiring, unwired plugins, the managed AGENTS.md section, and the Flutter/Dart baseline. |
 | `velora make:agents` | Write or refresh the managed Velora section in AGENTS.md. |
 | `velora search <query> [--type <type>] [--limit <n>] [--json]` | Search components, docs topics, packages, and commands. |
-| `velora component [<name>] [--detail brief\|full] [--source] [--json]` | Describe a velora_ui component from the installed version, or list them all. |
+| `velora component [<name>] [--detail brief\|full] [--source] [--json]` | Describe a velora_ui export from the installed version, or list them all. |
 | `velora docs [<topic>] [--json]` | Print a documentation topic, or list the topics. |
 | `velora manifest [--json]` | Describe this CLI: commands, packages, output types, and error codes. |
 <!-- /generated:cli-commands -->
@@ -108,7 +108,7 @@ Installable packages:
 | `velora_fcm` | Firebase Cloud Messaging push adapter. | `pushAdapter: VeloraFcmAdapter()` (manual) | [fcm](packages/fcm.md) |
 | `velora_local_notifications` | On-device local notifications adapter. | `localAdapter: VeloraLocalNotificationsAdapter()` (manual) | [local-notifications](packages/local-notifications.md) |
 | `velora_desktop` | Desktop lifecycle: close-to-tray, single instance, protocol activation, auto-start, suspend/resume. | Manual — construct `VeloraDesktopCoordinator` in `main()` | [desktop](packages/desktop.md) |
-| `velora_ui` | Token-first design system: theme, tokens, and components. | `theme: VeloraTheme.light()` on your app (manual) | [ui](packages/ui.md) |
+| `velora_ui` | Material theme presets, tokens, and composite components. | `theme: ThemePreset.aurora.light()` on your app (manual) | [ui](packages/ui.md) |
 <!-- /generated:installable-packages -->
 
 Packages marked *automatic* are `VeloraPlugin`s and get spliced into `plugins: [...]`. Packages marked *manual* only get the pubspec dependency; the command prints the remaining wiring steps. None of these are published to pub.dev yet, so override each with a git or path dependency after installing.

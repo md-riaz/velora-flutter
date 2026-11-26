@@ -65,13 +65,15 @@ class EditProfileController extends VeloraFormController {
           permissions: current.permissions,
           features: current.features,
         );
-        Velora.toast.success('Profile updated');
+        Velora.feedback.success('Profile updated');
         Velora.nav.back();
       } else {
-        Velora.toast.error('Failed to update profile: User session not found');
+        Velora.feedback.error(
+          'Failed to update profile: User session not found',
+        );
       }
     } catch (e) {
-      Velora.toast.error(e.toString());
+      Velora.feedback.error(e.toString());
     } finally {
       loading.value = false;
     }

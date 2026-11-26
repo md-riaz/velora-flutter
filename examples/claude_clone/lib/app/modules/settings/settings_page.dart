@@ -1,3 +1,5 @@
+import '../../shared/app_theme_mode.dart';
+
 import 'package:flutter/material.dart';
 import 'package:velora/velora.dart';
 
@@ -69,7 +71,7 @@ class _AppearanceSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final current = Velora.theme.current;
+      final current = AppThemeMode.mode.value;
       return Column(
         children: [
           _ThemeOption(

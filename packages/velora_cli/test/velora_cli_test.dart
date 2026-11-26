@@ -5,6 +5,57 @@ import 'package:velora_cli/velora_cli.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('make:module updates an existing map and generates controller tests', () async {
+    final app = Directory.systemTemp.createTempSync('velora_cli_module_');
+    addTearDown(() => app.deleteSync(recursive: true));
+    final cli = '${Directory.current.path}/bin/velora_cli.dart';
+    Future<ProcessResult> run(List<String> args) => Process.run(
+      Platform.resolvedExecutable,
+      [cli, ...args],
+      workingDirectory: app.path,
+    );
+
+    var result = await run(['make:module', 'first_feature']);
+    expect(result.exitCode, 0, reason: result.stderr.toString());
+    expect(File('${app.path}/.ai/module-map.json').existsSync(), isFalse);
+    final firstTest = File(
+      '${app.path}/test/modules/first_feature/first_feature_controller_test.dart',
+    );
+    expect(
+      firstTest.readAsStringSync(),
+      contains('FirstFeatureModule.controller()'),
+    );
+
+    final ai = Directory('${app.path}/.ai')..createSync();
+    final mapFile = File('${ai.path}/module-map.json')
+      ..writeAsStringSync(
+        jsonEncode({
+          'extra': 'kept',
+          'modules': [
+            {'name': 'existing', 'route': '/custom', 'extra': true},
+            {'name': 'first_feature', 'route': '/original'},
+          ],
+        }),
+      );
+    result = await run(['make:module', 'first_feature']);
+    expect(result.exitCode, 0, reason: result.stderr.toString());
+    result = await run(['make:module', 'second_feature', '--crud']);
+    expect(result.exitCode, 0, reason: result.stderr.toString());
+    final map = jsonDecode(mapFile.readAsStringSync()) as Map<String, dynamic>;
+    expect(map['extra'], 'kept');
+    expect(map['modules'], [
+      {'name': 'existing', 'route': '/custom', 'extra': true},
+      {'name': 'first_feature', 'route': '/original'},
+      {'name': 'second_feature', 'route': '/second_feature'},
+    ]);
+    expect(
+      File(
+        '${app.path}/test/modules/second_feature/second_feature_controller_test.dart',
+      ).readAsStringSync(),
+      contains('SecondFeatureModule.controller()'),
+    );
+  });
+
   test('exposes CLI metadata', () {
     expect(veloraCliName, 'velora_cli');
     expect(veloraCliVersion, '0.0.1');

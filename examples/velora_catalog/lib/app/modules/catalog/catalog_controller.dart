@@ -38,7 +38,7 @@ class CatalogController extends VeloraController {
     await run(() async {
       final items = await _repository.index();
       articles.assignAll(items);
-    }, showErrorToast: false);
+    }, reportError: false);
   }
 
   /// Re-runs [load] -- used by the list's pull-to-refresh gesture. There is

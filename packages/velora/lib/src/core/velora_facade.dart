@@ -5,6 +5,7 @@ import '../auth/auth_user.dart';
 import '../auth/logout_coordinator.dart';
 import '../config/velora_config.dart';
 import '../features/feature_service.dart';
+import '../feedback/feedback_presenter.dart';
 import '../http/velora_api_interceptor.dart';
 import '../http/velora_api_service.dart';
 import '../media/velora_media_service.dart';
@@ -19,10 +20,6 @@ import '../permissions/permission_service.dart';
 import '../routing/velora_nav.dart';
 import '../routing/velora_route_guard.dart';
 import '../storage/velora_storage_service.dart';
-import '../theme/theme_service.dart';
-import '../ui/velora_dialog.dart';
-import '../ui/velora_loader.dart';
-import '../ui/velora_toast.dart';
 import '../validation/velora_validator.dart';
 import 'velora_lifecycle.dart';
 import 'velora_plugin.dart';
@@ -51,12 +48,11 @@ class Velora {
   static VeloraNotify get notify => Get.find<VeloraNotify>();
   static VeloraStorageService get storage => Get.find<VeloraStorageService>();
   static VeloraNav get nav => Get.find<VeloraNav>();
-  static VeloraToast get toast => Get.find<VeloraToast>();
-  static VeloraDialog get dialog => Get.find<VeloraDialog>();
-  static VeloraLoader get loader => Get.find<VeloraLoader>();
+  static FeedbackPresenter get feedback => Get.isRegistered<FeedbackPresenter>()
+      ? Get.find<FeedbackPresenter>()
+      : const NoopFeedbackPresenter();
   static PermissionService get permission => Get.find<PermissionService>();
   static FeatureService get feature => Get.find<FeatureService>();
-  static ThemeService get theme => Get.find<ThemeService>();
   static VeloraMediaService get media => Get.find<VeloraMediaService>();
   static const VeloraValidator validator = VeloraValidator();
 
@@ -104,6 +100,8 @@ class Velora {
   static Future<void> boot({
     required VeloraConfig config,
 
+    FeedbackPresenter? feedback,
+
     /// HTTP interceptors applied (in order) after the built-in auth injector.
     List<VeloraApiInterceptor> interceptors = const [],
 
@@ -130,6 +128,11 @@ class Velora {
   }) async {
     _plugins.clear();
     Velora.config = config;
+
+    if (Get.isRegistered<FeedbackPresenter>()) {
+      await Get.delete<FeedbackPresenter>(force: true);
+    }
+    if (feedback != null) Get.put<FeedbackPresenter>(feedback, permanent: true);
 
     // Also register VeloraConfig in GetX so guards can find it.
     Get.put<VeloraConfig>(config, permanent: true);
@@ -248,11 +251,6 @@ class Velora {
       ),
     );
 
-    final themeService = await ThemeService(storage: storage).init();
-    Get.put<ThemeService>(themeService, permanent: true);
-    Get.put<VeloraToast>(VeloraToast(), permanent: true);
-    Get.put<VeloraDialog>(VeloraDialog(), permanent: true);
-    Get.put<VeloraLoader>(VeloraLoader(), permanent: true);
     Get.put<VeloraMediaService>(VeloraMediaService(), permanent: true);
 
     final ctx = VeloraContext(config);

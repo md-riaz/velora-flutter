@@ -95,7 +95,7 @@ Widget build(BuildContext context) {
 @override
 void onInit() {
   super.onInit();
-  ever(error, (v) { if ((v as String).isNotEmpty) Velora.toast.error(v); });
+  ever(error, (v) { if ((v as String).isNotEmpty) Velora.feedback.error(v); });
 }
 ```
 

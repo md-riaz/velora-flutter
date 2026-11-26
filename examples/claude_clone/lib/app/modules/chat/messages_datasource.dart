@@ -134,7 +134,7 @@ class MockMessagesDataSource implements MessagesDataSource {
     }
     if (lower.contains('theme') || lower.contains('velora')) {
       return 'This demo is built with the **Velora Flutter DX layer**.\n\n'
-          'The theming system uses `VeloraTheme.fromScheme()` with a hand-crafted '
+          'The theming system builds an app-owned `ThemeData` from a hand-crafted '
           '`ColorScheme` to precisely match Claude\'s warm copper-and-cream brand '
           'palette. Custom tokens (message bubbles, code blocks, input bar) live '
           "outside Material's standard palette and are injected via "

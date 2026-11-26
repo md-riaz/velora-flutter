@@ -72,7 +72,7 @@ class NotificationsController extends VeloraController {
           .toList(growable: false),
     );
     Velora.notify.unreadCount.value = 0;
-    Velora.toast.success('All notifications marked as read');
+    Velora.feedback.success('All notifications marked as read');
   }
 
   void _recalculateUnread() {

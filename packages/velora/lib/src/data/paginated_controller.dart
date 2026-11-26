@@ -23,7 +23,7 @@ import '../validation/velora_controller.dart';
 ///   itemBuilder: (ctx, i) {
 ///     if (i == controller.items.length) {
 ///       controller.loadMore();
-///       return const CircularProgressIndicator.adaptive();
+///       return const LoadingIndicator();
 ///     }
 ///     return UserTile(user: controller.items[i]);
 ///   },
@@ -69,7 +69,7 @@ class CursorPage<T, C> {
 ///   itemBuilder: (ctx, i) {
 ///     if (i == controller.items.length) {
 ///       controller.loadMore();
-///       return const CircularProgressIndicator.adaptive();
+///       return const LoadingIndicator();
 ///     }
 ///     return ActivityTile(activity: controller.items[i]);
 ///   },

@@ -731,11 +731,25 @@ class _InputBar extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        VeloraAttachmentStrip(
-          attachments: controller.attachments,
-          onPickTap: () => controller.showAttachmentPicker(),
-          onRemove: controller.removeAttachment,
-          onRetry: controller.retryAttachment,
+        Obx(
+          () => Wrap(
+            children: controller.attachments
+                .map(
+                  (attachment) => InputChip(
+                    label: Text(attachment.name),
+                    onDeleted: () => controller.removeAttachment(attachment.id),
+                    avatar: attachment.status == AttachmentStatus.error
+                        ? IconButton(
+                            icon: const Icon(Icons.refresh),
+                            tooltip: 'Retry upload',
+                            onPressed: () =>
+                                controller.retryAttachment(attachment.id),
+                          )
+                        : const Icon(Icons.attach_file),
+                  ),
+                )
+                .toList(),
+          ),
         ),
         Container(
           decoration: BoxDecoration(

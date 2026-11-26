@@ -18,22 +18,20 @@ The tables below are generated from the source tree by `tool/check_docs.sh --wri
 |---|---|---|---|---|
 | `auth` | 4 | 4 | get | config, core, http, routing, storage |
 | `config` | 1 | 1 | — | auth, notifications |
-| `core` | 4 | 4 | flutter, get | auth, config, features, http, media, notifications, permissions, routing, storage, theme, ui, validation |
+| `core` | 3 | 3 | get | auth, config, features, feedback, http, media, notifications, permissions, routing, storage, validation |
 | `data` | 2 | 2 | get | support, validation |
 | `features` | 1 | 1 | get | core |
+| `feedback` | 1 | 1 | — | — |
 | `http` | 5 | 5 | dio, get, logger | config, storage |
-| `media` | 4 | 4 | **file_picker**, **image_picker**, dio, flutter, get | http, ui |
+| `media` | 4 | 4 | **file_picker**, **image_picker**, dio, get | http |
 | `notifications` | 11 | 11 | flutter, get | auth, features, http, permissions, routing |
-| `permissions` | 2 | 2 | flutter, get | auth, core |
-| `responsive` | 1 | 1 | flutter | — |
+| `permissions` | 1 | 1 | get | auth |
 | `routing` | 2 | 2 | flutter, get | auth, config |
 | `storage` | 1 | 1 | **flutter_secure_storage**, **shared_preferences**, flutter, get | — |
 | `support` | 1 | 1 | — | — |
-| `theme` | 1 | 1 | flutter, get | storage |
-| `ui` | 12 | 10 | **image_picker**, flutter, get | media |
 | `validation` | 3 | 3 | get | core |
 
-Bold pub packages ship native code. Folder pairs that import each other (7): auth ↔ config; auth ↔ core; auth ↔ routing; core ↔ features; core ↔ permissions; core ↔ validation; media ↔ ui.
+Bold pub packages ship native code. Folder pairs that import each other (5): auth ↔ config; auth ↔ core; auth ↔ routing; core ↔ features; core ↔ validation.
 <!-- /generated:core-inventory -->
 
 `velora.dart` also re-exports `package:get/get.dart`, so every app that imports Velora gets the whole GetX API.
@@ -70,7 +68,7 @@ Read from each package's imports and usages:
 
 ## What blocks a split today
 
-**1. The facade is a hub.** `core/` imports 12 of the other 15 folders, almost all through `velora_facade.dart`, and two folders import the facade back (`permissions/permission_widgets.dart` for `Velora.permission`, `validation/velora_controller.dart` for `Velora.loader` and `Velora.toast`). Three of the seven folder cycles (`core ↔ features`, `core ↔ permissions`, `core ↔ validation`) and half of a fourth (`auth ↔ core`) exist only because of it. The facade cannot live in `velora_core`.
+**1. The facade is a hub.** `velora_facade.dart` coordinates capabilities and controller feedback uses `Velora.feedback`. See [architecture](../architecture.md) for the UI boundary.
 
 **2. `VeloraConfig` aggregates capability config.** `config/velora_config.dart` imports `auth/auth_user.dart` and `notifications/notification_config.dart`, and `auth_service.dart` reads `VeloraConfig` back. `VeloraPlugin` also imports `VeloraConfig`, `VeloraApiService`, and `VeloraApiInterceptor`, so the plugin contract currently drags HTTP and config into anything that implements it.
 
@@ -81,8 +79,6 @@ Read from each package's imports and usages:
 | `http → storage` | `velora_api_service.dart` reads the bearer token from `VeloraStorageService` | `VeloraTokenStore` |
 | `auth → storage`, `auth → http` | `auth_service.dart` | `VeloraTokenStore`; `velora_auth` depends on `velora_http` (one direction) |
 | `auth ↔ routing` | `logout_coordinator.dart` calls `VeloraNav`; `velora_route_guard.dart` calls `Get.find<AuthService>()` | a session-state reader in core; logout redirect as a callback or navigator interface |
-| `theme → storage` | `theme_service.dart` | the key-value storage contract |
-| `media ↔ ui` | `velora_attachments_mixin.dart` opens `VeloraAttachmentPickerSheet`; five UI files import attachment models | move the three attachment widgets with media |
 | `media → http` | `velora_upload_adapter.dart` | `velora_media` depends on `velora_http` (one direction) |
 | `notifications → auth, http, features, permissions, routing` | `notification_service.dart`, `notification_remote_datasource.dart` | split contracts from the service (below) |
 

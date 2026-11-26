@@ -1,9 +1,5 @@
 # velora_ui
 
-Velora's token-first design system: theme and tokens plus components for display, form inputs, layout, navigation, feedback/overlays, and data tables, wizards, and an adaptive app shell. Depends only on `flutter`.
+Material 3 presets and responsive UI components. Use `ThemePreset.aurora.light()` and `ThemePreset.aurora.dark()` in a `MaterialApp`. Presets accept a `ColorScheme`, seed color, visual density, and text theme. Read extensions with `DesignTokens.of(context)` and `StatusColors.of(context)`.
 
-Not a plugin. Apply it through your app's theme: `MaterialApp(theme: VeloraTheme.light(), darkTheme: VeloraTheme.dark())`. The public surface is registered in `components.json`, which `tool/check_docs.sh` checks against the exports and the docs.
-
-Requires Flutter >=3.47.0 / Dart >=3.13.0. Not published to pub.dev yet; use a git or path dependency.
-
-Full guide: [`docs/packages/ui.md`](../../docs/packages/ui.md).
+The package provides `AdaptiveShell`, `ResponsiveDataTable`, `Skeleton`, `EmptyState`, and `InlineAlert`; use Flutter Material widgets for standard controls.

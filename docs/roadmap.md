@@ -6,13 +6,13 @@
 - CLI scaffolding package.
 - Reference Flutter app (`examples/claude_clone`).
 - Laravel Sanctum auth defaults.
-- API, storage, navigation, toast, permission, form, and error helpers.
+- API, storage, navigation, feedback, permission, form, and error helpers.
 - Constructor-injected controller/service/repository layer.
 
 ## Shipped
 
 - Package split into `velora`, `velora_cli`, `velora_lints`, `velora_offline`, `velora_db`, `velora_env`, `velora_fcm`, `velora_local_notifications`, and `velora_ui`.
-- Design system (`velora_ui`): tokens and theme, core components, form inputs, layout, navigation, feedback/overlays, and data table, stepper/wizard, and adaptive shell — see [velora_ui](packages/ui.md) for the component list.
+- Optional Material theme foundation (`velora_ui`): presets, tokens, and composite components — see [velora_ui](packages/ui.md) for the component list.
 - Push and on-device notifications through the optional `velora_fcm` and `velora_local_notifications` adapters.
 - `.env` config and flavors (`velora_env`).
 - Toolchain baseline of Flutter 3.47 / Dart 3.13 — see [Toolchain baseline](toolchain.md).
@@ -27,7 +27,7 @@
 
 Not shipped. Tracked as GitHub issues, and subject to change.
 
-- CRUD page templates in `velora make:module` built on the `velora_ui` data table and shell.
+- CRUD page templates in `velora make:module` built on native widgets, `ResponsiveDataTable`, and `AdaptiveShell`.
 - Page templates (`velora template`), structured accessibility/theme metadata per component, and an MCP wrapper over the same lookup commands.
 - Splitting optional core capabilities into focused packages.
 - Realtime support.

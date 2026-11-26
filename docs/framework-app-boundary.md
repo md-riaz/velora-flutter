@@ -15,28 +15,26 @@ The framework is a DX layer, not a product. It should feel like a well-designed 
 
 ---
 
+See [architecture](architecture.md) for the UI boundary.
+
 ## What the Framework Owns
 
 These categories live in `packages/velora/lib/src/` and are re-exported through `velora.dart`. They carry no assumptions about what kind of app consumes them.
 
 | Category | Key exports | Rule that places it here |
 |---|---|---|
-| **Bootstrap & DI** | `Velora.boot()`, `VeloraApp`, `VeloraConfig` | Every app needs exactly one initialization path |
+| **Bootstrap & DI** | `Velora.boot()`, `VeloraConfig` | Every app needs exactly one initialization path |
 | **HTTP client** | `VeloraApiService`, `ApiResponse`, `ApiException`, `VeloraApiInterceptor` | Domain-agnostic transport; apps configure base URL and interceptors, not the client |
 | **Mock utilities** | `MockApiService`, `VeloraMockApi` | Shared testing infrastructure; avoids each app re-implementing delay/error simulation |
 | **Auth** | `AuthService`, `VeloraUser`, `SessionState` | `VeloraUser` is a base type apps extend; the service manages tokens/session, not profile fields |
 | **Routing** | `VeloraNav`, `VeloraRouteGuard`, `VeloraAuthGuard` | Navigation primitives and guards are domain-agnostic plumbing |
 | **Storage** | `VeloraStorageService` | Key-value persistence abstraction — apps choose what to store, not how |
-| **Theme** | `ThemeService`, `VeloraTheme.fromScheme()` | Light/dark mode switching and persistence are shared infrastructure; brand *colors* are not |
 | **Pagination** | `PaginatedData<T>`, `CursorPage<T,C>`, `VeloraPaginatedController`, `VeloraCursorController` | Generic data-loading contracts; zero knowledge of what `T` is |
 | **Feature flags** | `FeatureService`, `VeloraFeature` | Infrastructure for toggling capabilities; apps register and read flags, framework does not know their names |
 | **Permissions** | `PermissionService`, `VeloraPermission` | Role/permission evaluation logic is domain-agnostic enforcement |
 | **Notifications** | `VeloraNotify`, `PushAdapter`, `NotificationEvent` | Infrastructure for delivery channels; payload content is app-defined |
 | **Media / uploads** | `VeloraMediaService`, `VeloraAttachment`, `VeloraAttachmentsMixin`, `VeloraUploadAdapter` | File-picking and upload normalization; apps plug in their own backend adapter |
-| **Generic UI primitives** | `VeloraEmptyState`, `VeloraErrorView`, `VeloraFormField`, `VeloraLoadingButton`, `VeloraAttachmentChip` | Presentational scaffolding with no domain copy or brand tokens; customized via parameters |
-| **Toast / Dialog / Loader** | `VeloraToast`, `VeloraDialog`, `VeloraLoader` | UI primitives every app needs; content/text supplied by the caller |
 | **Controller bases** | `VeloraController`, `VeloraFormController` | Standardize `loading`/`error`/`run()` patterns; no domain methods |
-| **Responsive** | `Responsive` breakpoint helpers | Layout breakpoints are universal |
 
 **Framework rule:** If adding a method or field to a framework class requires knowing the name of any route, model, or endpoint specific to one app, the code does not belong in the framework.
 
@@ -88,10 +86,10 @@ Apply in order. The first rule that fires determines placement. If two rules con
    - Yes → `APP`. Routes are app contracts. Framework navigation accepts route strings as arguments; it does not know them.
 
 7. **Brand token** — Is this a brand color, a specific radius value, or a design token?
-   - Yes → `APP` theme resources. `VeloraTheme.fromScheme()` accepts a `ColorScheme`; brand palettes are not part of the framework.
+   - Yes → `APP` theme resources. The app owns its theme; optional presets live in `velora_ui`.
 
 8. **Widget configurability** — Does the UI component need configuration to work in any context, or does it always look the same?
-   - Configurable, no domain assumptions → `FW` widget. Fixed appearance or domain copy → `APP` widget.
+   - UI belongs in the app or an optional UI package.
 
 ---
 
@@ -105,7 +103,7 @@ Explicit rulings on cases that have been debated or are likely to come up again.
 | **Offline banner widget** (visual strip saying "You're offline") | `APP` | Generic in concept but the copy ("Messages will send when reconnected") is chat-domain specific. Promote to `VeloraOfflineBanner(message: String)` only when a second app needs it. |
 | **Audio recording** (`record` package, waveform, audio bubble) | `APP` | Only the chat module needs this. YAGNI applies. If a second Velora app needs audio, extract an abstract `VeloraAudioAdapter` at that point. The waveform UI and bubble are chat-domain widgets regardless. |
 | **Pending message queue** (offline-first send buffer) | `APP` | Queue mechanics depend entirely on the domain's entity graph. Extract a generic `VeloraOfflineQueue<T>` only after two distinct use cases appear. |
-| **Rename dialog** (`_RenameDialog` StatefulWidget) | `APP` | The prompt, field hint, and target entity are chat-specific. A `VeloraDialog.prompt()` generic would be framework-level; it doesn't exist yet. |
+| **Rename dialog** (`_RenameDialog` StatefulWidget) | `APP` | The prompt, field hint, and target entity are chat-specific. Use an app-owned dialog. |
 | **Cursor pagination primitives** (`CursorPage<T,C>`, `VeloraCursorController`) | `FW` | Fully generic. The controller calls an abstract `fetchNextPage(C? cursor)`; the framework knows nothing about what `T` or `C` are. |
 | **Mock seeded data** (`MockMessagesDataSource._store`, 22 messages) | `APP` | `VeloraMockApi` (framework) provides delay/error mechanics. What you seed is domain content and lives in the app's data sources. |
 | **`VeloraUser` extension fields** (adding `plan`, `avatarUrl`, etc.) | `APP` | Extend `VeloraUser` in the app via a subclass or `Velora.userAs<T>()`. Base class stays lean. |
@@ -159,7 +157,7 @@ await run(() async {
 });
 if (error.value.isNotEmpty) return; // ← always guard here
 localState.update();
-Velora.toast.success('Done');
+Velora.feedback.success('Done');
 ```
 
 ---
@@ -186,9 +184,9 @@ WidgetsBinding.instance.addPostFrameCallback((_) {
 |---|---|
 | **Domain model in the framework** — adding `MessageModel` to `packages/velora/lib/` | The framework must not know what entities an app manages. Use generic type parameters instead. |
 | **Endpoint path in a framework service** — adding `VeloraApiService.getConversations()` | `VeloraApiService` takes a path as a parameter; it does not know the API surface of any app. |
-| **Brand color in framework theme** — hardcoding an app's primary color in `ThemeService` | `VeloraTheme.fromScheme(colorScheme)` accepts the brand's colors as input; it does not own them. |
+| **Brand color in framework theme** — hardcoding a brand color in core | The app owns its palette. |
 | **Feature flag names in `Velora.boot()` config** | Feature *registration* happens in the app's `main()`; the framework provides the mechanism only. |
 | **Domain logic in `VeloraController`** — adding `sendMessage()` to the base class | The base defines `run()`, `loading`, `error`. Domain behavior belongs in app controller subclasses. |
 | **Premature framework extraction** — promoting single-app features before a second consumer exists | YAGNI: extraction has a real cost (surface area, versioning, test burden) and should be deferred. |
 | **Service registration in a controller** — calling `Velora.feature.register()` in `onInit()` | Registration runs exactly once, in `main()`. Controllers only read and toggle. |
-| **Framework widget with hardcoded copy** — `VeloraEmptyState` with fixed text | The widget accepts `title` and `description` as parameters; specific copy is an app decision. |
+| **Hardcoded product copy in reusable UI** | Specific copy is an app decision. |

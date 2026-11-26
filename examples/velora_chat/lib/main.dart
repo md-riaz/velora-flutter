@@ -1,3 +1,5 @@
+import 'material_feedback_presenter.dart';
+
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import 'package:velora/velora.dart';
@@ -20,6 +22,7 @@ Future<void> main() async {
   final toggleSource = ToggleConnectivitySource();
 
   await Velora.boot(
+    feedback: const MaterialFeedbackPresenter(),
     config: const VeloraConfig(
       appName: 'Velora Chat',
       // No real backend — MockChatServerInterceptor (added below) stands in
@@ -123,10 +126,10 @@ class VeloraChatApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return VeloraApp(
+    return GetMaterialApp(
       title: 'Velora Chat',
       initialRoute: AppRoutes.conversations,
-      routes: AppPages.routes,
+      getPages: AppPages.routes,
       theme: ThemeData(
         useMaterial3: true,
         colorSchemeSeed: const Color(0xFF25D366),
