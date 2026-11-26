@@ -11,9 +11,9 @@ Velora needs a desktop lifecycle package that covers window management, tray ico
 
 | Capability | Package | Version |
 |---|---|---|
-| Window | window_manager | ^0.6.0 |
-| Tray | tray_manager | ^0.8.3 |
-| Auto-start | nativeapi (`LaunchAtLogin`) | ^0.5.10 |
+| Window | window_manager | ^0.7.1 |
+| Tray | tray_manager | ^0.9.1 |
+| Auto-start | nativeapi (`LaunchAtLogin`) | ^0.6.2 |
 | Deep links | app_links | ^7.2.2 |
 | Single instance | windows_single_instance | ^1.2.0 |
 | Sleep/wake | power_state_monitor | ^0.1.2 |
