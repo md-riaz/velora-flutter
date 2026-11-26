@@ -5,6 +5,71 @@ import 'package:velora_cli/velora_cli.dart';
 import 'package:test/test.dart';
 
 void main() {
+  group('make:theme', () {
+    late Directory app;
+    late File theme;
+    late String cli;
+
+    setUp(() {
+      app = Directory.systemTemp.createTempSync('velora_cli_theme_');
+      theme = File('${app.path}/lib/resources/theme/app_theme.dart');
+      cli = '${Directory.current.path}/bin/velora_cli.dart';
+    });
+    tearDown(() => app.deleteSync(recursive: true));
+
+    Future<ProcessResult> run(List<String> args) => Process.run(
+      Platform.resolvedExecutable,
+      [cli, 'make:theme', ...args],
+      workingDirectory: app.path,
+    );
+
+    test('generates the default light and dark theme', () async {
+      final result = await run([]);
+      expect(result.exitCode, 0, reason: result.stderr.toString());
+      final content = theme.readAsStringSync();
+      expect(content, contains("import 'package:flutter/material.dart';"));
+      expect(content, contains("import 'package:velora_ui/velora_ui.dart';"));
+      expect(content, contains('ThemePreset.aurora.light()'));
+      expect(content, contains('ThemePreset.aurora.dark()'));
+    });
+
+    test('uses the selected preset and font', () async {
+      final result = await run(['--preset', 'meadow', '--font', 'Inter']);
+      expect(result.exitCode, 0, reason: result.stderr.toString());
+      final content = theme.readAsStringSync();
+      expect(
+        content,
+        contains(
+          'ThemePreset.meadow.light(textTheme: ThemeData(fontFamily: "Inter").textTheme)',
+        ),
+      );
+      expect(
+        content,
+        contains(
+          'ThemePreset.meadow.dark(textTheme: ThemeData(fontFamily: "Inter").textTheme)',
+        ),
+      );
+    });
+
+    test('rejects an invalid preset', () async {
+      final result = await run(['--preset', 'unknown']);
+      expect(result.exitCode, 64);
+      expect(result.stderr.toString(), contains('Unknown preset'));
+      expect(theme.existsSync(), isFalse);
+    });
+
+    test('requires force to overwrite a theme', () async {
+      theme.parent.createSync(recursive: true);
+      theme.writeAsStringSync('existing');
+      final refused = await run([]);
+      expect(refused.exitCode, 64);
+      expect(theme.readAsStringSync(), 'existing');
+      final forced = await run(['--force']);
+      expect(forced.exitCode, 0, reason: forced.stderr.toString());
+      expect(theme.readAsStringSync(), contains('ThemePreset.aurora.light()'));
+    });
+  });
+
   test('make:module updates an existing map and generates controller tests', () async {
     final app = Directory.systemTemp.createTempSync('velora_cli_module_');
     addTearDown(() => app.deleteSync(recursive: true));

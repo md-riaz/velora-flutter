@@ -24,6 +24,18 @@ dart run velora_cli make:auth --sanctum
 
 Generates `lib/app/modules/auth/` with a login page and an auth controller.
 
+## Scaffold a theme
+
+```sh
+dart run velora_cli make:theme --preset meadow --font "Inter"
+```
+
+Writes `lib/resources/theme/app_theme.dart` with light and dark themes from
+`velora_ui`. Add `velora_ui` to your app's dependencies. The preset defaults to
+`aurora`; `meadow`, `neutral`, and `corporate` are also available. The font is
+optional and must be available to the app. Pass `--force` to replace an existing
+theme file.
+
 ## Scaffold a CRUD module
 
 Generate a complete feature module for any resource:
@@ -84,6 +96,7 @@ Adds the package to `pubspec.yaml`, wires its plugin into `Velora.boot(plugins: 
 |---|---|
 | `velora_cli new <name>` | Create a new app skeleton |
 | `velora_cli make:auth --sanctum` | Scaffold login + auth flow |
+| `velora_cli make:theme [--preset <preset>] [--font <family>] [--force]` | Generate light and dark themes from a preset |
 | `velora_cli make:module <name> --crud` | Generate a full CRUD module |
 | `velora_cli make:module <name> --form` | Add a form page, validation controller, and controller test; can be combined with `--crud` |
 | `velora_cli make:notifications` | Generate notification center module |
