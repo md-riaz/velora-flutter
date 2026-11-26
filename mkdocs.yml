@@ -74,6 +74,7 @@ nav:
     - CLI Commands: commands.md
     - Agent Tooling: agent-tooling.md
     - Framework / App Boundary: framework-app-boundary.md
+    - Next Major Migration: migration/v-next.md
     - Plugins: plugins.md
     - Web & PWA: pwa.md
   - Official Packages:

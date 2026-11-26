@@ -1,3 +1,6 @@
+import '../../shared/empty_state.dart';
+import '../../shared/app_theme_mode.dart';
+
 import 'package:flutter/material.dart';
 import 'package:velora/velora.dart';
 
@@ -87,7 +90,7 @@ class HomePage extends GetView<HomeController> {
                 );
               }),
               Obx(() {
-                final isDark = Velora.theme.current == ThemeMode.dark;
+                final isDark = AppThemeMode.mode.value == ThemeMode.dark;
                 return IconButton(
                   tooltip: isDark
                       ? 'Switch to light mode'
@@ -101,7 +104,7 @@ class HomePage extends GetView<HomeController> {
                       key: ValueKey(isDark),
                     ),
                   ),
-                  onPressed: Velora.theme.toggle,
+                  onPressed: AppThemeMode.toggle,
                 );
               }),
               const SizedBox(width: 4),
@@ -153,9 +156,14 @@ class HomePage extends GetView<HomeController> {
               return const SliverToBoxAdapter(child: SizedBox.shrink());
             }
             return SliverToBoxAdapter(
-              child: VeloraErrorView(
-                message: err,
-                onRetry: () => controller.reload(),
+              child: AppEmptyState(
+                icon: Icons.error_outline,
+                title: 'Something went wrong',
+                description: err,
+                action: TextButton(
+                  onPressed: controller.reload,
+                  child: const Text('Retry'),
+                ),
               ),
             );
           }),
@@ -171,7 +179,7 @@ class HomePage extends GetView<HomeController> {
             if (items.isEmpty) {
               if (controller.items.isNotEmpty) {
                 return const SliverFillRemaining(
-                  child: VeloraEmptyState(
+                  child: AppEmptyState(
                     icon: Icons.search_off,
                     title: 'No results',
                     description: 'Try a different search term.',
@@ -179,7 +187,7 @@ class HomePage extends GetView<HomeController> {
                 );
               }
               return SliverFillRemaining(
-                child: VeloraEmptyState(
+                child: AppEmptyState(
                   icon: Icons.chat_bubble_outline,
                   title: 'No conversations',
                   description: 'Start a new chat to get going.',

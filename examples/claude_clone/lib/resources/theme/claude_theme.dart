@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:velora/velora.dart';
 
 import 'claude_colors.dart';
 import 'claude_extensions.dart';
 
-/// Claude brand theme built on top of [VeloraTheme.fromScheme].
+/// Claude brand theme built from a custom color scheme.
 ///
 /// Rather than using [ColorScheme.fromSeed] (which tints every surface from
 /// one seed), we supply a fully hand-crafted [ColorScheme] so the warm
@@ -49,11 +48,20 @@ class ClaudeTheme {
       inversePrimary: ClaudeColors.primaryLight,
     );
 
-    return VeloraTheme.fromScheme(
+    return ThemeData(
+      useMaterial3: true,
       colorScheme: scheme,
-      cardBorderRadius: 16,
-      inputBorderRadius: 12,
-      buttonBorderRadius: 10,
+      cardTheme: CardThemeData(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      ),
       extensions: [ClaudeTokens.light],
     );
   }
@@ -94,11 +102,20 @@ class ClaudeTheme {
       inversePrimary: ClaudeColors.primary,
     );
 
-    return VeloraTheme.fromScheme(
+    return ThemeData(
+      useMaterial3: true,
       colorScheme: scheme,
-      cardBorderRadius: 16,
-      inputBorderRadius: 12,
-      buttonBorderRadius: 10,
+      cardTheme: CardThemeData(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      ),
       extensions: [ClaudeTokens.dark],
     );
   }

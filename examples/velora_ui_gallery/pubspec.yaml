@@ -1,5 +1,5 @@
 name: velora_ui_gallery
-description: A gallery/showcase app for the velora_ui design system — every component in light/dark and both theme presets.
+description: A ThemePreset showcase for native Material and retained velora_ui components.
 publish_to: 'none'
 version: 1.0.0+1
 

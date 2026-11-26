@@ -1,86 +1,86 @@
 import 'package:flutter/material.dart';
 
 import '../tokens/velora_tokens.dart';
-import '../theme/velora_tokens_context.dart';
 
-/// A semantic status level shared by the components that communicate state —
-/// [VeloraBadge], [VeloraAlert], and friends.
-///
-/// Each level maps to a color pair (a fill color and a legible "on" color)
-/// that's resolved from the active theme: [error] comes from Material's
-/// [ColorScheme] (`error`/`onError`), while [success]/[warning]/[info] come
-/// from [VeloraTokens] (which Material's scheme doesn't define). Resolving
-/// through the theme — rather than hard-coding hex — means a component
-/// automatically tracks light/dark mode and any token overrides.
-enum VeloraStatus {
-  /// A successful / positive outcome (a saved change, a completed task).
+enum StatusTone {
   success,
-
-  /// A cautionary state that isn't yet an error (a nearing limit, a
-  /// deprecation).
   warning,
-
-  /// A neutral, informational message.
   info,
+  error;
 
-  /// A failure / destructive state (a rejected request, a validation error).
-  error,
+  IconData get icon => switch (this) {
+    success => Icons.check_circle_outline,
+    warning => Icons.warning_amber_outlined,
+    info => Icons.info_outline,
+    error => Icons.error_outline,
+  };
 }
 
-/// The two colors a [VeloraStatus] resolves to against the current theme: a
-/// [color] (the strong/fill color) and an [onColor] (legible content drawn on
-/// top of [color]).
 @immutable
-class VeloraStatusColors {
-  /// The strong/fill color for this status (used for solid badges, alert
-  /// accents, icons).
+class StatusColorPair {
   final Color color;
-
-  /// A color legible when drawn on top of [color] (text/icons inside a solid
-  /// badge).
   final Color onColor;
-
-  /// Creates a resolved status color pair.
-  const VeloraStatusColors({required this.color, required this.onColor});
+  const StatusColorPair(this.color, this.onColor);
+  StatusColorPair lerp(StatusColorPair other, double t) => StatusColorPair(
+    Color.lerp(color, other.color, t)!,
+    Color.lerp(onColor, other.onColor, t)!,
+  );
 }
 
-/// Resolves a [VeloraStatus] to concrete colors from the ambient theme.
-extension VeloraStatusResolver on VeloraStatus {
-  /// Looks up this status's color pair from [VeloraTokens] (success/warning/
-  /// info) or the [ColorScheme] (error) on the theme above [context].
-  VeloraStatusColors colors(BuildContext context) {
-    final tokens = context.veloraTokens;
-    final scheme = Theme.of(context).colorScheme;
-    switch (this) {
-      case VeloraStatus.success:
-        return VeloraStatusColors(
-          color: tokens.success,
-          onColor: tokens.onSuccess,
-        );
-      case VeloraStatus.warning:
-        return VeloraStatusColors(
-          color: tokens.warning,
-          onColor: tokens.onWarning,
-        );
-      case VeloraStatus.info:
-        return VeloraStatusColors(color: tokens.info, onColor: tokens.onInfo);
-      case VeloraStatus.error:
-        return VeloraStatusColors(color: scheme.error, onColor: scheme.onError);
+@immutable
+class StatusColors extends ThemeExtension<StatusColors> {
+  final StatusColorPair success, warning, info, error;
+  const StatusColors({
+    required this.success,
+    required this.warning,
+    required this.info,
+    required this.error,
+  });
+  factory StatusColors.fromScheme(ColorScheme scheme, DesignTokens tokens) {
+    StatusColorPair pair(Color seed) {
+      final derived = ColorScheme.fromSeed(
+        seedColor: Color.lerp(seed, scheme.primary, 0.12)!,
+        brightness: scheme.brightness,
+      );
+      return StatusColorPair(derived.primary, derived.onPrimary);
     }
-  }
 
-  /// The default leading icon for this status, used by [VeloraAlert] and any
-  /// other component that shows a status glyph.
-  IconData get icon {
-    switch (this) {
-      case VeloraStatus.success:
-        return Icons.check_circle_outline;
-      case VeloraStatus.warning:
-        return Icons.warning_amber_outlined;
-      case VeloraStatus.info:
-        return Icons.info_outline;
-      case VeloraStatus.error:
-        return Icons.error_outline;
-    }
+    return StatusColors(
+      success: pair(tokens.success),
+      warning: pair(tokens.warning),
+      info: pair(tokens.info),
+      error: StatusColorPair(scheme.error, scheme.onError),
+    );
   }
+  static StatusColors of(BuildContext context) =>
+      Theme.of(context).extension<StatusColors>() ??
+      (throw StateError('StatusColors missing from theme'));
+  StatusColorPair forTone(StatusTone tone) => switch (tone) {
+    StatusTone.success => success,
+    StatusTone.warning => warning,
+    StatusTone.info => info,
+    StatusTone.error => error,
+  };
+  @override
+  StatusColors copyWith({
+    StatusColorPair? success,
+    StatusColorPair? warning,
+    StatusColorPair? info,
+    StatusColorPair? error,
+  }) => StatusColors(
+    success: success ?? this.success,
+    warning: warning ?? this.warning,
+    info: info ?? this.info,
+    error: error ?? this.error,
+  );
+  @override
+  StatusColors lerp(ThemeExtension<StatusColors>? other, double t) =>
+      other is! StatusColors
+      ? this
+      : StatusColors(
+          success: success.lerp(other.success, t),
+          warning: warning.lerp(other.warning, t),
+          info: info.lerp(other.info, t),
+          error: error.lerp(other.error, t),
+        );
 }

@@ -1,3 +1,6 @@
+import 'material_feedback_presenter.dart';
+import 'app/shared/app_theme_mode.dart';
+
 import 'package:flutter/material.dart';
 import 'package:velora/velora.dart';
 
@@ -10,6 +13,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Velora.boot(
+    feedback: const MaterialFeedbackPresenter(),
     config: const VeloraConfig(
       appName: 'Claude Demo',
       // No real API needed — all data is mocked in controllers.
@@ -20,6 +24,8 @@ Future<void> main() async {
       ),
     ),
   );
+
+  AppThemeMode.init();
 
   // Register feature flags once at startup so FeatureService state persists
   // across SettingsController lifecycles.
@@ -39,14 +45,15 @@ class ClaudeApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return VeloraApp(
-      title: 'Claude',
-      initialRoute: Velora.auth.check ? AppRoutes.home : AppRoutes.login,
-      routes: AppPages.routes,
-      theme: ClaudeTheme.light(),
-      darkTheme: ClaudeTheme.dark(),
-      // VeloraApp resolves the persisted ThemeMode from ThemeService
-      // on first build, so toggling light/dark mode survives app restarts.
+    return Obx(
+      () => GetMaterialApp(
+        title: 'Claude',
+        initialRoute: Velora.auth.check ? AppRoutes.home : AppRoutes.login,
+        getPages: AppPages.routes,
+        theme: ClaudeTheme.light(),
+        darkTheme: ClaudeTheme.dark(),
+        themeMode: AppThemeMode.mode.value,
+      ),
     );
   }
 }

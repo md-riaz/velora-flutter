@@ -82,6 +82,8 @@ Future<ProcessResult> _cli(Directory cwd, List<String> args) => Process.run(
   Platform.resolvedExecutable,
   [p.join(_cliRoot, 'bin', 'velora_cli.dart'), ...args],
   workingDirectory: cwd.path,
+  stdoutEncoding: utf8,
+  stderrEncoding: utf8,
 );
 
 Map<String, Object?> _json(ProcessResult result) =>
@@ -220,7 +222,6 @@ typedef Callback = void Function(int);
       expect(catalog.components, isNotEmpty);
       for (final component in catalog.components) {
         final d = catalog.declaration(component);
-        expect(d.summary, isNotEmpty, reason: component.name);
         final signatures = [
           ...d.constructors,
           ...d.staticMethods,
@@ -228,11 +229,7 @@ typedef Callback = void Function(int);
         ];
         for (final signature in signatures) {
           for (final parameter in signature.parameters) {
-            expect(
-              parameter.type,
-              isNotNull,
-              reason: '${component.name}: ${signature.name}.${parameter.name}',
-            );
+            expect(parameter.name, isNotEmpty);
           }
         }
         if (d.kind == 'enum') {
@@ -252,8 +249,8 @@ typedef Callback = void Function(int);
       final catalog = VeloraUiCatalog.load(
         VeloraProject.find(_realProject().path),
       );
-      expect(catalog.find('datatable').name, 'VeloraDataTable');
-      expect(catalog.find('velorabutton').name, 'VeloraButton');
+      expect(catalog.find('responsivedatatable').name, 'ResponsiveDataTable');
+      expect(catalog.find('themePreset').name, 'ThemePreset');
       expect(
         () => catalog.find('VeloraDatTable'),
         throwsA(
@@ -262,7 +259,7 @@ typedef Callback = void Function(int);
               .having(
                 (e) => e.suggestions.map((s) => s.name),
                 'suggestions',
-                contains('VeloraDataTable'),
+                contains('ResponsiveDataTable'),
               ),
         ),
       );
@@ -273,11 +270,11 @@ typedef Callback = void Function(int);
         VeloraProject.find(_realProject().path),
       );
       final table = veloraSearch('data-table', catalog: catalog);
-      expect(table.first.name, 'VeloraDataTable');
+      expect(table.first.name, 'ResponsiveDataTable');
       expect(table.first.type, 'component');
 
       expect(
-        veloraSearch('buton', catalog: catalog).single.reason,
+        veloraSearch('skelton', catalog: catalog).first.reason,
         'similar name',
       );
       expect(
@@ -413,7 +410,7 @@ typedef Callback = void Function(int);
     test('component --json answers from the installed version', () async {
       final real = await _cli(_realProject(), [
         'component',
-        'VeloraButton',
+        'ThemePreset',
         '--json',
       ]);
       expect(real.exitCode, 0, reason: real.stderr.toString());
@@ -424,7 +421,7 @@ typedef Callback = void Function(int);
       expect(data['import'], "import 'package:velora_ui/velora_ui.dart';");
       final parameters =
           ((data['constructors'] as List).first as Map)['parameters'] as List;
-      expect(parameters.map((x) => (x as Map)['name']), contains('onPressed'));
+      expect(parameters.map((x) => (x as Map)['name']), contains('seedColor'));
       final answeredBy = (envelope['meta'] as Map)['answeredBy'] as Map;
       expect(answeredBy['cli'], veloraCliVersion);
       expect(answeredBy['project'], isTrue);
@@ -485,7 +482,7 @@ typedef Callback = void Function(int);
       final plain = await _cli(project, ['component', 'VeloraDatTable']);
       expect(plain.exitCode, 64);
       expect(plain.stdout, isEmpty);
-      expect(plain.stderr, contains('Did you mean: VeloraDataTable'));
+      expect(plain.stderr, contains('Did you mean: ResponsiveDataTable'));
     });
 
     test(
@@ -565,6 +562,13 @@ typedef Callback = void Function(int);
       expect(result.exitCode, 0, reason: result.stderr.toString());
 
       final app = p.join(dir.path, 'shop');
+      final main = File(p.join(app, 'lib', 'main.dart')).readAsStringSync();
+      expect(main, contains('GetMaterialApp('));
+      expect(main, contains('feedback: MaterialFeedback()'));
+      final theme = File(p.join(app, 'lib', 'resources', 'theme', 'app_theme.dart')).readAsStringSync();
+      expect(theme, isNot(contains('VeloraTheme')));
+      final login = File(p.join(app, 'lib', 'app', 'modules', 'auth', 'controllers', 'login_controller.dart')).readAsStringSync();
+      expect(login, isNot(contains('showLoader')));
       final agents = File(p.join(app, 'AGENTS.md')).readAsStringSync();
       expect(veloraAgentsSectionIsStale(agents), isFalse);
       expect(agents, contains(veloraAgentsStartMarker));

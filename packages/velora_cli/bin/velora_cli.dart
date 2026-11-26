@@ -600,6 +600,22 @@ void _makeModule(List<String> args) {
       _editPage(name, className, title),
     );
   }
+  _write(
+    p.join('test', 'modules', name, '${name}_controller_test.dart'),
+    _controllerTest(name, className),
+  );
+  final moduleMap = File(p.join('.ai', 'module-map.json'));
+  if (moduleMap.existsSync()) {
+    final map =
+        jsonDecode(moduleMap.readAsStringSync()) as Map<String, dynamic>;
+    final modules = map['modules'] as List<dynamic>;
+    if (!modules.any((entry) => entry is Map && entry['name'] == name)) {
+      modules.add({'name': name, 'route': '/$name'});
+      moduleMap.writeAsStringSync(
+        '${const JsonEncoder.withIndent('  ').convert(map)}\n',
+      );
+    }
+  }
   stdout.writeln('Created ${crud ? 'CRUD ' : ''}module: $name');
 }
 
@@ -1354,6 +1370,7 @@ import 'resources/theme/app_theme.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Velora.boot(
+    feedback: MaterialFeedback(),
     config: const VeloraConfig(
       appName: '{{title}}',
       apiBaseUrl: String.fromEnvironment(
@@ -1365,12 +1382,32 @@ Future<void> main() async {
   runApp(const {{appClass}}());
 }
 
+
+class MaterialFeedback implements FeedbackPresenter {
+  @override
+  void success(String message) => Get.rawSnackbar(message: message);
+
+  @override
+  void error(String message) => Get.rawSnackbar(message: message);
+
+  @override
+  Future<bool> confirm(ConfirmationRequest request) async =>
+      await Get.dialog<bool>(AlertDialog(
+        title: Text(request.title),
+        content: Text(request.message),
+        actions: [
+          TextButton(onPressed: () => Get.back(result: false), child: Text(request.cancelLabel)),
+          TextButton(onPressed: () => Get.back(result: true), child: Text(request.confirmLabel)),
+        ],
+      )) ?? false;
+}
+
 class {{appClass}} extends StatelessWidget {
   const {{appClass}}({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return GetMaterialApp(
       title: '{{title}}',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
@@ -1536,7 +1573,6 @@ class LoginController extends VeloraController {
         email: emailController.text.trim(),
         password: passwordController.text,
       ),
-      showLoader: true,
       successMessage: 'Welcome back',
     );
 
@@ -1716,13 +1752,12 @@ class DashboardPage extends StatelessWidget {
         .replaceAll('{{title}}', title);
 
 String _appTheme() => '''import 'package:flutter/material.dart';
-import 'package:velora/velora.dart';
 
 class AppTheme {
   const AppTheme._();
 
-  static ThemeData light() => VeloraTheme.light(seedColor: Colors.indigo);
-  static ThemeData dark() => VeloraTheme.dark(seedColor: Colors.indigo);
+  static ThemeData light() => ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo));
+  static ThemeData dark() => ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo, brightness: Brightness.dark));
 }
 ''';
 
@@ -1961,6 +1996,23 @@ class {{className}}Controller extends VeloraController {
 '''
         .replaceAll('{{name}}', name)
         .replaceAll('{{className}}', className);
+
+String _controllerTest(String name, String className) =>
+    '''
+import 'package:flutter_test/flutter_test.dart';
+
+import '../../../lib/app/modules/$name/${name}_module.dart';
+
+void main() {
+  test('$className controller starts idle without an error', () {
+    final controller = ${className}Module.controller();
+
+    expect(controller.loading.value, isFalse);
+    expect(controller.error.value, isEmpty);
+    controller.onClose();
+  });
+}
+''';
 
 String _indexPage(String name, String className, String title, bool crud) {
   if (!crud) {

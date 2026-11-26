@@ -1,29 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../theme/velora_tokens_context.dart';
+import '../tokens/velora_tokens.dart';
 import 'velora_skeleton.dart';
 
-/// Which column a [VeloraDataTable] is sorted by, and in which direction.
+/// Which column a [ResponsiveDataTable] is sorted by, and in which direction.
 ///
 /// The table never sorts rows itself. It shows this state in the header and
 /// reports the state the user asked for through
-/// [VeloraDataTable.onSortChanged]; the caller sorts (or re-queries) and
+/// [ResponsiveDataTable.onSortChanged]; the caller sorts (or re-queries) and
 /// passes the new rows and the new state back in.
 @immutable
-class VeloraSortState {
-  /// The [VeloraDataColumn.id] of the sorted column.
+class TableSortState {
+  /// The [ResponsiveDataColumn.id] of the sorted column.
   final String columnId;
 
   /// Whether the sort is ascending.
   final bool ascending;
 
   /// Creates a sort state.
-  const VeloraSortState(this.columnId, {this.ascending = true});
+  const TableSortState(this.columnId, {this.ascending = true});
 
   @override
   bool operator ==(Object other) =>
-      other is VeloraSortState &&
+      other is TableSortState &&
       other.columnId == columnId &&
       other.ascending == ascending;
 
@@ -32,13 +32,13 @@ class VeloraSortState {
 
   @override
   String toString() =>
-      'VeloraSortState($columnId, ${ascending ? 'ascending' : 'descending'})';
+      'TableSortState($columnId, ${ascending ? 'ascending' : 'descending'})';
 }
 
-/// One column of a [VeloraDataTable].
+/// One column of a [ResponsiveDataTable].
 @immutable
-class VeloraDataColumn<T> {
-  /// Stable identifier, reported back in [VeloraSortState.columnId].
+class ResponsiveDataColumn<T> {
+  /// Stable identifier, reported back in [TableSortState.columnId].
   final String id;
 
   /// Header text. Also labels the value in the compact (stacked) layout and
@@ -49,7 +49,7 @@ class VeloraDataColumn<T> {
   final Widget Function(T row) cell;
 
   /// Whether the header offers sorting. Requires
-  /// [VeloraDataTable.onSortChanged].
+  /// [ResponsiveDataTable.onSortChanged].
   final bool sortable;
 
   /// Right-aligns the header and cell, for numbers.
@@ -59,14 +59,14 @@ class VeloraDataColumn<T> {
   final int flex;
 
   /// Creates a column definition.
-  const VeloraDataColumn({
+  const ResponsiveDataColumn({
     required this.id,
     required this.label,
     required this.cell,
     this.sortable = false,
     this.numeric = false,
     this.flex = 1,
-  }) : assert(flex > 0, 'VeloraDataColumn.flex must be positive.');
+  }) : assert(flex > 0, 'ResponsiveDataColumn.flex must be positive.');
 }
 
 /// A responsive, controlled data table for CRUD and admin screens.
@@ -95,13 +95,13 @@ class VeloraDataColumn<T> {
 /// that are not on the current page; those are preserved.
 ///
 /// The table lays out every row it is given, so pass one page of rows and
-/// put paging controls in [footer] (see `VeloraPagination`).
-class VeloraDataTable<T> extends StatefulWidget {
+/// put paging controls in [footer] (see a footer).
+class ResponsiveDataTable<T> extends StatefulWidget {
   /// The rows to show, already sorted and paged by the caller.
   final List<T> rows;
 
   /// Column definitions, in display order.
-  final List<VeloraDataColumn<T>> columns;
+  final List<ResponsiveDataColumn<T>> columns;
 
   /// The currently selected rows.
   final Set<T> selected;
@@ -114,10 +114,10 @@ class VeloraDataTable<T> extends StatefulWidget {
   final bool multiSelect;
 
   /// The current sort, shown in the header.
-  final VeloraSortState? sort;
+  final TableSortState? sort;
 
   /// Called with the sort the user asked for.
-  final ValueChanged<VeloraSortState>? onSortChanged;
+  final ValueChanged<TableSortState>? onSortChanged;
 
   /// Called when a row is tapped or activated with Enter.
   final ValueChanged<T>? onRowTap;
@@ -132,8 +132,8 @@ class VeloraDataTable<T> extends StatefulWidget {
   /// Whether data is being loaded or refreshed.
   final bool loading;
 
-  /// Shown instead of rows when loading failed. Typically a `VeloraAlert`
-  /// or a `VeloraEmptyState` with a retry action.
+  /// Shown instead of rows when loading failed. Typically a `InlineAlert`
+  /// or a `EmptyState` with a retry action.
   final Widget? error;
 
   /// Shown when there are no rows and the table is not loading.
@@ -153,7 +153,7 @@ class VeloraDataTable<T> extends StatefulWidget {
   final int skeletonRows;
 
   /// Creates a data table.
-  const VeloraDataTable({
+  const ResponsiveDataTable({
     super.key,
     required this.rows,
     required this.columns,
@@ -175,7 +175,7 @@ class VeloraDataTable<T> extends StatefulWidget {
   });
 
   @override
-  State<VeloraDataTable<T>> createState() => _VeloraDataTableState<T>();
+  State<ResponsiveDataTable<T>> createState() => _ResponsiveDataTableState<T>();
 }
 
 class _MoveRowIntent extends Intent {
@@ -187,7 +187,7 @@ class _ToggleRowIntent extends Intent {
   const _ToggleRowIntent();
 }
 
-class _VeloraDataTableState<T> extends State<VeloraDataTable<T>> {
+class _ResponsiveDataTableState<T> extends State<ResponsiveDataTable<T>> {
   final List<FocusNode> _rowNodes = [];
   int? _focusedRow;
 
@@ -200,14 +200,14 @@ class _VeloraDataTableState<T> extends State<VeloraDataTable<T>> {
   }
 
   @override
-  void didUpdateWidget(covariant VeloraDataTable<T> oldWidget) {
+  void didUpdateWidget(covariant ResponsiveDataTable<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
     _syncNodes();
   }
 
   void _syncNodes() {
     while (_rowNodes.length < widget.rows.length) {
-      _rowNodes.add(FocusNode(debugLabel: 'VeloraDataTable row'));
+      _rowNodes.add(FocusNode(debugLabel: 'ResponsiveDataTable row'));
     }
     while (_rowNodes.length > widget.rows.length) {
       _rowNodes.removeLast().dispose();
@@ -244,14 +244,12 @@ class _VeloraDataTableState<T> extends State<VeloraDataTable<T>> {
     onChanged(next);
   }
 
-  void _requestSort(VeloraDataColumn<T> column) {
+  void _requestSort(ResponsiveDataColumn<T> column) {
     final current = widget.sort;
     final ascending = current?.columnId == column.id
         ? !current!.ascending
         : true;
-    widget.onSortChanged?.call(
-      VeloraSortState(column.id, ascending: ascending),
-    );
+    widget.onSortChanged?.call(TableSortState(column.id, ascending: ascending));
   }
 
   void _moveFocus(int from, int delta) {
@@ -294,7 +292,7 @@ class _VeloraDataTableState<T> extends State<VeloraDataTable<T>> {
     BoxConstraints constraints,
     bool compact,
   ) {
-    final tokens = context.veloraTokens;
+    final tokens = DesignTokens.of(context);
     final error = widget.error;
     if (error != null) {
       return Padding(padding: EdgeInsets.all(tokens.spacingMd), child: error);
@@ -312,7 +310,7 @@ class _VeloraDataTableState<T> extends State<VeloraDataTable<T>> {
                     horizontal: tokens.spacingMd,
                     vertical: tokens.spacingSm,
                   ),
-                  child: const VeloraSkeleton(height: 20),
+                  child: const Skeleton(height: 20),
                 ),
             ],
           ),
@@ -408,10 +406,10 @@ class _VeloraDataTableState<T> extends State<VeloraDataTable<T>> {
 
   Widget _buildHeaderCell(
     BuildContext context,
-    VeloraDataColumn<T> column,
+    ResponsiveDataColumn<T> column,
     TextStyle? style,
   ) {
-    final tokens = context.veloraTokens;
+    final tokens = DesignTokens.of(context);
     final scheme = Theme.of(context).colorScheme;
     final sorted = widget.sort?.columnId == column.id;
     final canSort = column.sortable && widget.onSortChanged != null;
@@ -474,7 +472,7 @@ class _VeloraDataTableState<T> extends State<VeloraDataTable<T>> {
   // --- Rows (both layouts) -------------------------------------------------
 
   Widget _buildRow(BuildContext context, int index, {required bool compact}) {
-    final tokens = context.veloraTokens;
+    final tokens = DesignTokens.of(context);
     final scheme = Theme.of(context).colorScheme;
     final row = widget.rows[index];
     final isSelected = widget.selected.contains(row);
@@ -589,9 +587,9 @@ class _VeloraDataTableState<T> extends State<VeloraDataTable<T>> {
   // --- Compact layout ------------------------------------------------------
 
   Widget _buildCards(BuildContext context) {
-    final tokens = context.veloraTokens;
+    final tokens = DesignTokens.of(context);
     final scheme = Theme.of(context).colorScheme;
-    final List<VeloraDataColumn<T>> sortable = widget.onSortChanged == null
+    final List<ResponsiveDataColumn<T>> sortable = widget.onSortChanged == null
         ? []
         : widget.columns.where((c) => c.sortable).toList();
     final showToolbar =
@@ -651,7 +649,7 @@ class _VeloraDataTableState<T> extends State<VeloraDataTable<T>> {
     Widget? checkbox,
     Widget? actions,
   ) {
-    final tokens = context.veloraTokens;
+    final tokens = DesignTokens.of(context);
     final scheme = Theme.of(context).colorScheme;
     final labelStyle = Theme.of(context).textTheme.labelSmall
         ?.copyWith(color: scheme.onSurfaceVariant);
@@ -682,68 +680,6 @@ class _VeloraDataTableState<T> extends State<VeloraDataTable<T>> {
             ),
           ),
           ?actions,
-        ],
-      ),
-    );
-  }
-}
-
-/// Previous/next paging controls for a [VeloraDataTable.footer].
-///
-/// Controlled: shows [page] of [pageCount] and reports the page the user
-/// asked for. The caller loads that page and passes the new [page] back.
-class VeloraPagination extends StatelessWidget {
-  /// The current page, starting at 1.
-  final int page;
-
-  /// The total number of pages.
-  final int pageCount;
-
-  /// Called with the requested page. When null, both buttons are disabled.
-  final ValueChanged<int>? onPageChanged;
-
-  /// Creates pagination controls.
-  const VeloraPagination({
-    super.key,
-    required this.page,
-    required this.pageCount,
-    required this.onPageChanged,
-  }) : assert(page >= 1, 'VeloraPagination.page starts at 1.'),
-       assert(pageCount >= 1, 'VeloraPagination.pageCount must be >= 1.');
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.veloraTokens;
-    final scheme = Theme.of(context).colorScheme;
-    final onChanged = onPageChanged;
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: tokens.spacingSm),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          Flexible(
-            child: Text(
-              'Page $page of $pageCount',
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodySmall
-                  ?.copyWith(color: scheme.onSurfaceVariant),
-            ),
-          ),
-          SizedBox(width: tokens.spacingSm),
-          IconButton(
-            tooltip: 'Previous page',
-            icon: const Icon(Icons.chevron_left),
-            onPressed: onChanged != null && page > 1
-                ? () => onChanged(page - 1)
-                : null,
-          ),
-          IconButton(
-            tooltip: 'Next page',
-            icon: const Icon(Icons.chevron_right),
-            onPressed: onChanged != null && page < pageCount
-                ? () => onChanged(page + 1)
-                : null,
-          ),
         ],
       ),
     );

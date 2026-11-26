@@ -1,32 +1,32 @@
 import 'package:flutter/material.dart';
 
-import '../theme/velora_tokens_context.dart';
+import '../tokens/velora_tokens.dart';
 import 'velora_status.dart';
 
 /// An inline, semantic message banner — a success confirmation, a caution, an
 /// informational note, or an error.
 ///
-/// Its accent color and default icon come from a [VeloraStatus] resolved
-/// against the theme (see [VeloraStatusResolver]); its layout, radius, and
-/// spacing come from [VeloraTokens]. The banner uses a soft tinted background
+/// Its accent color and default icon come from a [StatusTone] resolved
+/// against the theme (see [StatusTone]); its layout, radius, and
+/// spacing come from [DesignTokens]. The banner uses a soft tinted background
 /// with a leading colored icon and a colored left accent bar so it reads as
 /// "this level of message" at a glance without shouting.
 ///
 /// Pass an optional [title] for a bolded heading above [message], and an
 /// optional [onClose] to show a dismiss button (the widget doesn't manage its
 /// own visibility — the caller removes it from the tree in response).
-class VeloraAlert extends StatelessWidget {
+class InlineAlert extends StatelessWidget {
   /// The alert's body text.
   final String message;
 
-  /// The semantic level of the alert. Defaults to [VeloraStatus.info].
-  final VeloraStatus status;
+  /// The semantic level of the alert. Defaults to [StatusTone.info].
+  final StatusTone status;
 
   /// An optional bold heading shown above [message].
   final String? title;
 
   /// Overrides the leading glyph. Omit to use the default icon for [status]
-  /// (see [VeloraStatusResolver.icon]).
+  /// (see [StatusTone.icon]).
   final IconData? icon;
 
   /// If non-null, a trailing close button is shown and this is called when it
@@ -34,10 +34,10 @@ class VeloraAlert extends StatelessWidget {
   final VoidCallback? onClose;
 
   /// Creates a Velora alert.
-  const VeloraAlert({
+  const InlineAlert({
     super.key,
     required this.message,
-    this.status = VeloraStatus.info,
+    this.status = StatusTone.info,
     this.title,
     this.icon,
     this.onClose,
@@ -45,10 +45,10 @@ class VeloraAlert extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tokens = context.veloraTokens;
+    final tokens = DesignTokens.of(context);
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final colors = status.colors(context);
+    final colors = StatusColors.of(context).forTone(status);
     final radius = BorderRadius.circular(tokens.radiusLg);
 
     return Container(

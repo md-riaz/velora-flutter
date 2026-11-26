@@ -21,9 +21,13 @@ class AccountController extends VeloraController {
   );
 
   Future<void> signOut() async {
-    final confirmed = await Velora.dialog.confirm(
-      title: 'Sign out',
-      message: 'Are you sure you want to sign out?',
+    final confirmed = await Velora.feedback.confirm(
+      ConfirmationRequest(
+        confirmLabel: 'Confirm',
+        cancelLabel: 'Cancel',
+        title: 'Sign out',
+        message: 'Are you sure you want to sign out?',
+      ),
     );
     if (!confirmed) return;
     // Delegate to the framework's logout so every user-scoped service

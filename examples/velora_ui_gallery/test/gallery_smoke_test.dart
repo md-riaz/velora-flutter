@@ -1,169 +1,44 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:velora_ui/velora_ui.dart';
 import 'package:velora_ui_gallery/main.dart';
 
-/// Drags [listView] upward in small, bounded steps (pumping once after each
-/// drag, never `pumpAndSettle`) until [finder] is built into the tree.
-///
-/// The gallery's body is a plain (eagerly-listed, but lazily-built)
-/// `ListView`, and one section runs an indefinitely-repeating
-/// [AnimationController] (`VeloraSkeleton`'s pulse) plus a real
-/// `NetworkImage` — both of which make `pumpAndSettle` either hang or hit
-/// the network, so every scroll/settle step in this file uses fixed,
-/// finite `pump()` calls instead.
-Future<void> _scrollUntilFound(
-  WidgetTester tester,
-  Finder finder,
-  Finder listView,
-) async {
-  const maxAttempts = 20;
-  for (var attempt = 0; attempt < maxAttempts; attempt++) {
-    if (finder.evaluate().isNotEmpty) return;
-    await tester.drag(listView, const Offset(0, -300));
-    await tester.pump();
-  }
-}
-
 void main() {
-  testWidgets('renders the gallery app with its top-level structure', (
+  testWidgets('preset, brightness and density update the theme', (
     tester,
   ) async {
     await tester.pumpWidget(const GalleryApp());
-    // A couple of fixed pumps let the first frame (and VeloraSkeleton's
-    // pulse animation) settle without ever waiting for "no more frames" —
-    // which would never arrive while the skeletons keep pulsing.
+    await tester.tap(find.byKey(const ValueKey('preset')));
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(find.text('corporate').last);
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(find.byKey(const ValueKey('brightness')));
+    await tester.tap(find.byKey(const ValueKey('density')));
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 50));
-
-    expect(find.byType(MaterialApp), findsOneWidget);
-    expect(find.text('Velora UI Gallery'), findsOneWidget);
-    // The "Buttons" section header is the first section and renders inside
-    // the initial viewport without needing to scroll.
-    expect(find.text('Buttons'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('corporate / dark / compact'), findsOneWidget);
+    final context = tester.element(find.text('corporate / dark / compact'));
+    expect(Theme.of(context).brightness, Brightness.dark);
+    expect(Theme.of(context).visualDensity, VisualDensity.compact);
+    expect(DesignTokens.of(context).radiusMd, 6);
+    expect(StatusColors.of(context).success.color, isNotNull);
   });
 
-  testWidgets('brightness toggle flips the theme mode', (tester) async {
+  testWidgets('data destination sorts and selects rows', (tester) async {
+    tester.view.physicalSize = const Size(1200, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(const GalleryApp());
+    await tester.tap(find.text('Data'));
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(find.bySemanticsLabel('Select Ada'));
     await tester.pump();
-
-    final before = tester.widget<MaterialApp>(find.byType(MaterialApp));
-    expect(before.themeMode, ThemeMode.light);
-
-    await tester.tap(find.byTooltip('Switch to dark mode'));
+    expect(find.text('Selected: 1'), findsOneWidget);
+    await tester.tap(find.text('Name'));
     await tester.pump();
-
-    final after = tester.widget<MaterialApp>(find.byType(MaterialApp));
-    expect(after.themeMode, ThemeMode.dark);
-    expect(find.byTooltip('Switch to light mode'), findsOneWidget);
-  });
-
-  testWidgets('preset toggle switches between aurora and meadow', (
-    tester,
-  ) async {
-    await tester.pumpWidget(const GalleryApp());
-    await tester.pump();
-
-    expect(find.text('Velora Aurora · Light'), findsOneWidget);
-
-    await tester.tap(find.byTooltip('Switch to Velora Meadow'));
-    await tester.pump();
-
-    expect(find.text('Velora Meadow · Light'), findsOneWidget);
-  });
-
-  testWidgets('a checkbox deep in the inputs section toggles via setState', (
-    tester,
-  ) async {
-    await tester.pumpWidget(const GalleryApp());
-    await tester.pump();
-
-    final listView = find.byType(ListView);
-    final checkboxFinder = find.byType(Checkbox);
-
-    await _scrollUntilFound(tester, checkboxFinder, listView);
-    expect(checkboxFinder, findsOneWidget);
-
-    // Being present in the element tree only means it was *built* (the
-    // ListView's default cache extent builds a little past the viewport
-    // edge) — ensureVisible scrolls it fully into the visible viewport so
-    // the subsequent tap's hit test actually lands on it.
-    await tester.ensureVisible(checkboxFinder);
-    await tester.pump();
-
-    final before = tester.widget<Checkbox>(checkboxFinder).value;
-    await tester.tap(checkboxFinder);
-    await tester.pump();
-    final after = tester.widget<Checkbox>(checkboxFinder).value;
-
-    expect(after, isNot(equals(before)));
-  });
-
-  testWidgets('a nav-section tab switches the selected view via setState', (
-    tester,
-  ) async {
-    await tester.pumpWidget(const GalleryApp());
-    await tester.pump();
-
-    final listView = find.byType(ListView);
-    final monthTabFinder = find.text('Month');
-
-    await _scrollUntilFound(tester, monthTabFinder, listView);
-    expect(monthTabFinder, findsOneWidget);
-
-    await tester.ensureVisible(monthTabFinder);
-    await tester.pump();
-
-    expect(find.text('Showing: Week'), findsOneWidget);
-    expect(find.text('Showing: Month'), findsNothing);
-
-    await tester.tap(monthTabFinder);
-    await tester.pump();
-
-    expect(find.text('Showing: Month'), findsOneWidget);
-    expect(find.text('Showing: Week'), findsNothing);
-  });
-
-  testWidgets('a feedback-section toast button shows its toast message', (
-    tester,
-  ) async {
-    await tester.pumpWidget(const GalleryApp());
-    await tester.pump();
-
-    final listView = find.byType(ListView);
-    final successToastButtonFinder = find.text('Show success');
-
-    await _scrollUntilFound(tester, successToastButtonFinder, listView);
-    expect(successToastButtonFinder, findsOneWidget);
-
-    await tester.ensureVisible(successToastButtonFinder);
-    await tester.pump();
-
-    await tester.tap(successToastButtonFinder);
-    // A couple of fixed pumps let the snack bar's enter animation build
-    // without waiting for "no more frames" — the toast auto-dismisses after
-    // its duration, so asserting must happen right after pumping, not after
-    // settling.
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 50));
-
-    expect(find.text('Saved successfully'), findsOneWidget);
-  });
-
-  testWidgets('the data section table sorts and selects via setState', (
-    tester,
-  ) async {
-    await tester.pumpWidget(const GalleryApp());
-    await tester.pump();
-
-    final listView = find.byType(ListView);
-    await _scrollUntilFound(tester, find.text('Selected: 0'), listView);
-    await tester.pump(const Duration(milliseconds: 50));
-    expect(find.text('Selected: 0'), findsOneWidget);
-
-    await tester.ensureVisible(find.bySemanticsLabel('Select all rows'));
-    await tester.pump();
-    await tester.tap(find.bySemanticsLabel('Select all rows'));
-    await tester.pump();
-    expect(find.text('Selected: 4'), findsOneWidget);
+    final table = tester.widget<ResponsiveDataTable<String>>(
+      find.byType(ResponsiveDataTable<String>),
+    );
+    expect(table.rows.first, 'Grace');
   });
 }

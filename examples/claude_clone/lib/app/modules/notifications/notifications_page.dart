@@ -1,3 +1,4 @@
+import '../../shared/empty_state.dart';
 import 'package:flutter/material.dart';
 import 'package:velora/velora.dart';
 
@@ -32,7 +33,7 @@ class NotificationsPage extends GetView<NotificationsController> {
         final notifications = Velora.notify.notifications;
         if (notifications.isEmpty) {
           return const Center(
-            child: VeloraEmptyState(
+            child: AppEmptyState(
               icon: Icons.notifications_none_outlined,
               title: 'No notifications',
               description: 'You are all caught up.',

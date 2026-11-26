@@ -8,6 +8,59 @@ import 'messages_datasource.dart';
 import 'widgets/rename_dialog.dart';
 
 class ChatController extends VeloraController with VeloraAttachmentsMixin {
+  @override
+  Future<List<VeloraAttachment>?> presentAttachmentPicker(
+    VeloraPickerConfig config,
+  ) async {
+    final context = Get.context;
+    if (context == null) return null;
+    final source = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (config.allowGallery)
+              ListTile(
+                leading: const Icon(Icons.photo),
+                title: const Text('Photos'),
+                onTap: () => Navigator.pop(context, 'photos'),
+              ),
+            if (config.allowFiles)
+              ListTile(
+                leading: const Icon(Icons.attach_file),
+                title: const Text('Files'),
+                onTap: () => Navigator.pop(context, 'files'),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (source == 'photos')
+      return config.allowMultiple
+          ? Velora.media.pickMultiImage(imageQuality: config.imageQuality)
+          : [
+              if (await Velora.media.pickImage(
+                    imageQuality: config.imageQuality,
+                  )
+                  case final image?)
+                image,
+            ];
+    if (source == 'files')
+      return config.allowMultiple
+          ? Velora.media.pickFiles(
+              allowedExtensions: config.allowedFileExtensions,
+            )
+          : [
+              if (await Velora.media.pickFile(
+                    allowedExtensions: config.allowedFileExtensions,
+                  )
+                  case final file?)
+                file,
+            ];
+    return null;
+  }
+
   final MessagesDataSource _messagesDs;
   final ConversationsDataSource _conversationsDs;
 
@@ -203,7 +256,7 @@ class ChatController extends VeloraController with VeloraAttachmentsMixin {
     });
     if (error.value.isNotEmpty) return;
     conversation.value = conversation.value.copyWith(title: trimmed);
-    Velora.toast.success('Renamed');
+    Velora.feedback.success('Renamed');
   }
 
   Future<void> toggleStar() async {
@@ -217,19 +270,23 @@ class ChatController extends VeloraController with VeloraAttachmentsMixin {
       conversation.value = conversation.value.copyWith(isStarred: !newStarred);
       return;
     }
-    Velora.toast.success(
+    Velora.feedback.success(
       newStarred ? 'Added to starred' : 'Removed from starred',
     );
   }
 
   Future<void> clearHistory() async {
     if (isTyping.value) {
-      Velora.toast.info('Wait for the current reply to finish');
+      Velora.feedback.success('Wait for the current reply to finish');
       return;
     }
-    final confirmed = await Velora.dialog.confirm(
-      title: 'Clear history',
-      message: 'This will remove all messages from this conversation.',
+    final confirmed = await Velora.feedback.confirm(
+      ConfirmationRequest(
+        confirmLabel: 'Confirm',
+        cancelLabel: 'Cancel',
+        title: 'Clear history',
+        message: 'This will remove all messages from this conversation.',
+      ),
     );
     if (!confirmed) return;
     await run(() async {
@@ -241,13 +298,17 @@ class ChatController extends VeloraController with VeloraAttachmentsMixin {
     hasEarlier.value = false;
     _earlierCursor = null;
     conversation.value = conversation.value.copyWith(lastMessage: '');
-    Velora.toast.success('Chat history cleared');
+    Velora.feedback.success('Chat history cleared');
   }
 
   Future<void> deleteConversation() async {
-    final confirmed = await Velora.dialog.confirm(
-      title: 'Delete conversation',
-      message: 'This will permanently delete this conversation and all its messages.',
+    final confirmed = await Velora.feedback.confirm(
+      ConfirmationRequest(
+        confirmLabel: 'Confirm',
+        cancelLabel: 'Cancel',
+        title: 'Delete conversation',
+        message: 'This will permanently delete this conversation and all its messages.',
+      ),
     );
     if (!confirmed) return;
     await run(() async {
@@ -256,7 +317,7 @@ class ChatController extends VeloraController with VeloraAttachmentsMixin {
     });
     if (error.value.isNotEmpty) return;
     Velora.nav.back();
-    Velora.toast.success('Conversation deleted');
+    Velora.feedback.success('Conversation deleted');
   }
 
   // ---------------------------------------------------------------------------

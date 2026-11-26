@@ -1,9 +1,10 @@
+import '../../shared/app_theme_mode.dart';
 import 'package:flutter/material.dart';
 import 'package:velora/velora.dart';
 
 import '../../shared/feature_ids.dart';
 
-/// Demonstrates [ThemeService] and [FeatureService] patterns.
+/// Demonstrates theme and [FeatureService] patterns.
 ///
 /// Demo features are registered once at app startup (see [main]) so they
 /// persist across [SettingsController] lifecycles.  The controller toggles
@@ -13,10 +14,10 @@ class SettingsController extends VeloraController {
   // Theme
   // ---------------------------------------------------------------------------
 
-  ThemeMode get currentTheme => Velora.theme.current;
+  ThemeMode get currentTheme => AppThemeMode.mode.value;
 
   void setTheme(ThemeMode mode) {
-    Velora.theme.setMode(mode);
+    AppThemeMode.setMode(mode);
   }
 
   // ---------------------------------------------------------------------------

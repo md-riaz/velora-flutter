@@ -90,14 +90,18 @@ class HomeController extends VeloraPaginatedController<ConversationModel> {
   }
 
   Future<void> deleteConversation(String id) async {
-    final confirmed = await Velora.dialog.confirm(
-      title: 'Delete conversation',
-      message: 'This will permanently delete the conversation.',
+    final confirmed = await Velora.feedback.confirm(
+      ConfirmationRequest(
+        confirmLabel: 'Confirm',
+        cancelLabel: 'Cancel',
+        title: 'Delete conversation',
+        message: 'This will permanently delete the conversation.',
+      ),
     );
     if (!confirmed) return;
     await run(() => _dataSource.delete(id));
     if (error.value.isNotEmpty) return;
     items.removeWhere((c) => c.id == id);
-    Velora.toast.success('Conversation deleted');
+    Velora.feedback.success('Conversation deleted');
   }
 }

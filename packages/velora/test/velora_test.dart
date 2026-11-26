@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -295,21 +294,6 @@ void main() {
 
     expect(service.canAccess('reports'), isTrue);
     expect(service.canAccess('billing'), isFalse);
-  });
-
-  test('theme service tracks mode changes', () {
-    final service = ThemeService();
-
-    expect(service.current, ThemeMode.system);
-
-    service.useDark();
-    expect(service.current, ThemeMode.dark);
-
-    service.useLight();
-    expect(service.current, ThemeMode.light);
-
-    service.useSystem();
-    expect(service.current, ThemeMode.system);
   });
 
   test(

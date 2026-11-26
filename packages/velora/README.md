@@ -27,7 +27,7 @@ attachments with sensible defaults — but every default is overridable.
   notification centre with a no-op adapter for dev/testing
 - **Media attachments** — pick → upload → submit flow with progress, retry, and
   a built-in `MultipartUploadAdapter` for any multipart endpoint
-- **Theme** — `ThemeService` for light/dark/system toggle with persistence
+- **Feedback** — app-injected `FeedbackPresenter` for messages and confirmations
 - **Storage** — `VeloraStorageService` wrapping `SharedPreferences` and
   `FlutterSecureStorage` with typed JSON helpers
 - **Validation** — `VeloraValidator` rule set for forms

@@ -93,6 +93,34 @@ void main() {
     });
   });
 
+  group('bounds restoration', () {
+    final cases = <String, String?>{
+      'corrupt JSON': '{not json}',
+      'wrong JSON shape': '[1,2,3]',
+      'missing keys': '{}',
+      'partial bounds': '{"x":10,"y":20}',
+      'null storage value': null,
+    };
+
+    for (final entry in cases.entries) {
+      test('ignores ${entry.key}', () async {
+        final storage = FakeDesktopStoragePort();
+        if (entry.value != null) {
+          storage.values[VeloraDesktopCoordinator.boundsKey] = entry.value!;
+        }
+        final coordinator = VeloraDesktopCoordinator(
+          config: const VeloraDesktopConfig(appId: 'test', appName: 'Test'),
+          window: window,
+          storage: storage,
+        );
+
+        await expectLater(coordinator.initialize(), completes);
+        expect(window.attached, isTrue);
+        expect(window.currentBounds, isNull);
+      });
+    }
+  });
+
   group('close-to-tray', () {
     test('hides window when close-to-tray is on and tray is ready', () async {
       final coordinator = buildCoordinator();
