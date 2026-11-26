@@ -80,6 +80,13 @@ class AdaptiveShell extends StatefulWidget {
 
   /// Optional floating action button.
   final Widget? floatingActionButton;
+  final Widget? drawer;
+  final Widget? endDrawer;
+  final Color? backgroundColor;
+  final FloatingActionButtonLocation? floatingActionButtonLocation;
+  final bool? resizeToAvoidBottomInset;
+  final bool extendedRail;
+  final NavigationRailLabelType? railLabelType;
 
   /// Width at which the rail replaces the bottom bar.
   final double mediumBreakpoint;
@@ -101,6 +108,13 @@ class AdaptiveShell extends StatefulWidget {
     this.railLeading,
     this.railTrailing,
     this.floatingActionButton,
+    this.drawer,
+    this.endDrawer,
+    this.backgroundColor,
+    this.floatingActionButtonLocation,
+    this.resizeToAvoidBottomInset,
+    this.extendedRail = false,
+    this.railLabelType,
     this.mediumBreakpoint = 600,
     this.expandedBreakpoint = 1024,
   }) : assert(
@@ -169,7 +183,12 @@ class _AdaptiveShellState extends State<AdaptiveShell> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               NavigationRail(
-                labelType: NavigationRailLabelType.all,
+                extended: widget.extendedRail,
+                labelType:
+                    widget.railLabelType ??
+                    (widget.extendedRail
+                        ? NavigationRailLabelType.none
+                        : NavigationRailLabelType.all),
                 destinations: widget.destinations
                     .map(
                       (d) => NavigationRailDestination(
@@ -191,6 +210,11 @@ class _AdaptiveShellState extends State<AdaptiveShell> {
 
         return Scaffold(
           appBar: widget.appBar,
+          drawer: widget.drawer,
+          endDrawer: widget.endDrawer,
+          backgroundColor: widget.backgroundColor,
+          floatingActionButtonLocation: widget.floatingActionButtonLocation,
+          resizeToAvoidBottomInset: widget.resizeToAvoidBottomInset,
           body: SafeArea(child: content),
           floatingActionButton: widget.floatingActionButton,
           bottomNavigationBar: compact

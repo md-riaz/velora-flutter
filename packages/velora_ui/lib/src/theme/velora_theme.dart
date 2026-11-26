@@ -8,11 +8,32 @@ class ThemePreset {
   final String name;
   final Color seedColor;
   final double radius;
+  final String? fontFamily;
+  final DesignTokens? lightTokens;
+  final DesignTokens? darkTokens;
   const ThemePreset({
     required this.name,
     required this.seedColor,
     this.radius = 8,
+    this.fontFamily,
+    this.lightTokens,
+    this.darkTokens,
   });
+  ThemePreset copyWith({
+    String? name,
+    Color? seedColor,
+    double? radius,
+    String? fontFamily,
+    DesignTokens? lightTokens,
+    DesignTokens? darkTokens,
+  }) => ThemePreset(
+    name: name ?? this.name,
+    seedColor: seedColor ?? this.seedColor,
+    radius: radius ?? this.radius,
+    fontFamily: fontFamily ?? this.fontFamily,
+    lightTokens: lightTokens ?? this.lightTokens,
+    darkTokens: darkTokens ?? this.darkTokens,
+  );
   static const aurora = ThemePreset(
     name: 'aurora',
     seedColor: Color(0xFF5B4FE6),
@@ -36,26 +57,51 @@ class ThemePreset {
     Color? seedColor,
     VisualDensity? visualDensity,
     TextTheme? textTheme,
+    DesignTokens? tokens,
+    StatusColors? statusColors,
+    String? fontFamily,
+    Iterable<ThemeExtension>? extensions,
   }) => _build(
     Brightness.light,
     colorScheme,
     seedColor,
     visualDensity,
     textTheme,
+    tokens,
+    statusColors,
+    fontFamily,
+    extensions,
   );
   ThemeData dark({
     ColorScheme? colorScheme,
     Color? seedColor,
     VisualDensity? visualDensity,
     TextTheme? textTheme,
-  }) =>
-      _build(Brightness.dark, colorScheme, seedColor, visualDensity, textTheme);
+    DesignTokens? tokens,
+    StatusColors? statusColors,
+    String? fontFamily,
+    Iterable<ThemeExtension>? extensions,
+  }) => _build(
+    Brightness.dark,
+    colorScheme,
+    seedColor,
+    visualDensity,
+    textTheme,
+    tokens,
+    statusColors,
+    fontFamily,
+    extensions,
+  );
   ThemeData _build(
     Brightness brightness,
     ColorScheme? overrideScheme,
     Color? overrideSeed,
     VisualDensity? visualDensity,
     TextTheme? overrideTextTheme,
+    DesignTokens? overrideTokens,
+    StatusColors? statusColors,
+    String? overrideFontFamily,
+    Iterable<ThemeExtension>? extensions,
   ) {
     final colorScheme =
         overrideScheme ??
@@ -67,6 +113,10 @@ class ThemePreset {
               : DynamicSchemeVariant.tonalSpot,
         );
     final tokens =
+        overrideTokens ??
+        (colorScheme.brightness == Brightness.dark
+            ? darkTokens
+            : lightTokens) ??
         (colorScheme.brightness == Brightness.dark
                 ? DesignTokens.dark
                 : DesignTokens.light)
@@ -75,8 +125,13 @@ class ThemePreset {
               radiusLg: radius * 2,
               spacingMd: identical(this, corporate) ? 12 : 16,
             );
+    final effectiveFontFamily = overrideFontFamily ?? fontFamily;
     final textTheme =
-        overrideTextTheme ?? ThemeData(colorScheme: colorScheme).textTheme;
+        overrideTextTheme ??
+        ThemeData(
+          colorScheme: colorScheme,
+          fontFamily: effectiveFontFamily,
+        ).textTheme;
     final radiusMd = BorderRadius.circular(tokens.radiusMd);
     final radiusLg = BorderRadius.circular(tokens.radiusLg);
 
@@ -100,17 +155,21 @@ class ThemePreset {
           ? colorScheme.primary
           : colorScheme.onSurfaceVariant;
     });
+    final mergedExtensions = <ThemeExtension>[
+      tokens,
+      statusColors ?? StatusColors.fromScheme(colorScheme, tokens),
+      ...?extensions,
+    ];
+
     return ThemeData(
       useMaterial3: true,
       brightness: colorScheme.brightness,
       colorScheme: colorScheme,
+      fontFamily: effectiveFontFamily,
       textTheme: textTheme,
       scaffoldBackgroundColor: colorScheme.surface,
       visualDensity: visualDensity ?? VisualDensity.adaptivePlatformDensity,
-      extensions: <ThemeExtension<dynamic>>[
-        tokens,
-        StatusColors.fromScheme(colorScheme, tokens),
-      ],
+      extensions: mergedExtensions,
 
       navigationRailTheme: NavigationRailThemeData(
         backgroundColor: colorScheme.surface,
