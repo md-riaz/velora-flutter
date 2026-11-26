@@ -108,9 +108,12 @@ class VeloraDesktopCoordinator implements VeloraDesktopService {
           return true;
         });
       }
-      if (!config.windowButtonVisibility) {
+      if (config.titleBarStyle != VeloraTitleBarStyle.normal ||
+          !config.windowButtonVisibility) {
         await attempt('windowButtonVisibility', () async {
-          await _window.setWindowButtonVisibility(false);
+          await _window.setWindowButtonVisibility(
+            config.windowButtonVisibility,
+          );
           return true;
         });
       }
