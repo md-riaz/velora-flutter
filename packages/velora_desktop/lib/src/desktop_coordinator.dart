@@ -100,7 +100,21 @@ class VeloraDesktopCoordinator implements VeloraDesktopService {
       return _window.attach(onCloseRequested: _onCloseRequested);
     });
 
-    if (window) await _restoreBounds();
+    if (window) {
+      await _restoreBounds();
+      if (config.titleBarStyle != VeloraTitleBarStyle.normal) {
+        await attempt('titleBarStyle', () async {
+          await _window.setTitleBarStyle(config.titleBarStyle);
+          return true;
+        });
+      }
+      if (!config.windowButtonVisibility) {
+        await attempt('windowButtonVisibility', () async {
+          await _window.setWindowButtonVisibility(false);
+          return true;
+        });
+      }
+    }
 
     final trayPort = _tray;
     final trayConfig = config.tray;
@@ -194,6 +208,14 @@ class VeloraDesktopCoordinator implements VeloraDesktopService {
 
   @override
   Future<void> hide() => _window.hide();
+
+  @override
+  Future<void> setTitleBarStyle(VeloraTitleBarStyle style) =>
+      _window.setTitleBarStyle(style);
+
+  @override
+  Future<void> setWindowButtonVisibility(bool visible) =>
+      _window.setWindowButtonVisibility(visible);
 
   @override
   Future<void> quit() async {

@@ -43,10 +43,12 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              size: 56,
-              color: scheme.onSurfaceVariant.withValues(alpha: 0.5),
+            ExcludeSemantics(
+              child: Icon(
+                icon,
+                size: 56,
+                color: scheme.onSurfaceVariant.withValues(alpha: 0.5),
+              ),
             ),
             SizedBox(height: tokens.spacingMd),
             Text(

@@ -96,6 +96,12 @@ class _InertDesktopService implements VeloraDesktopService {
   Future<void> hide() async {}
 
   @override
+  Future<void> setTitleBarStyle(VeloraTitleBarStyle style) async {}
+
+  @override
+  Future<void> setWindowButtonVisibility(bool visible) async {}
+
+  @override
   Future<void> quit() async {}
 
   @override

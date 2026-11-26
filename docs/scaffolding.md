@@ -85,6 +85,7 @@ Adds the package to `pubspec.yaml`, wires its plugin into `Velora.boot(plugins: 
 | `velora_cli new <name>` | Create a new app skeleton |
 | `velora_cli make:auth --sanctum` | Scaffold login + auth flow |
 | `velora_cli make:module <name> --crud` | Generate a full CRUD module |
+| `velora_cli make:module <name> --form` | Add a form page, validation controller, and controller test; can be combined with `--crud` |
 | `velora_cli make:notifications` | Generate notification center module |
 | `velora_cli install:push --fcm` | Add FCM push setup files |
 | `velora_cli install:push --local` | Add local notifications setup files |

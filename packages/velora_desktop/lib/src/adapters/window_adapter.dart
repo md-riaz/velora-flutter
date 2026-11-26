@@ -1,6 +1,7 @@
 import 'package:nativeapi/nativeapi.dart' as nativeapi;
 
 import '../desktop_ports.dart';
+import '../desktop_service.dart';
 
 /// [VeloraDesktopWindowPort] over nativeapi [nativeapi.Window].
 ///
@@ -41,6 +42,27 @@ class WindowManagerAdapter implements VeloraDesktopWindowPort {
 
   @override
   Future<void> hide() async => _window?.hide();
+
+  @override
+  Future<void> setTitleBarStyle(VeloraTitleBarStyle style) async {
+    final window = _window;
+    if (window == null) return;
+    if (style != VeloraTitleBarStyle.customTitleBar) {
+      window.setContentUnderTitleBar(false);
+    }
+    window.titleBarStyle = style == VeloraTitleBarStyle.hidden
+        ? nativeapi.TitleBarStyle.hidden
+        : nativeapi.TitleBarStyle.normal;
+    if (style == VeloraTitleBarStyle.customTitleBar &&
+        !window.setContentUnderTitleBar(true)) {
+      throw UnsupportedError('Custom title bar is not available');
+    }
+  }
+
+  @override
+  Future<void> setWindowButtonVisibility(bool visible) async {
+    _window?.isWindowControlButtonsVisible = visible;
+  }
 
   @override
   Future<void> close() async => _window?.close();

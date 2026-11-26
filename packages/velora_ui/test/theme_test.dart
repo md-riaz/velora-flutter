@@ -167,4 +167,92 @@ void main() {
     expect(() => DesignTokens.of(context), throwsStateError);
     expect(() => StatusColors.of(context), throwsStateError);
   });
+  testWidgets('components expose semantics and handle large text', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemePreset.aurora.light(),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: const TextScaler.linear(2)),
+          child: child!,
+        ),
+        home: AdaptiveShell(
+          destinations: const [
+            ShellDestination(icon: Icons.home, label: 'Home'),
+            ShellDestination(icon: Icons.search, label: 'Search'),
+          ],
+          selectedIndex: 0,
+          onDestinationSelected: (_) {},
+          body: SingleChildScrollView(
+            child: Column(
+              children: [
+                InlineAlert(
+                  message: 'A long notice that should wrap at large text sizes',
+                  onClose: () {},
+                ),
+                const EmptyState(
+                  icon: Icons.inbox,
+                  title: 'Nothing here yet',
+                  message: 'Try again later',
+                ),
+                const Skeleton(),
+                ResponsiveDataTable<String>(
+                  rows: const ['Alice'],
+                  columns: [
+                    ResponsiveDataColumn(
+                      id: 'name',
+                      label: 'A long column name',
+                      cell: (row) => Text(row),
+                      sortable: true,
+                    ),
+                  ],
+                  onSelectionChanged: (_) {},
+                  onSortChanged: (_) {},
+                  rowLabel: (row) => row,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(tester.takeException(), isNull);
+    expect(find.byTooltip('Dismiss'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (w) => w is Checkbox && w.semanticLabel == 'Select Alice',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<Semantics>(
+            find
+                .ancestor(
+                  of: find.text(
+                    'A long notice that should wrap at large text sizes',
+                  ),
+                  matching: find.byWidgetPredicate(
+                    (w) => w is Semantics && w.properties.liveRegion == true,
+                  ),
+                )
+                .first,
+          )
+          .properties
+          .liveRegion,
+      isTrue,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(Skeleton),
+        matching: find.byType(ExcludeSemantics),
+      ),
+      findsOneWidget,
+    );
+    handle.dispose();
+    await tester.pumpWidget(const SizedBox());
+  });
 }

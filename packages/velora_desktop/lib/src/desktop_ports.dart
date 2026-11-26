@@ -59,6 +59,10 @@ abstract interface class VeloraDesktopWindowPort {
 
   Future<void> hide();
 
+  Future<void> setTitleBarStyle(VeloraTitleBarStyle style);
+
+  Future<void> setWindowButtonVisibility(bool visible);
+
   /// Asks the window to close; [attach]'s callback still decides.
   Future<void> close();
 

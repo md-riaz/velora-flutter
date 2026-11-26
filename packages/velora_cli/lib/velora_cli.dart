@@ -72,7 +72,7 @@ const veloraCommands = <VeloraCommand>[
   VeloraCommand('new', '<name>', 'Create a new Velora app skeleton.'),
   VeloraCommand(
     'make:module',
-    '<name> [--crud]',
+    '<name> [--crud] [--form]',
     'Generate a module: factory, routes, model, data source, repository, '
         'service, controller, and pages.',
   ),

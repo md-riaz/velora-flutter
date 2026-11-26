@@ -15,6 +15,8 @@ class FakeWindowPort implements VeloraDesktopWindowPort {
   bool closed = false;
   bool Function()? onCloseRequested;
   WindowBounds? currentBounds;
+  VeloraTitleBarStyle titleBarStyle = VeloraTitleBarStyle.normal;
+  bool windowButtonVisibility = true;
 
   /// Set to `false` before [attach] to simulate a platform without a window.
   bool supported = true;
@@ -37,6 +39,16 @@ class FakeWindowPort implements VeloraDesktopWindowPort {
   Future<void> hide() async {
     visible = false;
     focused = false;
+  }
+
+  @override
+  Future<void> setTitleBarStyle(VeloraTitleBarStyle style) async {
+    titleBarStyle = style;
+  }
+
+  @override
+  Future<void> setWindowButtonVisibility(bool visible) async {
+    windowButtonVisibility = visible;
   }
 
   @override

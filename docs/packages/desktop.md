@@ -76,8 +76,14 @@ VeloraDesktopConfig(
   protocolSchemes: {'myapp'},       // lower case, no ://
   autoStartArgument: '--autostart', // added to auto-start command
   deduplicationWindow: Duration(seconds: 2),
+  titleBarStyle: VeloraTitleBarStyle.customTitleBar,
+  windowButtonVisibility: false,
 )
 ```
+
+The title bar defaults to `normal` and native window buttons default to visible. Non-default settings are applied after the window attaches. `hidden` removes the native title bar; `customTitleBar` places content under a transparent native title bar where supported. The native backend currently supports that overlay on macOS; unsupported platforms report the failure in `capabilities.problems['titleBarStyle']`. Hiding the title bar also hides its native buttons in the backend; call `setWindowButtonVisibility(true)` afterward if the platform supports showing them.
+
+At runtime use `VeloraDesktop.service.setTitleBarStyle(style)` and `VeloraDesktop.service.setWindowButtonVisibility(visible)`. Native appearance and button visibility depend on the platform. Custom `VeloraDesktopWindowPort` and `VeloraDesktopService` implementations must implement both methods.
 
 ## Plugin integration
 
@@ -249,7 +255,7 @@ On unsupported platforms the capability degrades gracefully: `capabilities.power
 
 Import `package:velora_desktop/velora_desktop.dart` — the barrel exports `testing.dart` with in-memory fakes of every port:
 
-- `FakeWindowPort` — tracks show/hide/close/bounds state
+- `FakeWindowPort` — tracks show/hide/close/bounds, title bar style, and button visibility
 - `FakeTrayPort` — exposes `onActivate`/`onShow`/`onQuit` triggers; tracks `iconAsset`, `tooltip`, `menuItems`
 - `FakeAutoStartPort` — in-memory enabled flag
 - `FakeSingleInstancePort` — controllable claim success
