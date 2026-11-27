@@ -26,6 +26,7 @@ void main() {
     expect(result.exitCode, 0, reason: result.stderr.toString());
     expect(File('${temp.path}/app/flutter_args').readAsLinesSync(), [
       'create',
+      '--project-name=app',
       '--platforms=android,windows',
       '.',
     ]);
