@@ -5,7 +5,7 @@ An optional Material theme foundation independent of core and usable alongside o
 <!-- generated:ui-layers source=packages/velora_ui/components.json — do not edit; run tool/check_docs.sh --write -->
 | Layer | Focus | Exports |
 |---|---|---|
-| 1 | Theme and components | `ThemePreset`, `DesignTokens`, `StatusTone`, `StatusColors`, `StatusColorPair`, `AdaptiveShell`, `ShellBreakpoint`, `ShellDestination`, `ResponsiveDataTable`, `ResponsiveDataColumn`, `TableSortState`, `Skeleton`, `EmptyState`, `InlineAlert` |
+| 1 | Theme and components | `ThemePreset`, `DesignTokens`, `StatusTone`, `StatusColors`, `StatusColorPair`, `AdaptiveShell`, `ShellBreakpoint`, `ShellDestination`, `ResponsiveDataTable`, `ResponsiveDataColumn`, `TableSortState`, `Skeleton`, `EmptyState`, `InlineAlert`, `MasterDetail`, `SurfaceCard`, `ContextMenuRegion` |
 <!-- /generated:ui-layers -->
 
 ## Presets and native widgets
@@ -22,7 +22,7 @@ Presets are `aurora`, `meadow`, `neutral`, and `corporate`. Their `light()` and 
 
 `DesignTokens.of(context)` reads spacing, radius, elevation and motion. `StatusColors.of(context)` provides success, warning, info and error `StatusColorPair`s; select one with `forTone(StatusTone.warning)`. Both require a preset theme.
 
-Composite exports: `AdaptiveShell`, `ShellBreakpoint`, `ShellDestination`, `ResponsiveDataTable`, `ResponsiveDataColumn`, `TableSortState`, `Skeleton`, `EmptyState`, and `InlineAlert`.
+Composite exports: `AdaptiveShell`, `ShellBreakpoint`, `ShellDestination`, `ResponsiveDataTable`, `ResponsiveDataColumn`, `TableSortState`, `Skeleton`, `EmptyState`, `InlineAlert`, `MasterDetail`, `SurfaceCard`, and `ContextMenuRegion`.
 
 ## Fonts
 

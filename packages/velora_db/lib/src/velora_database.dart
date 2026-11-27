@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'driver/db_factory.dart';
 import 'migration/migration_runner.dart';
 import 'migration/velora_migration.dart';
+import 'velora_db_schema.dart';
 import 'velora_sql_database.dart';
 
 /// Opens and owns the app's local, reactive drift database, applying
@@ -43,6 +44,19 @@ class VeloraDatabase extends GetxService {
     required this.migrations,
     this.executor,
   }) : _runner = VeloraMigrationRunner(migrations);
+
+  /// Creates an un-opened in-memory [VeloraDatabase] configured from [schema].
+  ///
+  /// Uses [inMemoryVeloraDbExecutor] (`NativeDatabase.memory()` on native
+  /// platforms). Call [open] before accessing [db].
+  factory VeloraDatabase.inMemory(VeloraDbSchema schema) {
+    return VeloraDatabase(
+      databaseName: schema.databaseName,
+      version: schema.version,
+      migrations: schema.migrations,
+      executor: inMemoryVeloraDbExecutor(),
+    );
+  }
 
   /// The open [VeloraSqlDatabase] handle. Only valid after [open] has
   /// completed.

@@ -78,6 +78,14 @@ class AdaptiveShell extends StatefulWidget {
   /// Pinned to the bottom of the rail.
   final Widget? railTrailing;
 
+  /// Optional brand header shown at the top of the navigation rail (above
+  /// [railLeading] if both are provided).
+  final Widget? brandHeader;
+
+  /// Optional status footer shown at the bottom of the navigation rail (below
+  /// [railTrailing] if both are provided).
+  final Widget? statusFooter;
+
   /// Optional floating action button.
   final Widget? floatingActionButton;
   final Widget? drawer;
@@ -107,6 +115,8 @@ class AdaptiveShell extends StatefulWidget {
     this.secondaryPaneWidth = 360,
     this.railLeading,
     this.railTrailing,
+    this.brandHeader,
+    this.statusFooter,
     this.floatingActionButton,
     this.drawer,
     this.endDrawer,
@@ -178,7 +188,27 @@ class _AdaptiveShellState extends State<AdaptiveShell> {
             ],
           );
         }
-        if (!compact) {
+        final railEntries = <({int index, ShellDestination destination})>[
+          for (var i = 0; i < widget.destinations.length; i++)
+            if (!widget.destinations[i].compactOnly)
+              (index: i, destination: widget.destinations[i]),
+        ];
+        final showRail = !compact && railEntries.length >= 2;
+        final railSelectedPos = railEntries.indexWhere(
+          (entry) => entry.index == widget.selectedIndex,
+        );
+        final railSelectedIndex = railSelectedPos >= 0 ? railSelectedPos : null;
+
+        final effectiveRailLeading = _combineSlots(
+          widget.brandHeader,
+          widget.railLeading,
+        );
+        final effectiveRailTrailing = _combineSlots(
+          widget.railTrailing,
+          widget.statusFooter,
+        );
+
+        if (showRail) {
           content = Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -189,19 +219,24 @@ class _AdaptiveShellState extends State<AdaptiveShell> {
                     (widget.extendedRail
                         ? NavigationRailLabelType.none
                         : NavigationRailLabelType.all),
-                destinations: widget.destinations
+                destinations: railEntries
                     .map(
-                      (d) => NavigationRailDestination(
-                        icon: Icon(d.icon),
-                        selectedIcon: Icon(d.selectedIcon ?? d.icon),
-                        label: Text(d.label),
+                      (entry) => NavigationRailDestination(
+                        icon: Icon(entry.destination.icon),
+                        selectedIcon: Icon(
+                          entry.destination.selectedIcon ??
+                              entry.destination.icon,
+                        ),
+                        label: Text(entry.destination.label),
                       ),
                     )
                     .toList(),
-                selectedIndex: widget.selectedIndex,
-                onDestinationSelected: widget.onDestinationSelected,
-                leading: widget.railLeading,
-                trailing: widget.railTrailing,
+                selectedIndex: railSelectedIndex,
+                onDestinationSelected: (railIndex) {
+                  widget.onDestinationSelected(railEntries[railIndex].index);
+                },
+                leading: effectiveRailLeading,
+                trailing: effectiveRailTrailing,
               ),
               Expanded(child: content),
             ],
@@ -217,7 +252,7 @@ class _AdaptiveShellState extends State<AdaptiveShell> {
           resizeToAvoidBottomInset: widget.resizeToAvoidBottomInset,
           body: SafeArea(child: content),
           floatingActionButton: widget.floatingActionButton,
-          bottomNavigationBar: compact
+          bottomNavigationBar: !showRail
               ? NavigationBar(
                   destinations: widget.destinations
                       .map(
@@ -235,5 +270,11 @@ class _AdaptiveShellState extends State<AdaptiveShell> {
         );
       },
     );
+  }
+
+  Widget? _combineSlots(Widget? first, Widget? second) {
+    if (first == null) return second;
+    if (second == null) return first;
+    return Column(mainAxisSize: MainAxisSize.min, children: [first, second]);
   }
 }

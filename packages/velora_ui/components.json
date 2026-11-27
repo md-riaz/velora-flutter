@@ -59,6 +59,18 @@
         {
           "name": "InlineAlert",
           "file": "src/components/velora_alert.dart"
+        },
+        {
+          "name": "MasterDetail",
+          "file": "src/components/velora_master_detail.dart"
+        },
+        {
+          "name": "SurfaceCard",
+          "file": "src/components/velora_surface_card.dart"
+        },
+        {
+          "name": "ContextMenuRegion",
+          "file": "src/components/velora_context_menu.dart"
         }
       ]
     }

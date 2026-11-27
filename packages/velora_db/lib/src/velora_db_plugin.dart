@@ -5,6 +5,7 @@ import 'migration/velora_migration.dart';
 import 'query/sql_identifier.dart';
 import 'query/velora_table.dart';
 import 'velora_database.dart';
+import 'velora_db_schema.dart';
 import 'velora_sql_database.dart';
 
 /// An official Velora plugin that opens a drift-backed, reactive
@@ -76,6 +77,20 @@ class VeloraDbPlugin extends VeloraPlugin {
     this.clearOnLogout = const [],
     this.onLogout,
   });
+
+  /// Creates a [VeloraDbPlugin] configured from a declarative [VeloraDbSchema].
+  VeloraDbPlugin.fromSchema(
+    VeloraDbSchema schema, {
+    QueryExecutor? executor,
+    Future<void> Function(VeloraSqlDatabase db)? onLogout,
+  }) : this(
+         databaseName: schema.databaseName,
+         version: schema.version,
+         migrations: schema.migrations,
+         clearOnLogout: schema.clearOnLogout,
+         executor: executor,
+         onLogout: onLogout,
+       );
 
   @override
   String get name => 'velora_db';

@@ -93,52 +93,42 @@ class VeloraStorageService extends GetxService {
     }
   }
 
-  Future<void> setToken(String token) async {
+  /// Writes [value] for [key] to the platform secure enclave.
+  ///
+  /// When [allowInsecureFallback] is `false` (the default), any secure-storage
+  /// failure is rethrown rather than falling back to plaintext
+  /// [SharedPreferences]. When `true`, falls back to [SharedPreferences].
+  Future<void> setSecure(String key, String value) async {
     try {
-      await _secureStorage.write(key: _tokenKey, value: token);
+      await _secureStorage.write(key: key, value: value);
     } catch (error, stackTrace) {
       if (!allowInsecureFallback) {
         _warnSecureStorageUnavailable('write', error, stackTrace);
         rethrow;
       }
-      await _prefs.setString(_tokenKey, token);
+      await _prefs.setString(key, value);
       return;
     }
     // Secure write succeeded — purge any stale plaintext copy from a previous
     // insecure fallback. A cleanup failure must NOT re-trigger the fallback, so
     // it lives outside the write try/catch above.
     try {
-      await _prefs.remove(_tokenKey);
+      await _prefs.remove(key);
     } catch (_) {
-      // Best-effort cleanup; the authoritative token is already in the enclave.
+      // Best-effort cleanup; the authoritative value is already in the enclave.
     }
   }
 
-  Future<String?> getToken() async {
-    final token = await _readTokenForKey(_tokenKey);
-    if (token != null) return token;
-
-    // Migrate a token stored under the legacy default key to the custom key.
-    if (_tokenKey == _defaultTokenKey) return null;
-    final legacy = await _readTokenForKey(_defaultTokenKey);
-    if (legacy == null) return null;
-    await setToken(legacy);
-    await _deleteTokenForKey(_defaultTokenKey);
-    return legacy;
-  }
-
-  Future<void> clearToken() async {
-    await _deleteTokenForKey(_tokenKey);
-    if (_tokenKey != _defaultTokenKey) {
-      await _deleteTokenForKey(_defaultTokenKey);
-    }
-  }
-
-  Future<String?> _readTokenForKey(String key) async {
+  /// Reads the value for [key] from the platform secure enclave, or `null` if
+  /// absent.
+  ///
+  /// When [allowInsecureFallback] is `false` (the default), any secure-storage
+  /// failure is rethrown after purging any stale plaintext copy.
+  Future<String?> getSecure(String key) async {
     try {
       final secure = await _secureStorage.read(key: key);
       if (secure != null) {
-        // Purge any stale plaintext copy so old bearer tokens don't linger.
+        // Purge any stale plaintext copy so old secrets don't linger.
         await _prefs.remove(key);
         return secure;
       }
@@ -153,7 +143,12 @@ class VeloraStorageService extends GetxService {
     return allowInsecureFallback ? _prefs.getString(key) : null;
   }
 
-  Future<void> _deleteTokenForKey(String key) async {
+  /// Removes [key] from both the platform secure enclave and any plaintext
+  /// fallback in [SharedPreferences].
+  ///
+  /// Rethrows if the secure-storage delete fails so callers cannot mistake a
+  /// partial delete for complete removal.
+  Future<void> removeSecure(String key) async {
     Object? secureError;
     StackTrace secureStack = StackTrace.empty;
     try {
@@ -165,10 +160,32 @@ class VeloraStorageService extends GetxService {
     // Always remove the plaintext copy regardless of the secure-delete outcome.
     await _prefs.remove(key);
     // Surface a secure-delete failure so logout can't report success while a
-    // recoverable token remains in the keychain/keystore.
+    // recoverable secret remains in the keychain/keystore.
     if (secureError != null) {
       _warnSecureStorageUnavailable('delete', secureError, secureStack);
       Error.throwWithStackTrace(secureError, secureStack);
+    }
+  }
+
+  Future<void> setToken(String token) => setSecure(_tokenKey, token);
+
+  Future<String?> getToken() async {
+    final token = await getSecure(_tokenKey);
+    if (token != null) return token;
+
+    // Migrate a token stored under the legacy default key to the custom key.
+    if (_tokenKey == _defaultTokenKey) return null;
+    final legacy = await getSecure(_defaultTokenKey);
+    if (legacy == null) return null;
+    await setToken(legacy);
+    await removeSecure(_defaultTokenKey);
+    return legacy;
+  }
+
+  Future<void> clearToken() async {
+    await removeSecure(_tokenKey);
+    if (_tokenKey != _defaultTokenKey) {
+      await removeSecure(_defaultTokenKey);
     }
   }
 
@@ -180,7 +197,7 @@ class VeloraStorageService extends GetxService {
     if (!kDebugMode) return;
     debugPrint(
       'VeloraStorageService: secure storage $op failed and '
-      'allowInsecureFallback is false, so the token was not stored in '
+      'allowInsecureFallback is false, so the value was not stored in '
       'plaintext. Error: $error',
     );
   }

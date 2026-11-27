@@ -25,3 +25,9 @@ QueryExecutor defaultVeloraDbExecutor(String databaseName) {
     return result.resolvedExecutor;
   });
 }
+
+/// In-memory executor is not supported synchronously on Web because
+/// [WasmDatabase] requires loading `sqlite3.wasm` asynchronously.
+QueryExecutor inMemoryVeloraDbExecutor() {
+  throw UnsupportedError('VeloraDatabase.inMemory() is not supported on Web.');
+}

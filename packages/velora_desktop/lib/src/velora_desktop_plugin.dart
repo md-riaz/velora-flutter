@@ -104,6 +104,12 @@ class _InertDesktopService implements VeloraDesktopService {
   Future<void> setSize(Size size) async {}
 
   @override
+  bool get isCompactWindow => false;
+
+  @override
+  Future<void> toggleCompactWindow(Size compactSize) async {}
+
+  @override
   Future<void> setTitleBarStyle(VeloraTitleBarStyle style) async {}
 
   @override

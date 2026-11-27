@@ -5,6 +5,7 @@ import 'velora_storage_service.dart';
 /// Volatile storage for tests; tokens are never written to disk.
 class InMemoryStorage extends VeloraStorageService {
   final Map<String, Object> _values = {};
+  final Map<String, String> _secureValues = {};
   String? _token;
 
   @override
@@ -28,7 +29,10 @@ class InMemoryStorage extends VeloraStorageService {
   Future<void> remove(String key) async => _values.remove(key);
 
   @override
-  Future<void> clear() async => _values.clear();
+  Future<void> clear() async {
+    _values.clear();
+    _secureValues.clear();
+  }
 
   @override
   Future<void> setJson(String key, Object? value) async {
@@ -46,6 +50,16 @@ class InMemoryStorage extends VeloraStorageService {
       return null;
     }
   }
+
+  @override
+  Future<void> setSecure(String key, String value) async =>
+      _secureValues[key] = value;
+
+  @override
+  Future<String?> getSecure(String key) async => _secureValues[key];
+
+  @override
+  Future<void> removeSecure(String key) async => _secureValues.remove(key);
 
   @override
   Future<void> setToken(String token) async => _token = token;

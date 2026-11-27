@@ -29,7 +29,8 @@ attachments with sensible defaults — but every default is overridable.
   a built-in `MultipartUploadAdapter` for any multipart endpoint
 - **Feedback** — app-injected `FeedbackPresenter` for messages and confirmations
 - **Storage** — `VeloraStorageService` wrapping `SharedPreferences` and
-  `FlutterSecureStorage` with typed JSON helpers
+  `FlutterSecureStorage` with typed JSON helpers and generic `setSecure` /
+  `getSecure` / `removeSecure` key-value storage
 - **Validation** — `VeloraValidator` rule set for forms
 - **Responsive** — breakpoint helpers and layout utilities
 

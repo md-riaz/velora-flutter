@@ -3,9 +3,12 @@
 /// desktop, `WasmDatabase` on Web), so `velora_db` never pulls web-only or
 /// `dart:io`-only code into the wrong build.
 ///
-/// Both branches expose the same top-level symbol,
-/// `QueryExecutor defaultVeloraDbExecutor(String databaseName)`, so callers
-/// can import this file without caring which platform they're building for.
+/// Both branches expose the same top-level symbols:
+/// - `QueryExecutor defaultVeloraDbExecutor(String databaseName)`
+/// - `QueryExecutor inMemoryVeloraDbExecutor()`
+///
+/// Callers can import this file without caring which platform they're building
+/// for.
 ///
 /// [QE]: package:drift/drift.dart
 library;

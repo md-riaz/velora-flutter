@@ -80,10 +80,11 @@ VeloraDesktopConfig(
   windowButtonVisibility: false,
   minimumSize: Size(640, 480),
   initialSize: Size(1024, 768),
+  persistWindowBounds: true,
 )
 ```
 
-Both sizes default to `null`, leaving the platform defaults unchanged. When set, they apply after the window attaches; saved bounds are restored afterward and take precedence over `initialSize`. At runtime, call `VeloraDesktop.service.setMinimumSize(size)` or `VeloraDesktop.service.setSize(size)`. Custom window port and desktop service implementations must implement both methods.
+Both sizes default to `null`, leaving the platform defaults unchanged. When set, they apply after the window attaches; saved bounds are restored afterward and take precedence over `initialSize` unless `persistWindowBounds` is `false`. At runtime, call `VeloraDesktop.service.setMinimumSize(size)` or `VeloraDesktop.service.setSize(size)`, or `VeloraDesktop.service.toggleCompactWindow(compactSize)` (with `VeloraDesktop.service.isCompactWindow` to check the current state) to switch between normal bounds and a compact size. Custom window port and desktop service implementations must implement these methods.
 
 The title bar defaults to `normal` and native window buttons default to visible. Non-default settings are applied after the window attaches. `hidden` removes the native title bar; `customTitleBar` places content under a transparent native title bar where supported. The native backend currently supports that overlay on macOS; unsupported platforms report the failure in `capabilities.problems['titleBarStyle']`. Hiding the title bar also hides its native buttons in the backend; call `setWindowButtonVisibility(true)` afterward if the platform supports showing them.
 
@@ -183,12 +184,14 @@ Throws `UnsupportedError` when tray is not available.
 
 ## Window persistence
 
-The plugin automatically persists the window's position and size via `SharedPreferences`. Bounds are saved on close and restored on the next launch.
+The plugin automatically persists the window's position and size via `SharedPreferences` when `VeloraDesktopConfig.persistWindowBounds` is `true` (the default). Bounds are saved on close and restored on the next launch.
 
 - **Storage key:** `velora_desktop.window_bounds`
 - **Format:** JSON `{ "x": ..., "y": ..., "width": ..., "height": ... }`
 - Corrupt or missing storage is handled gracefully — the configured initial size, or the OS default when unset, is used
 - Bounds are saved only on a real close or quit, not when hiding to tray
+- If the app quits while in compact mode (`isCompactWindow == true`), the captured normal bounds are saved rather than the temporary compact size
+- Set `persistWindowBounds: false` to disable restoring and saving bounds
 
 Custom setups can pass any `VeloraDesktopStoragePort` implementation to the coordinator, or omit the `storage` parameter to disable persistence.
 

@@ -29,6 +29,9 @@ import 'velora_plugin.dart';
 class Velora {
   static late VeloraConfig config;
 
+  /// Whether [boot] (or [testBoot]) has been called and not subsequently reset.
+  static bool get isBooted => Get.isRegistered<VeloraConfig>();
+
   static final List<VeloraPlugin> _plugins = [];
 
   /// Plugins registered during the last [boot] call, in registration order.

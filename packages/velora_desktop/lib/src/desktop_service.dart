@@ -70,6 +70,7 @@ final class VeloraDesktopConfig {
     this.windowButtonVisibility = true,
     this.minimumSize,
     this.initialSize,
+    this.persistWindowBounds = true,
   }) : assert(
          !closeToTray || tray != null,
          'closeToTray needs a tray configuration',
@@ -116,6 +117,9 @@ final class VeloraDesktopConfig {
 
   /// Startup size, overridden by saved window bounds when available.
   final Size? initialSize;
+
+  /// Whether window bounds are restored on startup and saved on quit.
+  final bool persistWindowBounds;
 
   /// Whether this process was started by the auto-start entry.
   bool get launchedByAutoStart => launchArguments.contains(autoStartArgument);
@@ -185,6 +189,12 @@ abstract interface class VeloraDesktopService {
 
   /// Resizes the window.
   Future<void> setSize(Size size);
+
+  /// Whether the window is currently in compact mode.
+  bool get isCompactWindow;
+
+  /// Toggles between normal window bounds and [compactSize].
+  Future<void> toggleCompactWindow(Size compactSize);
 
   /// Updates the title bar style.
   Future<void> setTitleBarStyle(VeloraTitleBarStyle style);
