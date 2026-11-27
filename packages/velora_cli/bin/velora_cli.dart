@@ -496,7 +496,7 @@ void _new(List<String> args) {
   if (platforms != null) {
     final result = Process.runSync(
       'flutter',
-      ['create', '--platforms=$platforms', '.'],
+      ['create', '--project-name=$packageName', '--platforms=$platforms', '.'],
       workingDirectory: root.path,
       runInShell: Platform.isWindows,
     );
@@ -632,6 +632,16 @@ void main() {
 
 void _makeDatabaseFile(List<String> args, {required bool migration}) {
   if (args.length != 1 || args.first.startsWith('-')) _fail('Expected a name.');
+  if (migration) {
+    final pubspec = File(p.join(Directory.current.path, 'pubspec.yaml'));
+    if (!pubspec.existsSync() ||
+        !pubspecDeclaresDependency(pubspec.readAsStringSync(), 'velora_db')) {
+      _fail(
+        '`velora_db` is not declared in pubspec.yaml. '
+        'Run `velora install velora_db` before generating migrations.',
+      );
+    }
+  }
   final name = _snake(args.first);
   final className = _pascal(name);
   final path = migration
@@ -1230,11 +1240,17 @@ String _siblingConstraint(String pubspec, String name, String fallback) {
   if (git is Map && git['url'] is String) {
     final sibling = <String, dynamic>{'url': git['url']};
     if (git['ref'] != null) sibling['ref'] = git['ref'];
+    if (git['tag_pattern'] != null) sibling['tag_pattern'] = git['tag_pattern'];
     final originalPath = git['path'];
     sibling['path'] = originalPath is String
         ? p.posix.join(p.posix.dirname(originalPath), name)
         : name;
-    return jsonEncode({'git': sibling});
+    final dep = <String, dynamic>{
+      if (git['ref'] == null && source['version'] != null)
+        'version': source['version'],
+      'git': sibling,
+    };
+    return jsonEncode(dep);
   }
   return fallback;
 }

@@ -54,9 +54,21 @@ void main() {
     }
     expect(Directory('${app.path}/--help').existsSync(), isFalse);
 
+    final migrationPubspec = File('${app.path}/pubspec.yaml');
+    migrationPubspec.writeAsStringSync(
+      'name: demo\ndependencies:\n  velora: ^0.0.1\n',
+    );
+    final missingDb = await run(['make:migration', 'create_users']);
+    expect(missingDb.exitCode, 64);
+    expect(missingDb.stderr.toString(), contains('velora install velora_db'));
+
+    migrationPubspec.writeAsStringSync(
+      'name: demo\ndependencies:\n  velora: ^0.0.1\n  velora_db: ^0.1.0\n',
+    );
     for (final command in ['make:migration', 'make:repository']) {
       expect((await run([command, 'create_users'])).exitCode, 0);
     }
+    migrationPubspec.deleteSync();
     expect(
       File('${app.path}/lib/database/migrations/create_users_migration.dart')
           .readAsStringSync(),
