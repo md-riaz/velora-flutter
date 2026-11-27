@@ -21,6 +21,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// rooted emulators). It is off by default.
 class VeloraStorageService extends GetxService {
   static const _defaultTokenKey = 'velora.auth.token';
+  static const _fallbackPrefix = '__velora_secure_fallback__.';
 
   final String _tokenKey;
   late final SharedPreferences _prefs;
@@ -107,6 +108,7 @@ class VeloraStorageService extends GetxService {
         rethrow;
       }
       await _prefs.setString(key, value);
+      await _prefs.setBool('$_fallbackPrefix$key', true);
       return;
     }
     // Secure write succeeded — purge any stale plaintext copy from a previous
@@ -114,6 +116,7 @@ class VeloraStorageService extends GetxService {
     // it lives outside the write try/catch above.
     try {
       await _prefs.remove(key);
+      await _prefs.remove('$_fallbackPrefix$key');
     } catch (_) {
       // Best-effort cleanup; the authoritative value is already in the enclave.
     }
@@ -125,17 +128,23 @@ class VeloraStorageService extends GetxService {
   /// When [allowInsecureFallback] is `false` (the default), any secure-storage
   /// failure is rethrown after purging any stale plaintext copy.
   Future<String?> getSecure(String key) async {
+    if (allowInsecureFallback &&
+        (_prefs.getBool('$_fallbackPrefix$key') ?? false)) {
+      return _prefs.getString(key);
+    }
     try {
       final secure = await _secureStorage.read(key: key);
       if (secure != null) {
         // Purge any stale plaintext copy so old secrets don't linger.
         await _prefs.remove(key);
+        await _prefs.remove('$_fallbackPrefix$key');
         return secure;
       }
     } catch (error, stackTrace) {
       if (!allowInsecureFallback) {
         // We refuse to read plaintext — make sure none is left readable.
         await _prefs.remove(key);
+        await _prefs.remove('$_fallbackPrefix$key');
         _warnSecureStorageUnavailable('read', error, stackTrace);
         rethrow;
       }
@@ -159,6 +168,7 @@ class VeloraStorageService extends GetxService {
     }
     // Always remove the plaintext copy regardless of the secure-delete outcome.
     await _prefs.remove(key);
+    await _prefs.remove('$_fallbackPrefix$key');
     // Surface a secure-delete failure so logout can't report success while a
     // recoverable secret remains in the keychain/keystore.
     if (secureError != null) {

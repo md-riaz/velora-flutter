@@ -803,7 +803,7 @@ void main() {
 
       await storage.setSecure('pin', '5678');
       await storage.clear();
-      expect(await storage.getSecure('pin'), isNull);
+      expect(await storage.getSecure('pin'), '5678');
       expect(storage.get<String>('plain'), isNull);
       expect(await storage.getToken(), 'tok');
     },

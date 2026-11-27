@@ -203,10 +203,11 @@ class _AdaptiveShellState extends State<AdaptiveShell> {
           widget.brandHeader,
           widget.railLeading,
         );
-        final effectiveRailTrailing = _combineSlots(
+        final effectiveRailTrailing = _buildRailTrailing(
           widget.railTrailing,
           widget.statusFooter,
         );
+        final showBottomBar = compact && widget.destinations.length >= 2;
 
         if (showRail) {
           content = Row(
@@ -252,7 +253,7 @@ class _AdaptiveShellState extends State<AdaptiveShell> {
           resizeToAvoidBottomInset: widget.resizeToAvoidBottomInset,
           body: SafeArea(child: content),
           floatingActionButton: widget.floatingActionButton,
-          bottomNavigationBar: !showRail
+          bottomNavigationBar: showBottomBar
               ? NavigationBar(
                   destinations: widget.destinations
                       .map(
@@ -276,5 +277,16 @@ class _AdaptiveShellState extends State<AdaptiveShell> {
     if (first == null) return second;
     if (second == null) return first;
     return Column(mainAxisSize: MainAxisSize.min, children: [first, second]);
+  }
+
+  Widget? _buildRailTrailing(Widget? railTrailing, Widget? statusFooter) {
+    if (railTrailing == null && statusFooter == null) return null;
+    if (statusFooter == null) return railTrailing;
+    return Expanded(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [if (railTrailing != null) railTrailing, statusFooter],
+      ),
+    );
   }
 }

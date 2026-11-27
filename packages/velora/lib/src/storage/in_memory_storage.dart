@@ -6,7 +6,6 @@ import 'velora_storage_service.dart';
 class InMemoryStorage extends VeloraStorageService {
   final Map<String, Object> _values = {};
   final Map<String, String> _secureValues = {};
-  String? _token;
 
   @override
   Future<InMemoryStorage> init() async => this;
@@ -31,7 +30,6 @@ class InMemoryStorage extends VeloraStorageService {
   @override
   Future<void> clear() async {
     _values.clear();
-    _secureValues.clear();
   }
 
   @override
@@ -60,13 +58,4 @@ class InMemoryStorage extends VeloraStorageService {
 
   @override
   Future<void> removeSecure(String key) async => _secureValues.remove(key);
-
-  @override
-  Future<void> setToken(String token) async => _token = token;
-
-  @override
-  Future<String?> getToken() async => _token;
-
-  @override
-  Future<void> clearToken() async => _token = null;
 }

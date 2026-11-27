@@ -51,6 +51,7 @@ await Velora.boot(
   config: VeloraConfig(
     appName: 'My App',
     apiBaseUrl: 'https://api.example.com',
+    errorFormatter: (error) => error.toString().replaceFirst('Exception: ', ''),
     auth: VeloraAuthConfig(
       loginEndpoint: '/auth/login',
       logoutEndpoint: '/auth/logout',

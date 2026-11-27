@@ -48,8 +48,9 @@ class ContextMenuRegion<T> extends StatelessWidget {
         Overlay.of(context).context.findRenderObject() as RenderBox?;
     if (overlay == null) return;
 
+    final localPosition = overlay.globalToLocal(globalPosition);
     final position = RelativeRect.fromRect(
-      Rect.fromPoints(globalPosition, globalPosition),
+      Rect.fromPoints(localPosition, localPosition),
       Offset.zero & overlay.size,
     );
 

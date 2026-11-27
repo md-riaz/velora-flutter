@@ -59,6 +59,7 @@ class VeloraDesktopCoordinator implements VeloraDesktopService {
   bool _disposed = false;
   bool _isCompactWindow = false;
   WindowBounds? _normalBounds;
+  Future<void> _compactToggle = Future<void>.value();
 
   @override
   Stream<VeloraDesktopEvent> get events => _events.stream;
@@ -240,21 +241,40 @@ class VeloraDesktopCoordinator implements VeloraDesktopService {
   bool get isCompactWindow => _isCompactWindow;
 
   @override
-  Future<void> toggleCompactWindow(Size compactSize) async {
+  Future<void> toggleCompactWindow(Size compactSize) {
+    final next = _compactToggle.then((_) => _performToggleCompact(compactSize));
+    _compactToggle = next.catchError((_) {});
+    return next;
+  }
+
+  Future<void> _performToggleCompact(Size compactSize) async {
     if (!_isCompactWindow) {
-      _normalBounds = await _window.getBounds();
+      final normal = await _window.getBounds();
+      if (normal == null && config.initialSize == null) {
+        return;
+      }
+      final minSize = config.minimumSize;
+      if (minSize != null &&
+          (compactSize.width < minSize.width ||
+              compactSize.height < minSize.height)) {
+        await _window.setMinimumSize(compactSize);
+      }
       await _window.setSize(compactSize);
+      _normalBounds = normal;
       _isCompactWindow = true;
       return;
     }
     final normal = _normalBounds;
-    _normalBounds = null;
-    _isCompactWindow = false;
     if (normal != null) {
       await _window.setBounds(normal);
     } else if (config.initialSize != null) {
       await _window.setSize(config.initialSize!);
     }
+    if (config.minimumSize != null) {
+      await _window.setMinimumSize(config.minimumSize!);
+    }
+    _normalBounds = null;
+    _isCompactWindow = false;
   }
 
   @override

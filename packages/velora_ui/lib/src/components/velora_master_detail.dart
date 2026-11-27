@@ -11,7 +11,7 @@ import 'package:flutter/material.dart';
 /// Below [breakpoint], only the master pane is rendered. Selecting an item via
 /// the `onSelect` callback passed to [masterBuilder] pushes a route containing
 /// [detailBuilder] onto the nearest [Navigator].
-class MasterDetail<T extends Object?> extends StatefulWidget {
+class MasterDetail<T extends Object> extends StatefulWidget {
   /// Builds the master pane. Call `onSelect(item)` when an item is chosen.
   final Widget Function(BuildContext context, ValueChanged<T> onSelect)
   masterBuilder;
@@ -78,7 +78,7 @@ class MasterDetail<T extends Object?> extends StatefulWidget {
   State<MasterDetail<T>> createState() => _MasterDetailState<T>();
 }
 
-class _MasterDetailState<T extends Object?> extends State<MasterDetail<T>> {
+class _MasterDetailState<T extends Object> extends State<MasterDetail<T>> {
   T? _internalSelected;
 
   @override
@@ -96,10 +96,14 @@ class _MasterDetailState<T extends Object?> extends State<MasterDetail<T>> {
     widget.onSelected?.call(item);
 
     if (!isWide) {
-      final detail = widget.detailBuilder(context, item);
       final route =
-          widget.detailRouteBuilder?.call(context, detail) ??
-          MaterialPageRoute<void>(builder: (_) => detail);
+          widget.detailRouteBuilder?.call(
+            context,
+            widget.detailBuilder(context, item),
+          ) ??
+          MaterialPageRoute<void>(
+            builder: (routeContext) => widget.detailBuilder(routeContext, item),
+          );
       Navigator.of(context).push(route);
     }
   }
