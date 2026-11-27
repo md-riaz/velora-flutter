@@ -737,6 +737,77 @@ void main() {
     expect(storage.get<String>('velora.auth.token'), 'secret-token');
     expect(await storage.getToken(), 'secret-token');
   });
+
+  test(
+    'setSecure/getSecure/removeSecure round-trip without plaintext prefs',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final storage = await VeloraStorageService().init();
+
+      await storage.setSecure('api_key', 'k_123');
+      expect(await storage.getSecure('api_key'), 'k_123');
+      expect(storage.get<String>('api_key'), isNull);
+
+      await storage.removeSecure('api_key');
+      expect(await storage.getSecure('api_key'), isNull);
+    },
+  );
+
+  test('setSecure/getSecure/removeSecure rethrow when secure storage fails and fallback is off', () async {
+    SharedPreferences.setMockInitialValues({'api_key': 'stale'});
+    final storage = await VeloraStorageService(
+      secureStorage: _ThrowingSecureStorage(),
+    ).init();
+
+    await expectLater(storage.setSecure('api_key', 'k_123'), throwsA(anything));
+    expect(storage.get<String>('api_key'), 'stale');
+
+    await expectLater(storage.getSecure('api_key'), throwsA(anything));
+    // Failed fail-closed read purges stale plaintext copy.
+    expect(storage.get<String>('api_key'), isNull);
+
+    await expectLater(storage.removeSecure('api_key'), throwsA(anything));
+  });
+
+  test(
+    'setSecure/getSecure fall back to prefs when allowInsecureFallback is true',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final storage = await VeloraStorageService(
+        secureStorage: _ThrowingSecureStorage(),
+        allowInsecureFallback: true,
+      ).init();
+
+      await storage.setSecure('api_key', 'k_123');
+      expect(storage.get<String>('api_key'), 'k_123');
+      expect(await storage.getSecure('api_key'), 'k_123');
+
+      await expectLater(storage.removeSecure('api_key'), throwsA(anything));
+      expect(storage.get<String>('api_key'), isNull);
+    },
+  );
+
+  test(
+    'InMemoryStorage supports setSecure, getSecure, removeSecure, and clear',
+    () async {
+      final storage = await InMemoryStorage().init();
+      await storage.setToken('tok');
+      await storage.set('plain', 'v');
+      await storage.setSecure('pin', '1234');
+
+      expect(await storage.getSecure('pin'), '1234');
+      expect(storage.get<String>('pin'), isNull);
+
+      await storage.removeSecure('pin');
+      expect(await storage.getSecure('pin'), isNull);
+
+      await storage.setSecure('pin', '5678');
+      await storage.clear();
+      expect(await storage.getSecure('pin'), '5678');
+      expect(storage.get<String>('plain'), isNull);
+      expect(await storage.getToken(), 'tok');
+    },
+  );
 }
 
 /// Secure-storage double whose operations always throw, to exercise the

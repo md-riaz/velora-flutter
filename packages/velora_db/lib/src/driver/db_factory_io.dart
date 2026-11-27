@@ -24,3 +24,7 @@ QueryExecutor defaultVeloraDbExecutor(String databaseName) {
     return NativeDatabase.createInBackground(File(path));
   });
 }
+
+/// In-memory native executor backed by [NativeDatabase.memory], primarily for
+/// unit tests.
+QueryExecutor inMemoryVeloraDbExecutor() => NativeDatabase.memory();

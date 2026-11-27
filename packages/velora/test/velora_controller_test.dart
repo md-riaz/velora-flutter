@@ -72,4 +72,72 @@ void main() {
       await source.close();
     },
   );
+
+  group('run error formatting', () {
+    test('standalone controller falls back to exception.toString() when Velora is not booted', () async {
+      await Velora.reset();
+      expect(Velora.isBooted, isFalse);
+
+      final controller = _TestController();
+      final result = await controller.run<int>(
+        () async => throw StateError('boom'),
+        reportError: false,
+      );
+
+      expect(result, isNull);
+      expect(controller.error.value, 'Bad state: boom');
+    });
+
+    test(
+      'uses VeloraConfig.errorFormatter when errorMessage is omitted',
+      () async {
+        await Velora.testBoot(
+          config: VeloraConfig(
+            appName: 'Test',
+            apiBaseUrl: 'http://localhost',
+            notifications: const VeloraNotificationConfig(enabled: false),
+            errorFormatter: (error) => 'Formatted: $error',
+          ),
+        );
+        addTearDown(Velora.reset);
+
+        final controller = _TestController();
+        await controller.run<void>(
+          () async => throw FormatException('bad input'),
+          reportError: false,
+        );
+
+        expect(controller.error.value, 'Formatted: FormatException: bad input');
+      },
+    );
+
+    test(
+      'explicit errorMessage overrides VeloraConfig.errorFormatter',
+      () async {
+        var formatterCalled = false;
+        await Velora.testBoot(
+          config: VeloraConfig(
+            appName: 'Test',
+            apiBaseUrl: 'http://localhost',
+            notifications: const VeloraNotificationConfig(enabled: false),
+            errorFormatter: (error) {
+              formatterCalled = true;
+              return 'Formatted: $error';
+            },
+          ),
+        );
+        addTearDown(Velora.reset);
+
+        final controller = _TestController();
+        await controller.run<void>(
+          () async => throw Exception('raw'),
+          errorMessage: 'Friendly message',
+          reportError: false,
+        );
+
+        expect(formatterCalled, isFalse);
+        expect(controller.error.value, 'Friendly message');
+      },
+    );
+  });
 }

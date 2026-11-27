@@ -71,6 +71,10 @@ class VeloraConfig {
   /// Typed config extensions. Retrieve with [extension<T>()].
   final List<VeloraConfigExtension> extensions;
 
+  /// Formats uncaught errors in [VeloraController.run] when no explicit
+  /// `errorMessage` is provided. Defaults to `error.toString()`.
+  final String Function(Object error)? errorFormatter;
+
   const VeloraConfig({
     required this.appName,
     required this.apiBaseUrl,
@@ -78,6 +82,7 @@ class VeloraConfig {
     this.notifications = const VeloraNotificationConfig(),
     this.response = const VeloraResponseConfig(),
     this.extensions = const [],
+    this.errorFormatter,
   });
 
   /// Returns the first registered extension of type [T], or null if none.

@@ -7,4 +7,5 @@ export 'src/query/velora_db_repository.dart';
 export 'src/query/velora_table.dart';
 export 'src/velora_database.dart';
 export 'src/velora_db_plugin.dart';
+export 'src/velora_db_schema.dart';
 export 'src/velora_sql_database.dart';

@@ -22,10 +22,15 @@ class ShellDestination {
   /// The destination's label.
   final String label;
 
+  /// Whether this destination is shown only in compact bottom navigation and
+  /// omitted from the medium/expanded navigation rail.
+  final bool compactOnly;
+
   /// Creates a Velora nav destination.
   const ShellDestination({
     required this.icon,
     this.selectedIcon,
     required this.label,
+    this.compactOnly = false,
   });
 }

@@ -36,7 +36,12 @@ abstract class VeloraController extends GetxController {
       if (successMessage != null) Velora.feedback.success(successMessage);
       return result;
     } catch (exception) {
-      final message = errorMessage ?? exception.toString();
+      final message =
+          errorMessage ??
+          (Velora.isBooted
+              ? Velora.config.errorFormatter?.call(exception)
+              : null) ??
+          exception.toString();
       error.value = message;
       if (reportError) Velora.feedback.error(message);
       if (rethrowError) rethrow;

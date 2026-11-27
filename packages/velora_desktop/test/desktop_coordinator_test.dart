@@ -54,6 +54,7 @@ void main() {
       expect(config.windowButtonVisibility, isTrue);
       expect(config.minimumSize, isNull);
       expect(config.initialSize, isNull);
+      expect(config.persistWindowBounds, isTrue);
     });
 
     test('applies window configuration only when attached', () async {
@@ -208,6 +209,124 @@ void main() {
         expect(window.currentBounds, isNull);
       });
     }
+
+    test(
+      'persistWindowBounds: false skips restoring and saving bounds',
+      () async {
+        final storage = FakeDesktopStoragePort();
+        storage.values[VeloraDesktopCoordinator.boundsKey] =
+            '{"x":10,"y":20,"width":900,"height":700}';
+        final coordinator = VeloraDesktopCoordinator(
+          config: const VeloraDesktopConfig(
+            appId: 'test',
+            appName: 'Test',
+            initialSize: Size(800, 600),
+            persistWindowBounds: false,
+          ),
+          window: window,
+          storage: storage,
+        );
+
+        await coordinator.initialize();
+        expect(window.size, const Size(800, 600));
+        expect(window.currentBounds, isNull);
+
+        storage.values.clear();
+        window.currentBounds = const WindowBounds(
+          x: 50,
+          y: 60,
+          width: 1000,
+          height: 700,
+        );
+        await coordinator.quit();
+        expect(storage.values[VeloraDesktopCoordinator.boundsKey], isNull);
+      },
+    );
+  });
+
+  group('compact window', () {
+    test('toggleCompactWindow switches to compact size and restores previous normal bounds', () async {
+      window.currentBounds = const WindowBounds(
+        x: 100,
+        y: 120,
+        width: 1024,
+        height: 768,
+      );
+      final coordinator = buildCoordinator();
+      await coordinator.initialize();
+
+      expect(coordinator.isCompactWindow, isFalse);
+
+      await coordinator.toggleCompactWindow(const Size(320, 480));
+      expect(coordinator.isCompactWindow, isTrue);
+      expect(window.size, const Size(320, 480));
+
+      window.currentBounds = const WindowBounds(
+        x: 100,
+        y: 120,
+        width: 320,
+        height: 480,
+      );
+
+      await coordinator.toggleCompactWindow(const Size(320, 480));
+      expect(coordinator.isCompactWindow, isFalse);
+      expect(
+        window.currentBounds,
+        const WindowBounds(x: 100, y: 120, width: 1024, height: 768),
+      );
+    });
+
+    test('toggleCompactWindow falls back to initialSize when normal bounds are null', () async {
+      final coordinator = buildCoordinator(
+        config: const VeloraDesktopConfig(
+          appId: 'test',
+          appName: 'Test',
+          initialSize: Size(800, 600),
+        ),
+      );
+      await coordinator.initialize();
+
+      await coordinator.toggleCompactWindow(const Size(320, 480));
+      expect(coordinator.isCompactWindow, isTrue);
+      expect(window.size, const Size(320, 480));
+
+      await coordinator.toggleCompactWindow(const Size(320, 480));
+      expect(coordinator.isCompactWindow, isFalse);
+      expect(window.size, const Size(800, 600));
+    });
+
+    test(
+      'quit while in compact mode saves normal bounds instead of compact size',
+      () async {
+        final storage = FakeDesktopStoragePort();
+        window.currentBounds = const WindowBounds(
+          x: 100,
+          y: 120,
+          width: 1024,
+          height: 768,
+        );
+        final coordinator = VeloraDesktopCoordinator(
+          config: const VeloraDesktopConfig(appId: 'test', appName: 'Test'),
+          window: window,
+          storage: storage,
+        );
+        await coordinator.initialize();
+
+        await coordinator.toggleCompactWindow(const Size(320, 480));
+        window.currentBounds = const WindowBounds(
+          x: 100,
+          y: 120,
+          width: 320,
+          height: 480,
+        );
+
+        await coordinator.quit();
+        expect(
+          storage.values[VeloraDesktopCoordinator.boundsKey],
+          '{"x":100.0,"y":120.0,"width":1024.0,"height":768.0}',
+        );
+      },
+    );
   });
 
   group('close-to-tray', () {

@@ -42,6 +42,8 @@ This adds the dependency, adds the import, and wires `VeloraDbPlugin()` into you
 
 ## Boot
 
+Define a shared `VeloraDbSchema` once and pass it to `VeloraDbPlugin.fromSchema(...)` in `main.dart` (and reuse the exact same schema in tests with `VeloraDatabase.inMemory(schema)`):
+
 ```dart
 import 'package:velora/velora.dart';
 import 'package:velora_db/velora_db.dart';
@@ -62,17 +64,19 @@ class CreateTodosTable extends VeloraMigration {
   }
 }
 
+final appDbSchema = VeloraDbSchema(
+  databaseName: 'app.db',
+  version: 1,
+  migrations: [CreateTodosTable()],
+);
+
 await Velora.boot(
   config: myConfig,
-  plugins: [
-    VeloraDbPlugin(
-      databaseName: 'app.db',
-      version: 1,
-      migrations: [CreateTodosTable()],
-    ),
-  ],
+  plugins: [VeloraDbPlugin.fromSchema(appDbSchema)],
 );
 ```
+
+`VeloraDatabase.inMemory(appDbSchema)` opens an isolated in-memory SQLite database on native platforms (Dart VM / Flutter tests) with the same version and migrations; on Web it throws `UnsupportedError`.
 
 `databaseName`, `version`, and `migrations` all default (`'app.db'`, `1`, `const []`), so a bare `VeloraDbPlugin()` — what `velora install velora_db` wires in — is valid and opens an empty database. Add real migrations as soon as you know what tables you need; each `VeloraMigration.version` must be unique, and migrations run in ascending version order (`up()` for every migration on create, and only the migrations whose version falls in `(oldVersion, newVersion]` on upgrade).
 

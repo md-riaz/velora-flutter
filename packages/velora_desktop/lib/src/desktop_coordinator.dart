@@ -57,6 +57,9 @@ class VeloraDesktopCoordinator implements VeloraDesktopService {
   bool _quitting = false;
   bool _asleep = false;
   bool _disposed = false;
+  bool _isCompactWindow = false;
+  WindowBounds? _normalBounds;
+  Future<void> _compactToggle = Future<void>.value();
 
   @override
   Stream<VeloraDesktopEvent> get events => _events.stream;
@@ -235,6 +238,46 @@ class VeloraDesktopCoordinator implements VeloraDesktopService {
   Future<void> setSize(Size size) => _window.setSize(size);
 
   @override
+  bool get isCompactWindow => _isCompactWindow;
+
+  @override
+  Future<void> toggleCompactWindow(Size compactSize) {
+    final next = _compactToggle.then((_) => _performToggleCompact(compactSize));
+    _compactToggle = next.catchError((_) {});
+    return next;
+  }
+
+  Future<void> _performToggleCompact(Size compactSize) async {
+    if (!_isCompactWindow) {
+      final normal = await _window.getBounds();
+      if (normal == null && config.initialSize == null) {
+        return;
+      }
+      final minSize = config.minimumSize;
+      if (minSize != null &&
+          (compactSize.width < minSize.width ||
+              compactSize.height < minSize.height)) {
+        await _window.setMinimumSize(compactSize);
+      }
+      await _window.setSize(compactSize);
+      _normalBounds = normal;
+      _isCompactWindow = true;
+      return;
+    }
+    final normal = _normalBounds;
+    if (normal != null) {
+      await _window.setBounds(normal);
+    } else if (config.initialSize != null) {
+      await _window.setSize(config.initialSize!);
+    }
+    if (config.minimumSize != null) {
+      await _window.setMinimumSize(config.minimumSize!);
+    }
+    _normalBounds = null;
+    _isCompactWindow = false;
+  }
+
+  @override
   Future<void> setTitleBarStyle(VeloraTitleBarStyle style) =>
       _window.setTitleBarStyle(style);
 
@@ -369,6 +412,7 @@ class VeloraDesktopCoordinator implements VeloraDesktopService {
   }
 
   Future<void> _restoreBounds() async {
+    if (!config.persistWindowBounds) return;
     final storage = _storage;
     if (storage == null) return;
     try {
@@ -383,10 +427,13 @@ class VeloraDesktopCoordinator implements VeloraDesktopService {
   }
 
   Future<void> _saveBounds() async {
+    if (!config.persistWindowBounds) return;
     final storage = _storage;
     if (storage == null) return;
     try {
-      final bounds = await _window.getBounds();
+      final bounds = _isCompactWindow
+          ? _normalBounds
+          : await _window.getBounds();
       if (bounds == null) return;
       await storage.set(boundsKey, jsonEncode(bounds.toJson()));
     } on Object {
