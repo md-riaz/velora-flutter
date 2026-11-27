@@ -27,7 +27,7 @@ The tables below are generated from the source tree by `tool/check_docs.sh --wri
 | `notifications` | 11 | 11 | flutter, get | auth, features, http, permissions, routing |
 | `permissions` | 1 | 1 | get | auth |
 | `routing` | 2 | 2 | flutter, get | auth, config |
-| `storage` | 1 | 1 | **flutter_secure_storage**, **shared_preferences**, flutter, get | — |
+| `storage` | 2 | 2 | **flutter_secure_storage**, **shared_preferences**, flutter, get | — |
 | `support` | 1 | 1 | — | — |
 | `validation` | 3 | 3 | get | core |
 
@@ -42,7 +42,7 @@ Bold pub packages ship native code. Folder pairs that import each other (5): aut
 | Package | Depends on (local) | Depends on (pub) |
 |---|---|---|
 | `velora` | — | `dio`, `file_picker`, `flutter_secure_storage`, `get`, `image_picker`, `logger`, `shared_preferences` |
-| `velora_cli` | — | `path` |
+| `velora_cli` | — | `path`, `yaml` |
 | `velora_db` | `velora` | `dio`, `drift`, `get`, `path`, `path_provider`, `sqlite3` |
 | `velora_desktop` | `velora` | `app_links`, `nativeapi`, `nativeapi_flutter`, `power_state_monitor`, `shared_preferences`, `tray_manager`, `window_manager`, `windows_single_instance` |
 | `velora_env` | `velora` | `get` |

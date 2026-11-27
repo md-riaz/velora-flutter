@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'desktop_event.dart';
 
 /// Native title bar, no title bar, or content underneath the title bar.
@@ -66,6 +68,8 @@ final class VeloraDesktopConfig {
     this.deduplicationWindow = const Duration(seconds: 2),
     this.titleBarStyle = VeloraTitleBarStyle.normal,
     this.windowButtonVisibility = true,
+    this.minimumSize,
+    this.initialSize,
   }) : assert(
          !closeToTray || tray != null,
          'closeToTray needs a tray configuration',
@@ -106,6 +110,12 @@ final class VeloraDesktopConfig {
 
   final VeloraTitleBarStyle titleBarStyle;
   final bool windowButtonVisibility;
+
+  /// Minimum window size, or null to leave the platform default.
+  final Size? minimumSize;
+
+  /// Startup size, overridden by saved window bounds when available.
+  final Size? initialSize;
 
   /// Whether this process was started by the auto-start entry.
   bool get launchedByAutoStart => launchArguments.contains(autoStartArgument);
@@ -169,6 +179,12 @@ abstract interface class VeloraDesktopService {
 
   /// Hides the window.
   Future<void> hide();
+
+  /// Updates the minimum window size.
+  Future<void> setMinimumSize(Size size);
+
+  /// Resizes the window.
+  Future<void> setSize(Size size);
 
   /// Updates the title bar style.
   Future<void> setTitleBarStyle(VeloraTitleBarStyle style);

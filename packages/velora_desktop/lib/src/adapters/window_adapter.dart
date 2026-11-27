@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:nativeapi/nativeapi.dart' as nativeapi;
 
 import '../desktop_ports.dart';
@@ -42,6 +44,22 @@ class WindowManagerAdapter implements VeloraDesktopWindowPort {
 
   @override
   Future<void> hide() async => _window?.hide();
+
+  @override
+  Future<void> setMinimumSize(Size size) async {
+    _window?.minimumSize = nativeapi.Size(
+      width: size.width,
+      height: size.height,
+    );
+  }
+
+  @override
+  Future<void> setSize(Size size) async {
+    _window?.setSize(
+      nativeapi.Size(width: size.width, height: size.height),
+      false,
+    );
+  }
 
   @override
   Future<void> setTitleBarStyle(VeloraTitleBarStyle style) async {

@@ -78,8 +78,12 @@ VeloraDesktopConfig(
   deduplicationWindow: Duration(seconds: 2),
   titleBarStyle: VeloraTitleBarStyle.customTitleBar,
   windowButtonVisibility: false,
+  minimumSize: Size(640, 480),
+  initialSize: Size(1024, 768),
 )
 ```
+
+Both sizes default to `null`, leaving the platform defaults unchanged. When set, they apply after the window attaches; saved bounds are restored afterward and take precedence over `initialSize`. At runtime, call `VeloraDesktop.service.setMinimumSize(size)` or `VeloraDesktop.service.setSize(size)`. Custom window port and desktop service implementations must implement both methods.
 
 The title bar defaults to `normal` and native window buttons default to visible. Non-default settings are applied after the window attaches. `hidden` removes the native title bar; `customTitleBar` places content under a transparent native title bar where supported. The native backend currently supports that overlay on macOS; unsupported platforms report the failure in `capabilities.problems['titleBarStyle']`. Hiding the title bar also hides its native buttons in the backend; call `setWindowButtonVisibility(true)` afterward if the platform supports showing them.
 
@@ -183,7 +187,7 @@ The plugin automatically persists the window's position and size via `SharedPref
 
 - **Storage key:** `velora_desktop.window_bounds`
 - **Format:** JSON `{ "x": ..., "y": ..., "width": ..., "height": ... }`
-- Corrupt or missing storage is handled gracefully — the OS default window size is used
+- Corrupt or missing storage is handled gracefully — the configured initial size, or the OS default when unset, is used
 - Bounds are saved only on a real close or quit, not when hiding to tray
 
 Custom setups can pass any `VeloraDesktopStoragePort` implementation to the coordinator, or omit the `storage` parameter to disable persistence.
@@ -255,7 +259,7 @@ On unsupported platforms the capability degrades gracefully: `capabilities.power
 
 Import `package:velora_desktop/velora_desktop.dart` — the barrel exports `testing.dart` with in-memory fakes of every port:
 
-- `FakeWindowPort` — tracks show/hide/close/bounds, title bar style, and button visibility
+- `FakeWindowPort` — tracks show/hide/close/bounds, minimum size, size, title bar style, and button visibility
 - `FakeTrayPort` — exposes `onActivate`/`onShow`/`onQuit` triggers; tracks `iconAsset`, `tooltip`, `menuItems`
 - `FakeAutoStartPort` — in-memory enabled flag
 - `FakeSingleInstancePort` — controllable claim success

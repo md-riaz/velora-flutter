@@ -37,6 +37,7 @@ export 'src/permissions/permission_service.dart';
 export 'src/routing/velora_nav.dart';
 export 'src/routing/velora_route_guard.dart';
 export 'src/storage/velora_storage_service.dart';
+export 'src/storage/in_memory_storage.dart';
 export 'src/support/paginated_data.dart';
 export 'src/validation/velora_controller.dart';
 export 'src/validation/velora_form_controller.dart';

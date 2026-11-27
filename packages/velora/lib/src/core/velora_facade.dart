@@ -13,6 +13,7 @@ import '../notifications/adapters/local_notification_adapter.dart';
 import '../notifications/adapters/noop_push_adapter.dart';
 import '../notifications/adapters/push_adapter.dart';
 import '../notifications/notification_remote_datasource.dart';
+import '../notifications/notification_config.dart';
 import '../notifications/notification_repository.dart';
 import '../notifications/notification_service.dart';
 import '../notifications/velora_notify.dart';
@@ -20,6 +21,7 @@ import '../permissions/permission_service.dart';
 import '../routing/velora_nav.dart';
 import '../routing/velora_route_guard.dart';
 import '../storage/velora_storage_service.dart';
+import '../storage/in_memory_storage.dart';
 import '../validation/velora_validator.dart';
 import 'velora_lifecycle.dart';
 import 'velora_plugin.dart';
@@ -57,7 +59,7 @@ class Velora {
   static const VeloraValidator validator = VeloraValidator();
 
   /// The currently authenticated user, or null when no session is active.
-  static VeloraUser? get user => auth.user;
+  static VeloraUser? get user => auth.currentUser.value;
 
   /// Returns the current user cast to your own model type.
   ///
@@ -97,8 +99,37 @@ class Velora {
 
   // ---------------------------------------------------------------------------
 
+  /// Boots isolated services for tests without platform storage channels.
+  static Future<void> testBoot({
+    VeloraConfig? config,
+    VeloraStorageService? storage,
+    FeedbackPresenter? feedback,
+    List<VeloraPlugin> plugins = const [],
+  }) async {
+    await reset();
+    Get.testMode = true;
+    await boot(
+      config:
+          config ??
+          const VeloraConfig(
+            appName: 'Test',
+            apiBaseUrl: 'http://localhost',
+            notifications: VeloraNotificationConfig(enabled: false),
+          ),
+      feedback: feedback ?? const NoopFeedbackPresenter(),
+      plugins: plugins,
+      storage: storage ?? InMemoryStorage(),
+    );
+  }
+
+  static Future<void> reset() async {
+    Get.reset();
+    _plugins.clear();
+  }
+
   static Future<void> boot({
     required VeloraConfig config,
+    VeloraStorageService? storage,
 
     FeedbackPresenter? feedback,
 
@@ -137,7 +168,7 @@ class Velora {
     // Also register VeloraConfig in GetX so guards can find it.
     Get.put<VeloraConfig>(config, permanent: true);
 
-    final storage = await VeloraStorageService(
+    storage ??= await VeloraStorageService(
       tokenKey: config.auth.tokenStorageKey,
     ).init();
     Get.put<VeloraStorageService>(storage, permanent: true);
@@ -228,8 +259,8 @@ class Velora {
     );
     Get.put<VeloraNotify>(notify, permanent: true);
     Get.put<NotificationService>(notify, permanent: true);
-    if (auth.check && auth.user != null) {
-      feature.syncFromUserFeatures(auth.user!.features);
+    if (auth.check && auth.currentUser.value != null) {
+      feature.syncFromUserFeatures(auth.currentUser.value!.features);
     }
     if (auth.check &&
         config.notifications.enabled &&

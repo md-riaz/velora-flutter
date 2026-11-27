@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:velora_desktop/src/desktop_coordinator.dart';
 import 'package:velora_desktop/src/desktop_event.dart';
@@ -50,6 +52,8 @@ void main() {
       const config = VeloraDesktopConfig(appId: 'test', appName: 'Test');
       expect(config.titleBarStyle, VeloraTitleBarStyle.normal);
       expect(config.windowButtonVisibility, isTrue);
+      expect(config.minimumSize, isNull);
+      expect(config.initialSize, isNull);
     });
 
     test('applies window configuration only when attached', () async {
@@ -58,17 +62,23 @@ void main() {
         appName: 'Test',
         titleBarStyle: VeloraTitleBarStyle.customTitleBar,
         windowButtonVisibility: false,
+        minimumSize: Size(400, 300),
+        initialSize: Size(800, 600),
       );
       final coordinator = buildCoordinator(config: config);
       await coordinator.initialize();
       expect(window.titleBarStyle, VeloraTitleBarStyle.customTitleBar);
       expect(window.windowButtonVisibility, isFalse);
+      expect(window.minimumSize, const Size(400, 300));
+      expect(window.size, const Size(800, 600));
 
       window = FakeWindowPort()..supported = false;
       final unsupported = buildCoordinator(config: config);
       await unsupported.initialize();
       expect(window.titleBarStyle, VeloraTitleBarStyle.normal);
       expect(window.windowButtonVisibility, isTrue);
+      expect(window.minimumSize, isNull);
+      expect(window.size, isNull);
     });
 
     test('updates title bar and buttons at runtime', () async {
@@ -82,6 +92,19 @@ void main() {
       await coordinator.setWindowButtonVisibility(true);
       expect(window.titleBarStyle, VeloraTitleBarStyle.normal);
       expect(window.windowButtonVisibility, isTrue);
+    });
+
+    test('size changes delegate to the fake window', () async {
+      final coordinator = buildCoordinator();
+      await coordinator.initialize();
+      await coordinator.setMinimumSize(const Size(320, 240));
+      await coordinator.setSize(const Size(640, 480));
+      expect(window.minimumSize, const Size(320, 240));
+      expect(window.size, const Size(640, 480));
+      await window.setMinimumSize(const Size(200, 100));
+      await window.setSize(const Size(500, 400));
+      expect(window.minimumSize, const Size(200, 100));
+      expect(window.size, const Size(500, 400));
     });
 
     test('fake tracks title bar and button changes', () async {
@@ -139,6 +162,27 @@ void main() {
   });
 
   group('bounds restoration', () {
+    test('restores saved bounds after applying initial size', () async {
+      final storage = FakeDesktopStoragePort();
+      storage.values[VeloraDesktopCoordinator.boundsKey] =
+          '{"x":10,"y":20,"width":900,"height":700}';
+      final coordinator = VeloraDesktopCoordinator(
+        config: const VeloraDesktopConfig(
+          appId: 'test',
+          appName: 'Test',
+          initialSize: Size(800, 600),
+        ),
+        window: window,
+        storage: storage,
+      );
+      await coordinator.initialize();
+      expect(window.size, const Size(800, 600));
+      expect(
+        window.currentBounds,
+        const WindowBounds(x: 10, y: 20, width: 900, height: 700),
+      );
+    });
+
     final cases = <String, String?>{
       'corrupt JSON': '{not json}',
       'wrong JSON shape': '[1,2,3]',

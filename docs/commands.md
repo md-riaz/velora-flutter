@@ -9,7 +9,10 @@ Run commands from the package or generated app directory they target. No project
 <!-- generated:cli-commands source=packages/velora_cli/lib/velora_cli.dart — do not edit; run tool/check_docs.sh --write -->
 | Command | What it does |
 |---|---|
-| `velora new <name>` | Create a new Velora app skeleton. |
+| `velora new <name> [--platforms=<list>]` | Create a new Velora app skeleton. |
+| `velora list` | List available commands. |
+| `velora make:migration <name>` | Generate a database migration. |
+| `velora make:repository <name>` | Generate a data repository. |
 | `velora make:module <name> [--crud] [--form]` | Generate a module: factory, routes, model, data source, repository, service, controller, and pages. |
 | `velora make:auth --sanctum` | Scaffold the login and auth flow. |
 | `velora make:theme [--preset <aurora\|meadow\|neutral\|corporate>] [--font <family>] [--force]` | Generate an app theme from a velora_ui preset. |

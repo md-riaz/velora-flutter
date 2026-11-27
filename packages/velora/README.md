@@ -74,6 +74,18 @@ Velora.auth.isAuthenticated; // RxBool
 await Velora.logout();
 ```
 
+Custom user models implement `Authenticatable` (the existing `VeloraUser`
+name remains an alias) and are configured with `VeloraAuthConfig.userParser`.
+Read them with `Velora.auth.userAs<MyUser>()`; `Velora.auth.user` is null when
+the current user is not an `AuthUser`. The reactive `currentUser` retains the
+custom model.
+
+For tests, `await Velora.testBoot()` resets the service locator and uses
+in-memory storage, no-op feedback and disabled notifications by default. Pass
+`config`, `storage`, `feedback` or `plugins` to customize it, and call
+`await Velora.reset()` during teardown. Controllers expose `errorMessage` as
+null when their reactive `error` is empty.
+
 ---
 
 ## Adapting to your API's response shape

@@ -3,6 +3,8 @@
 /// them exposes a package type.
 library;
 
+import 'dart:ui';
+
 import 'desktop_service.dart';
 
 /// A window's position and size in screen coordinates.
@@ -58,6 +60,10 @@ abstract interface class VeloraDesktopWindowPort {
   Future<void> show({required bool focus});
 
   Future<void> hide();
+
+  Future<void> setMinimumSize(Size size);
+
+  Future<void> setSize(Size size);
 
   Future<void> setTitleBarStyle(VeloraTitleBarStyle style);
 
