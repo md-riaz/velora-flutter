@@ -12,7 +12,9 @@ Create a brand new Velora-powered Flutter app:
 dart run velora_cli new my_app
 ```
 
-Writes a Flutter app skeleton with constructor-injected splash/auth/dashboard modules, a `MaterialApp` wired to a hand-written `AppRouter.onGenerateRoute` switch (Navigator-based, not GetX declarative routing), a theme file, `.ai/` context files for AI-assisted development, and an `AGENTS.md` with the managed lookup section described in [Agent Tooling](agent-tooling.md). The generated `pubspec.yaml` lists `velora_cli` under `dev_dependencies`.
+Pass `--platforms=android,windows` to run `flutter create` for those platforms in the generated directory. Without it, the command writes the app skeleton only. The skeleton has constructor-injected splash/auth/dashboard modules, a `GetMaterialApp` wired to a hand-written `AppRouter.onGenerateRoute` switch, a theme file, `.ai/` context files, and an `AGENTS.md` with the managed lookup section described in [Agent Tooling](agent-tooling.md). The generated `pubspec.yaml` lists `velora_cli` under `dev_dependencies`.
+
+Use `velora list` or `velora --help` to list commands, and `velora new --help` (or `-h`) for command usage.
 
 ## Scaffold auth
 
@@ -89,6 +91,12 @@ dart run velora_cli install velora_offline
 ```
 
 Adds the package to `pubspec.yaml`, wires its plugin into `Velora.boot(plugins: [...])` in `lib/main.dart`, and runs `pub get` — the Laravel-style "install and it's wired for you" step. Pass `--no-wire` to skip editing `main.dart` or `--no-pub-get` to skip fetching dependencies.
+
+When `velora` uses a path or Git dependency, the installed package uses the same source and a sibling package path; hosted dependencies use the catalog's version constraint.
+
+## Scaffold database files
+
+`velora make:migration create_users` writes `lib/database/migrations/create_users_migration.dart`. Set its version to a unique schema version and add the SQL changes. `velora make:repository users` writes `lib/app/data/users_repository.dart` for app-specific data access. Existing files are not overwritten.
 
 ## All CLI commands
 

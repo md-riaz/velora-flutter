@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'dart:async';
 import 'dart:convert';
 
@@ -101,6 +103,20 @@ class VeloraDesktopCoordinator implements VeloraDesktopService {
     });
 
     if (window) {
+      final minimumSize = config.minimumSize;
+      if (minimumSize != null) {
+        await attempt('minimumSize', () async {
+          await _window.setMinimumSize(minimumSize);
+          return true;
+        });
+      }
+      final initialSize = config.initialSize;
+      if (initialSize != null) {
+        await attempt('initialSize', () async {
+          await _window.setSize(initialSize);
+          return true;
+        });
+      }
       await _restoreBounds();
       if (config.titleBarStyle != VeloraTitleBarStyle.normal) {
         await attempt('titleBarStyle', () async {
@@ -211,6 +227,12 @@ class VeloraDesktopCoordinator implements VeloraDesktopService {
 
   @override
   Future<void> hide() => _window.hide();
+
+  @override
+  Future<void> setMinimumSize(Size size) => _window.setMinimumSize(size);
+
+  @override
+  Future<void> setSize(Size size) => _window.setSize(size);
 
   @override
   Future<void> setTitleBarStyle(VeloraTitleBarStyle style) =>

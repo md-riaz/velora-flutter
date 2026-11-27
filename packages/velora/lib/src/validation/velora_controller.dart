@@ -8,6 +8,8 @@ abstract class VeloraController extends GetxController {
   final RxBool loading = false.obs;
   final RxString error = ''.obs;
 
+  String? get errorMessage => error.value.isEmpty ? null : error.value;
+
   final List<StreamSubscription<dynamic>> _subscriptions = [];
 
   /// Runs [task] with loading/error bookkeeping.

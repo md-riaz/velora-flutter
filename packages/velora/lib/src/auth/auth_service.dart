@@ -35,7 +35,7 @@ class AuthService extends GetxService {
   final Rx<SessionState> state = SessionState.guest.obs;
   final RxBool isAuthenticated = false.obs;
 
-  VeloraUser? get user => currentUser.value;
+  AuthUser? get user => userAs<AuthUser>();
   T? userAs<T extends VeloraUser>() {
     final u = currentUser.value;
     return u is T ? u : null;

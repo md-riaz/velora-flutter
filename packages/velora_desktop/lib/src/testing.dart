@@ -3,6 +3,7 @@
 library;
 
 import 'dart:async';
+import 'dart:ui';
 
 import 'desktop_ports.dart';
 import 'desktop_service.dart';
@@ -15,6 +16,8 @@ class FakeWindowPort implements VeloraDesktopWindowPort {
   bool closed = false;
   bool Function()? onCloseRequested;
   WindowBounds? currentBounds;
+  Size? minimumSize;
+  Size? size;
   VeloraTitleBarStyle titleBarStyle = VeloraTitleBarStyle.normal;
   bool windowButtonVisibility = true;
 
@@ -40,6 +43,12 @@ class FakeWindowPort implements VeloraDesktopWindowPort {
     visible = false;
     focused = false;
   }
+
+  @override
+  Future<void> setMinimumSize(Size size) async => minimumSize = size;
+
+  @override
+  Future<void> setSize(Size size) async => this.size = size;
 
   @override
   Future<void> setTitleBarStyle(VeloraTitleBarStyle style) async {

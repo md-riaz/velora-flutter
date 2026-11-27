@@ -5,6 +5,129 @@ import 'package:velora_cli/velora_cli.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('new forwards platforms to flutter in the app directory', () async {
+    final temp = Directory.systemTemp.createTempSync('velora_platforms_');
+    addTearDown(() => temp.deleteSync(recursive: true));
+    final bin = Directory('${temp.path}/bin')..createSync();
+    final flutter = File('${bin.path}/flutter')
+      ..writeAsStringSync('#!/bin/sh\nprintf "%s\\n" "\$@" > flutter_args\n');
+    await Process.run('chmod', ['+x', flutter.path]);
+    final result = await Process.run(
+      Platform.resolvedExecutable,
+      [
+        '${Directory.current.path}/bin/velora_cli.dart',
+        'new',
+        'app',
+        '--platforms=android,windows',
+      ],
+      workingDirectory: temp.path,
+      environment: {'PATH': '${bin.path}:${Platform.environment['PATH']}'},
+    );
+    expect(result.exitCode, 0, reason: result.stderr.toString());
+    expect(File('${temp.path}/app/flutter_args').readAsLinesSync(), [
+      'create',
+      '--project-name=app',
+      '--platforms=android,windows',
+      '.',
+    ]);
+  }, testOn: '!windows');
+
+  test('help, generators and source-aware installs', () async {
+    final app = Directory.systemTemp.createTempSync('velora_issue_83_');
+    addTearDown(() => app.deleteSync(recursive: true));
+    final cli = '${Directory.current.path}/bin/velora_cli.dart';
+    Future<ProcessResult> run(List<String> args) => Process.run(
+      Platform.resolvedExecutable,
+      [cli, ...args],
+      workingDirectory: app.path,
+    );
+
+    for (final args in [
+      <String>['--help'],
+      ['-h'],
+      ['list'],
+      ['new', '--help'],
+      ['new', '-h'],
+    ]) {
+      final result = await run(args);
+      expect(result.exitCode, 0, reason: result.stderr.toString());
+      expect(result.stdout.toString(), contains('velora new'));
+    }
+    expect(Directory('${app.path}/--help').existsSync(), isFalse);
+
+    final migrationPubspec = File('${app.path}/pubspec.yaml');
+    migrationPubspec.writeAsStringSync(
+      'name: demo\ndependencies:\n  velora: ^0.0.1\n',
+    );
+    final missingDb = await run(['make:migration', 'create_users']);
+    expect(missingDb.exitCode, 64);
+    expect(missingDb.stderr.toString(), contains('velora install velora_db'));
+
+    migrationPubspec.writeAsStringSync(
+      'name: demo\ndependencies:\n  velora: ^0.0.1\n  velora_db: ^0.1.0\n',
+    );
+    for (final command in ['make:migration', 'make:repository']) {
+      expect((await run([command, 'create_users'])).exitCode, 0);
+    }
+    migrationPubspec.deleteSync();
+    expect(
+      File('${app.path}/lib/database/migrations/create_users_migration.dart')
+          .readAsStringSync(),
+      contains('extends VeloraMigration'),
+    );
+    expect(
+      File('${app.path}/lib/app/data/create_users_repository.dart')
+          .existsSync(),
+      isTrue,
+    );
+    expect((await run(['make:repository', 'create_users'])).exitCode, 64);
+
+    final pubspec = File('${app.path}/pubspec.yaml');
+    for (final source in [
+      'path: ../packages/velora',
+      'git:\n      url: https://example.com/repo.git\n      ref: main\n      path: packages/velora',
+      '^0.0.1',
+    ]) {
+      pubspec.writeAsStringSync(
+        'name: demo\ndependencies:\n  velora: ${source.startsWith('^') ? source : '\n    $source'}\n',
+      );
+      final result = await run([
+        'install',
+        'velora_offline',
+        '--no-wire',
+        '--no-pub-get',
+      ]);
+      expect(result.exitCode, 0, reason: result.stderr.toString());
+      final content = pubspec.readAsStringSync();
+      expect(
+        content,
+        contains(
+          source.startsWith('path')
+              ? '../packages/velora_offline'
+              : source.startsWith('git')
+              ? 'packages/velora_offline'
+              : 'velora_offline: ^0.0.1',
+        ),
+      );
+      if (source.startsWith('git')) expect(content, contains('"ref":"main"'));
+    }
+
+    final created = await run(['new', 'sample']);
+    expect(created.exitCode, 0, reason: created.stderr.toString());
+    final main = File('${app.path}/sample/lib/main.dart').readAsStringSync();
+    expect(main, contains('scaffoldMessengerKey: messengerKey'));
+    expect(main, contains('navigatorKey: navigatorKey'));
+    expect(
+      File('${app.path}/sample/test/widget_test.dart').readAsStringSync(),
+      contains('Velora.testBoot()'),
+    );
+    expect(
+      File(
+        '${app.path}/sample/lib/app/modules/auth/controllers/login_controller.dart',
+      ).readAsStringSync(),
+      contains("'email': emailController.text.trim()"),
+    );
+  });
   group('make:theme', () {
     late Directory app;
     late File theme;

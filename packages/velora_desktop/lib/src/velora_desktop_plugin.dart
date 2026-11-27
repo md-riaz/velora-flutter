@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'dart:async';
 import 'dart:io';
 
@@ -94,6 +96,12 @@ class _InertDesktopService implements VeloraDesktopService {
 
   @override
   Future<void> hide() async {}
+
+  @override
+  Future<void> setMinimumSize(Size size) async {}
+
+  @override
+  Future<void> setSize(Size size) async {}
 
   @override
   Future<void> setTitleBarStyle(VeloraTitleBarStyle style) async {}

@@ -24,12 +24,14 @@
 ///   @override Map<String, dynamic> toJson() => {'uuid': uuid, ...};
 /// }
 /// ```
-abstract class VeloraUser {
+abstract interface class Authenticatable {
   List<String> get roles;
   List<String> get permissions;
   List<String> get features;
   Map<String, dynamic> toJson();
 }
+
+typedef VeloraUser = Authenticatable;
 
 /// Built-in user model — use as-is when your backend matches the default shape.
 ///

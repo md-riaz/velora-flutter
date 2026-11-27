@@ -17,7 +17,7 @@ class PermissionService extends GetxService {
   /// Uses [VeloraAuthConfig.permissionResolver] when configured; otherwise
   /// checks whether [permission] appears in [VeloraUser.permissions].
   bool can(String permission) {
-    final user = auth.user;
+    final user = auth.currentUser.value;
     if (user == null) return false;
     final resolver = _resolver;
     if (resolver != null) return resolver(user, permission);
@@ -26,7 +26,8 @@ class PermissionService extends GetxService {
 
   bool cannot(String permission) => !can(permission);
 
-  bool hasRole(String role) => auth.user?.roles.contains(role) ?? false;
+  bool hasRole(String role) =>
+      auth.currentUser.value?.roles.contains(role) ?? false;
 
   bool hasAnyRole(Iterable<String> roles) => roles.any(hasRole);
 

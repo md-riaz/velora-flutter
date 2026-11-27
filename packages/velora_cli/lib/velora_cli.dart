@@ -69,7 +69,14 @@ class VeloraCommand {
 
 /// Every command `velora` accepts, in help order.
 const veloraCommands = <VeloraCommand>[
-  VeloraCommand('new', '<name>', 'Create a new Velora app skeleton.'),
+  VeloraCommand(
+    'new',
+    '<name> [--platforms=<list>]',
+    'Create a new Velora app skeleton.',
+  ),
+  VeloraCommand('list', '', 'List available commands.'),
+  VeloraCommand('make:migration', '<name>', 'Generate a database migration.'),
+  VeloraCommand('make:repository', '<name>', 'Generate a data repository.'),
   VeloraCommand(
     'make:module',
     '<name> [--crud] [--form]',

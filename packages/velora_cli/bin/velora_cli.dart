@@ -3,11 +3,21 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 import 'package:velora_cli/velora_cli.dart';
+import 'package:yaml/yaml.dart';
 
 void main(List<String> arguments) {
-  if (arguments.isEmpty || arguments.first == 'help') {
+  if (arguments.isEmpty || ['help', '--help', '-h'].contains(arguments.first)) {
     _printHelp();
     return;
+  }
+
+  if (arguments.skip(1).any((arg) => arg == '--help' || arg == '-h')) {
+    final commands = veloraCommands.where((c) => c.name == arguments.first);
+    if (commands.isNotEmpty) {
+      final command = commands.first;
+      stdout.writeln('${command.usage}\n${command.summary}');
+      return;
+    }
   }
 
   // `_fail` sets `exitCode` and throws `_CliExit` to abort the current command.
@@ -15,6 +25,12 @@ void main(List<String> arguments) {
   // an uncaught-exception stack trace.
   try {
     switch (arguments.first) {
+      case 'list':
+        _printHelp();
+      case 'make:migration':
+        _makeDatabaseFile(arguments.skip(1).toList(), migration: true);
+      case 'make:repository':
+        _makeDatabaseFile(arguments.skip(1).toList(), migration: false);
       case 'new':
         _new(arguments.skip(1).toList());
       case 'make:module':
@@ -466,12 +482,26 @@ void _printHelp() {
 }
 
 void _new(List<String> args) {
-  if (args.isEmpty) _fail('Missing app name.');
-  final rootName = args.first;
+  final parsed = _Args(args)..parse(options: {'platforms'});
+  if (parsed.positional.isEmpty) _fail('Missing app name.');
+  final rootName = parsed.positional.first;
+  final platforms = parsed.option('platforms');
+  if (platforms != null && !RegExp(r'^[a-z]+(,[a-z]+)*$').hasMatch(platforms)) {
+    _fail('Invalid platforms list.');
+  }
   final appName = p.basename(p.normalize(rootName));
   final packageName = _snake(appName);
   final title = _title(packageName);
   final root = Directory(rootName)..createSync(recursive: true);
+  if (platforms != null) {
+    final result = Process.runSync(
+      'flutter',
+      ['create', '--project-name=$packageName', '--platforms=$platforms', '.'],
+      workingDirectory: root.path,
+      runInShell: Platform.isWindows,
+    );
+    if (result.exitCode != 0) _fail('flutter create failed: ${result.stderr}');
+  }
 
   _write(p.join(root.path, 'pubspec.yaml'), _pubspec(packageName, root.path));
   _write(p.join(root.path, 'analysis_options.yaml'), _analysisOptions());
@@ -580,8 +610,65 @@ void _new(List<String> args) {
     _appTheme(),
   );
   _writeAi(root.path, title);
+  _write(
+    p.join(root.path, 'test', 'widget_test.dart'),
+    '''import 'package:flutter_test/flutter_test.dart';
+import 'package:velora/velora.dart';
+import 'package:$packageName/main.dart';
+
+void main() {
+  setUp(() async => Velora.testBoot());
+  tearDown(() async => Velora.reset());
+  testWidgets('app starts', (tester) async {
+    await tester.pumpWidget(const ${_pascal(packageName)}App());
+    expect(find.byType(${_pascal(packageName)}App), findsOneWidget);
+  });
+}
+''',
+  );
   _write(p.join(root.path, 'AGENTS.md'), upsertVeloraAgentsSection(''));
   stdout.writeln('Created Velora app: $rootName');
+}
+
+void _makeDatabaseFile(List<String> args, {required bool migration}) {
+  if (args.length != 1 || args.first.startsWith('-')) _fail('Expected a name.');
+  if (migration) {
+    final pubspec = File(p.join(Directory.current.path, 'pubspec.yaml'));
+    if (!pubspec.existsSync() ||
+        !pubspecDeclaresDependency(pubspec.readAsStringSync(), 'velora_db')) {
+      _fail(
+        '`velora_db` is not declared in pubspec.yaml. '
+        'Run `velora install velora_db` before generating migrations.',
+      );
+    }
+  }
+  final name = _snake(args.first);
+  final className = _pascal(name);
+  final path = migration
+      ? p.join('lib', 'database', 'migrations', '${name}_migration.dart')
+      : p.join('lib', 'app', 'data', '${name}_repository.dart');
+  if (File(path).existsSync()) _fail('File already exists: $path');
+  _write(
+    path,
+    migration
+        ? '''import 'package:velora_db/velora_db.dart';
+
+class ${className}Migration extends VeloraMigration {
+  @override
+  int get version => 1;
+
+  @override
+  Future<void> up(VeloraMigrationContext context) async {
+    // Add schema changes here and assign a unique version.
+  }
+}
+'''
+        : '''class ${className}Repository {
+  // Add data access methods here.
+}
+''',
+  );
+  stdout.writeln('Created $path');
 }
 
 void _makeModule(List<String> args) {
@@ -1038,10 +1125,11 @@ void _install(List<String> args) {
     _fail('Run this inside a Velora app (no pubspec.yaml found).');
   }
 
+  final pubspec = pubspecFile.readAsStringSync();
   final updatedPubspec = addDependencyToPubspec(
-    pubspecFile.readAsStringSync(),
+    pubspec,
     package.name,
-    package.constraint,
+    _siblingConstraint(pubspec, package.name, package.constraint),
   );
   pubspecFile.writeAsStringSync(updatedPubspec);
   stdout.writeln(
@@ -1130,6 +1218,41 @@ void _install(List<String> args) {
     }
   }
   stdout.writeln('Installed ${package.name}.');
+}
+
+String _siblingConstraint(String pubspec, String name, String fallback) {
+  final doc = loadYaml(pubspec);
+  if (doc is! Map || doc['dependencies'] is! Map) return fallback;
+  final source = doc['dependencies']['velora'];
+  if (source is! Map) return fallback;
+  final path = source['path'];
+  if (path is String) {
+    return jsonEncode({
+      'path': p.posix.join(p.posix.dirname(path.replaceAll('\\', '/')), name),
+    });
+  }
+  final git = source['git'];
+  if (git is String) {
+    return jsonEncode({
+      'git': {'url': git, 'path': name},
+    });
+  }
+  if (git is Map && git['url'] is String) {
+    final sibling = <String, dynamic>{'url': git['url']};
+    if (git['ref'] != null) sibling['ref'] = git['ref'];
+    if (git['tag_pattern'] != null) sibling['tag_pattern'] = git['tag_pattern'];
+    final originalPath = git['path'];
+    sibling['path'] = originalPath is String
+        ? p.posix.join(p.posix.dirname(originalPath), name)
+        : name;
+    final dep = <String, dynamic>{
+      if (git['ref'] == null && source['version'] != null)
+        'version': source['version'],
+      'git': sibling,
+    };
+    return jsonEncode(dep);
+  }
+  return fallback;
 }
 
 void _doctor() {
@@ -1414,6 +1537,9 @@ import 'app/routes/app_router.dart';
 import 'app/routes/app_routes.dart';
 import 'resources/theme/app_theme.dart';
 
+final messengerKey = GlobalKey<ScaffoldMessengerState>();
+final navigatorKey = GlobalKey<NavigatorState>();
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Velora.boot(
@@ -1431,22 +1557,31 @@ Future<void> main() async {
 
 
 class MaterialFeedback implements FeedbackPresenter {
-  @override
-  void success(String message) => Get.rawSnackbar(message: message);
+  void _show(String message) {
+    final messenger = messengerKey.currentState ??
+        (navigatorKey.currentContext == null ? null : ScaffoldMessenger.maybeOf(navigatorKey.currentContext!));
+    messenger?.showSnackBar(SnackBar(content: Text(message)));
+  }
 
   @override
-  void error(String message) => Get.rawSnackbar(message: message);
+  void success(String message) => _show(message);
 
   @override
-  Future<bool> confirm(ConfirmationRequest request) async =>
-      await Get.dialog<bool>(AlertDialog(
+  void error(String message) => _show(message);
+
+  @override
+  Future<bool> confirm(ConfirmationRequest request) async {
+    final context = navigatorKey.currentContext;
+    if (context == null) return false;
+    return await showDialog<bool>(context: context, builder: (context) => AlertDialog(
         title: Text(request.title),
         content: Text(request.message),
         actions: [
-          TextButton(onPressed: () => Get.back(result: false), child: Text(request.cancelLabel)),
-          TextButton(onPressed: () => Get.back(result: true), child: Text(request.confirmLabel)),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(request.cancelLabel)),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: Text(request.confirmLabel)),
         ],
       )) ?? false;
+  }
 }
 
 class {{appClass}} extends StatelessWidget {
@@ -1455,6 +1590,8 @@ class {{appClass}} extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
+      scaffoldMessengerKey: messengerKey,
+      navigatorKey: navigatorKey,
       title: '{{title}}',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
@@ -1616,10 +1753,10 @@ class LoginController extends VeloraController {
 
   Future<void> login(BuildContext context) async {
     final user = await run(
-      () => Velora.auth.login(
-        email: emailController.text.trim(),
-        password: passwordController.text,
-      ),
+      () => Velora.auth.login({
+        'email': emailController.text.trim(),
+        'password': passwordController.text,
+      }),
       successMessage: 'Welcome back',
     );
 
@@ -1724,7 +1861,7 @@ import 'package:velora/velora.dart';
 import '../../../routes/app_routes.dart';
 
 class DashboardController extends VeloraController {
-  AuthUser? get user => Velora.auth.user;
+  AuthUser? get user => Velora.auth.userAs<AuthUser>();
   String get apiBaseUrl => Velora.config.apiBaseUrl;
 
   Future<void> logout(BuildContext context) async {
