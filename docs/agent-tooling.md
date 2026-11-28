@@ -8,6 +8,7 @@ The CLI answers questions about Velora from the packages a project has installed
 | `velora component [<name>]` | The installed `velora_ui`: `components.json` and the declaring source file. |
 | `velora docs [<topic>]` | The `docs/` directory of the checkout the project's Velora packages come from. |
 | `velora manifest` | The CLI's own registries. |
+| `velora mcp` | Read-only MCP tools backed by the same registries and installed packages. |
 | `velora make:agents` | Writes the managed section below into `AGENTS.md`. |
 
 Run them from the app directory (or any directory below it), after `flutter pub get`. `velora new` adds `velora_cli` to the app's `dev_dependencies`, so `dart run velora_cli <command>` works from the app root and resolves the same checkout as the app's other Velora packages. An app created before this needs that dev dependency added by hand.
@@ -76,6 +77,10 @@ Not included yet: theme tokens used, accessibility and keyboard notes as structu
 ## `velora manifest`
 
 `velora manifest --json` lists the commands (and which accept `--json`), installable packages, docs topics, output types, error codes, the JSON `apiVersion`, and the minimum Flutter and Dart versions.
+
+## Local MCP server
+
+Run `dart run velora_cli mcp` from the app directory, or pass `--project <path>` to select it. Configure an MCP client to start that command over stdio. The server exposes `search`, `component_get`, `template_get`, `docs_get`, `package_get`, and `doctor_summary`; it does not generate or modify files. Responses use the same versioned envelopes and installed-package metadata as the CLI. Documentation pages are available locally only when the installed packages include the checkout's docs.
 
 ## JSON output
 

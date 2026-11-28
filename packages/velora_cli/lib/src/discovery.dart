@@ -110,6 +110,9 @@ const veloraOutputTypes = <String>[
   'docs.page',
   'template.list',
   'template.detail',
+  'package.list',
+  'package.detail',
+  'doctor.summary',
 ];
 
 /// A documentation page `velora docs <topic>` can serve.
