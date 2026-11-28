@@ -1,0 +1,15 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  errors:
+    analysis_options_deprecated_plugins: ignore
+  exclude:
+    - build/**
+    - windows/**
+  plugins:
+    - custom_lint
+
+linter:
+  rules:
+    prefer_single_quotes: true
+    require_trailing_commas: true

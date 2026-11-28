@@ -99,7 +99,7 @@ jobs:
       # Packages that depend on nativeapi/cnativeapi need the GTK 3, X11 and
       # Xi development headers for the native build hook.
       - name: Install Linux desktop dependencies
-        if: contains(fromJSON('["packages/velora_desktop"]'), matrix.package)
+        if: contains(fromJSON('["packages/velora_desktop", "examples/desktop_readiness"]'), matrix.package)
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends \
