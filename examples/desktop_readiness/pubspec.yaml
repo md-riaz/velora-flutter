@@ -1,0 +1,45 @@
+name: desktop_readiness
+description: Integrated desktop readiness example proving Velora contracts under tray lifecycle, offline durable replay, sleep/resume, and notification activation.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.0
+  flutter: '>=3.47.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  get: ^4.7.2
+  drift: ^2.34.2
+  velora:
+    path: ../../packages/velora
+  velora_db:
+    path: ../../packages/velora_db
+  velora_desktop:
+    path: ../../packages/velora_desktop
+  velora_local_notifications:
+    path: ../../packages/velora_local_notifications
+  velora_offline:
+    path: ../../packages/velora_offline
+  velora_ui:
+    path: ../../packages/velora_ui
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  custom_lint: ^0.6.0
+  velora_lints:
+    path: ../../packages/velora_lints
+  shared_preferences: ^2.5.3
+
+flutter:
+  uses-material-design: true
+
+# Repo-CI/host-test offline SQLite amalgamation hook (see third_party/sqlite3/README.md).
+hooks:
+  user_defines:
+    sqlite3:
+      source: source
+      path: ../../third_party/sqlite3/sqlite3.c
