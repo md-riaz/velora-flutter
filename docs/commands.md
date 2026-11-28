@@ -22,7 +22,8 @@ Run commands from the package or generated app directory they target. No project
 | `velora install <package> [--no-pub-get] [--no-wire]` | Add an official Velora package and wire it into Velora.boot() when it can be. |
 | `velora doctor` | Check the velora dependency, Velora.boot() wiring, unwired plugins, the managed AGENTS.md section, and the Flutter/Dart baseline. |
 | `velora make:agents` | Write or refresh the managed Velora section in AGENTS.md. |
-| `velora search <query> [--type <type>] [--limit <n>] [--json]` | Search components, docs topics, packages, and commands. |
+| `velora search <query> [--type <type>] [--limit <n>] [--json]` | Search components, templates, docs topics, packages, and commands. |
+| `velora template [<id>] [--dry-run] [--json] [--force]` | List, inspect, or generate a source-owned template. |
 | `velora component [<name>] [--detail brief\|full] [--source] [--json]` | Describe a velora_ui export from the installed version, or list them all. |
 | `velora docs [<topic>] [--json]` | Print a documentation topic, or list the topics. |
 | `velora manifest [--json]` | Describe this CLI: commands, packages, output types, and error codes. |

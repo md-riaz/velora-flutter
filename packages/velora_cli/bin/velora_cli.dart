@@ -53,6 +53,8 @@ void main(List<String> arguments) {
         _makeAgents();
       case 'search':
         _search(_Args(arguments.skip(1)));
+      case 'template':
+        _template(_Args(arguments.skip(1)));
       case 'component':
         _component(_Args(arguments.skip(1)));
       case 'docs':
@@ -167,6 +169,55 @@ void _makeAgents() {
         ? 'Created AGENTS.md with the Velora section.'
         : 'Updated the Velora section in AGENTS.md.',
   );
+}
+
+void _template(_Args args) {
+  args.parse(flags: {'dry-run', 'force'});
+  if (args.positional.isEmpty) {
+    if (args.json) {
+      _printJson(
+        veloraEnvelope('template.list', {
+          'templates': [for (final t in veloraTemplates) t.toJson()],
+        }, null),
+      );
+    } else {
+      for (final t in veloraTemplates) {
+        stdout.writeln('${t.id}: ${t.description}');
+      }
+    }
+    return;
+  }
+  final id = args.positional.single;
+  final matches = veloraTemplates.where((t) => t.id == id);
+  if (matches.isEmpty) {
+    throw VeloraCliError(
+      VeloraErrorCode.unknownTemplate,
+      'Unknown template: $id',
+    );
+  }
+  final template = matches.single;
+  final dryRun = args.flag('dry-run');
+  if (!dryRun) {
+    if (FileSystemEntity.typeSync(template.file, followLinks: false) !=
+            FileSystemEntityType.notFound &&
+        !args.flag('force')) {
+      throw VeloraCliError(
+        VeloraErrorCode.templateConflict,
+        '${template.file} already exists. Use --force to overwrite it.',
+      );
+    }
+    _write(template.file, template.source);
+  }
+  if (args.json) {
+    _printJson(
+      veloraEnvelope('template.detail', {
+        ...template.toJson(),
+        'dryRun': dryRun,
+      }, null),
+    );
+  } else {
+    stdout.writeln('${dryRun ? 'Would create' : 'Created'} ${template.file}');
+  }
 }
 
 void _makeTheme(List<String> arguments) {

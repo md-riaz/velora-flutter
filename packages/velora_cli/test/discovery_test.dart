@@ -352,6 +352,20 @@ typedef Callback = void Function(int);
   });
 
   group('registries', () {
+    test('template ids are unique and searchable', () {
+      final ids = veloraTemplates.map((t) => t.id).toList();
+      expect(ids.toSet().length, ids.length);
+      expect(ids.length, 7);
+      expect(
+        veloraSearch('crud-list', types: {'template'}).first.name,
+        'crud-list',
+      );
+      expect(
+        veloraSearch('crud-list').any((h) => h.type == 'template'),
+        isTrue,
+      );
+      expect((veloraManifest()['templates'] as List).length, ids.length);
+    });
     test('ids, codes, and output types are unique', () {
       final topics = veloraDocsTopics.map((t) => t.id).toList();
       expect(topics.toSet().length, topics.length);
@@ -407,6 +421,48 @@ typedef Callback = void Function(int);
   });
 
   group('commands', () {
+    test('templates preview, generate, and protect existing files', () async {
+      final dir = Directory.systemTemp.createTempSync('velora_template_');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      final template = veloraTemplates.first;
+      final file = File(p.join(dir.path, template.file));
+      final list = await _cli(dir, ['template', '--json']);
+      expect(((_json(list)['data'] as Map)['templates'] as List).length, 7);
+      final search = await _cli(dir, [
+        'search',
+        template.id,
+        '--type=template',
+        '--json',
+      ]);
+      expect(
+        (((_json(search)['data'] as Map)['results'] as List).first
+            as Map)['type'],
+        'template',
+      );
+      final preview = await _cli(dir, [
+        'template',
+        template.id,
+        '--dry-run',
+        '--json',
+      ]);
+      expect((_json(preview)['data'] as Map)['id'], template.id);
+      expect(file.existsSync(), isFalse);
+      final created = await _cli(dir, ['template', template.id, '--json']);
+      expect(created.exitCode, 0);
+      expect(file.existsSync(), isTrue);
+      file.writeAsStringSync('keep');
+      final conflict = await _cli(dir, ['template', template.id, '--json']);
+      expect(conflict.exitCode, 64);
+      expect(_json(conflict)['code'], 'ERR_TEMPLATE_CONFLICT');
+      expect(file.readAsStringSync(), 'keep');
+      expect(
+        (await _cli(dir, ['template', template.id, '--force'])).exitCode,
+        0,
+      );
+      expect(file.readAsStringSync(), template.source);
+      final unknown = await _cli(dir, ['template', 'missing', '--json']);
+      expect(_json(unknown)['code'], 'ERR_UNKNOWN_TEMPLATE');
+    });
     test('component --json answers from the installed version', () async {
       final real = await _cli(_realProject(), [
         'component',

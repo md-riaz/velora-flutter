@@ -119,6 +119,8 @@ Branch on `code`. The `error` text can change between releases.
 | `ERR_UNKNOWN_COMMAND` | The first argument is not a Velora command. |
 | `ERR_UNKNOWN_COMPONENT` | No `velora_ui` export has that name in the installed version. |
 | `ERR_UNKNOWN_DOCS_TOPIC` | No documentation topic has that id. |
+| `ERR_UNKNOWN_TEMPLATE` | No template has that id. |
+| `ERR_TEMPLATE_CONFLICT` | A template output already exists. |
 | `ERR_INVALID_ARGUMENT` | A required argument is missing, or an option or its value is not accepted. |
 | `ERR_PROJECT_REQUIRED` | The command needs a resolved Dart project: a `pubspec.yaml` and `.dart_tool/package_config.json` in the current directory or a parent. |
 | `ERR_PACKAGE_NOT_INSTALLED` | The project does not resolve the package the answer comes from. |

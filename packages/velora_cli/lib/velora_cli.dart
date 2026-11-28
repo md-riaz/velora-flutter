@@ -1,5 +1,6 @@
 export 'src/discovery.dart';
 export 'src/source_scan.dart';
+export 'src/templates.dart';
 
 const veloraCliName = 'velora_cli';
 const veloraCliVersion = '0.0.1';
@@ -124,7 +125,13 @@ const veloraCommands = <VeloraCommand>[
   VeloraCommand(
     'search',
     '<query> [--type <type>] [--limit <n>] [--json]',
-    'Search components, docs topics, packages, and commands.',
+    'Search components, templates, docs topics, packages, and commands.',
+    json: true,
+  ),
+  VeloraCommand(
+    'template',
+    '[<id>] [--dry-run] [--json] [--force]',
+    'List, inspect, or generate a source-owned template.',
     json: true,
   ),
   VeloraCommand(
