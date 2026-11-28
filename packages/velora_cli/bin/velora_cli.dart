@@ -5,7 +5,7 @@ import 'package:path/path.dart' as p;
 import 'package:velora_cli/velora_cli.dart';
 import 'package:yaml/yaml.dart';
 
-void main(List<String> arguments) {
+Future<void> main(List<String> arguments) async {
   if (arguments.isEmpty || ['help', '--help', '-h'].contains(arguments.first)) {
     _printHelp();
     return;
@@ -61,6 +61,8 @@ void main(List<String> arguments) {
         _docs(_Args(arguments.skip(1)));
       case 'manifest':
         _manifest(_Args(arguments.skip(1)));
+      case 'mcp':
+        await _mcp(_Args(arguments.skip(1)));
       default:
         throw VeloraCliError(
           VeloraErrorCode.unknownCommand,
@@ -526,6 +528,11 @@ void _manifest(_Args args) {
     ..writeln(
       'Error codes: ${VeloraErrorCode.all.map((e) => e.code).join(', ')}',
     );
+}
+
+Future<void> _mcp(_Args args) async {
+  args.parse(options: {'project'}, maxPositional: 0);
+  await VeloraMcpServer(projectDirectory: args.option('project')).serveStdio();
 }
 
 void _printHelp() {

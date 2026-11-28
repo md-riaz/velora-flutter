@@ -27,6 +27,7 @@ Run commands from the package or generated app directory they target. No project
 | `velora component [<name>] [--detail brief\|full] [--source] [--json]` | Describe a velora_ui export from the installed version, or list them all. |
 | `velora docs [<topic>] [--json]` | Print a documentation topic, or list the topics. |
 | `velora manifest [--json]` | Describe this CLI: commands, packages, output types, and error codes. |
+| `velora mcp [--project <path>]` | Run the local read-only MCP stdio server. |
 <!-- /generated:cli-commands -->
 
 ## Runtime package

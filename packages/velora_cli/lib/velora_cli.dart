@@ -1,4 +1,5 @@
 export 'src/discovery.dart';
+export 'src/mcp_server.dart';
 export 'src/source_scan.dart';
 export 'src/templates.dart';
 
@@ -152,6 +153,11 @@ const veloraCommands = <VeloraCommand>[
     '[--json]',
     'Describe this CLI: commands, packages, output types, and error codes.',
     json: true,
+  ),
+  VeloraCommand(
+    'mcp',
+    '[--project <path>]',
+    'Run the local read-only MCP stdio server.',
   ),
 ];
 
