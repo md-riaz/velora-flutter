@@ -35,6 +35,14 @@ class VeloraErrorCode {
     'ERR_UNKNOWN_DOCS_TOPIC',
     'No documentation topic has that id.',
   );
+  static const unknownTemplate = VeloraErrorCode(
+    'ERR_UNKNOWN_TEMPLATE',
+    'No template has that id.',
+  );
+  static const templateConflict = VeloraErrorCode(
+    'ERR_TEMPLATE_CONFLICT',
+    'A template output already exists.',
+  );
   static const invalidArgument = VeloraErrorCode(
     'ERR_INVALID_ARGUMENT',
     'A required argument is missing, or an option or its value is not '
@@ -61,6 +69,8 @@ class VeloraErrorCode {
     unknownCommand,
     unknownComponent,
     unknownDocsTopic,
+    unknownTemplate,
+    templateConflict,
     invalidArgument,
     projectRequired,
     packageNotInstalled,
@@ -98,6 +108,8 @@ const veloraOutputTypes = <String>[
   'component.detail',
   'docs.list',
   'docs.page',
+  'template.list',
+  'template.detail',
 ];
 
 /// A documentation page `velora docs <topic>` can serve.
@@ -534,7 +546,13 @@ List<VeloraSuggestion> suggestNames(
 }
 
 /// The kinds of entry `velora search` covers, as accepted by `--type`.
-const veloraSearchTypes = <String>['component', 'docs', 'package', 'command'];
+const veloraSearchTypes = <String>[
+  'component',
+  'template',
+  'docs',
+  'package',
+  'command',
+];
 
 /// One search result.
 class VeloraSearchHit {
@@ -596,6 +614,9 @@ List<VeloraSearchHit> veloraSearch(
       consider('component', c.name, catalog.declaration(c).summary, c.category);
     }
   }
+  for (final template in veloraTemplates) {
+    consider('template', template.id, template.description, template.title);
+  }
   for (final topic in veloraDocsTopics) {
     consider('docs', topic.id, topic.title);
   }
@@ -643,11 +664,13 @@ Map<String, Object?> veloraManifest({VeloraUiCatalog? catalog}) => {
       },
   ],
   'docsTopics': [for (final t in veloraDocsTopics) t.toJson()],
+  'templates': [for (final t in veloraTemplates) t.toJson()],
   'counts': {
     'components': catalog?.components.length,
     'docsTopics': veloraDocsTopics.length,
     'packages': veloraPackageCatalog.length,
     'commands': veloraCommands.length,
+    'templates': veloraTemplates.length,
   },
   'outputTypes': veloraOutputTypes,
   'errorCodes': [
