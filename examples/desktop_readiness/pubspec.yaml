@@ -36,6 +36,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - windows/runner/resources/app_icon.ico
 
 # Repo-CI/host-test offline SQLite amalgamation hook (see third_party/sqlite3/README.md).
 hooks:

@@ -37,6 +37,7 @@ class ReadinessCoordinator {
   bool _isHiddenToTray = false;
   bool _isSuspended = false;
   bool _endpointReachable = true;
+  String? _pendingActivatedItemId;
   Future<void> _resumeQueue = Future<void>.value();
 
   ReadinessCoordinator({
@@ -60,6 +61,12 @@ class ReadinessCoordinator {
   Stream<bool> get endpointReachableStream => _reachableController.stream;
   Stream<ReadinessRealtimeState> get realtimeStates => realtime.states;
   Stream<String> get activatedItemIds => _activatedItemController.stream;
+
+  String? consumePendingActivatedItemId() {
+    final pending = _pendingActivatedItemId;
+    _pendingActivatedItemId = null;
+    return pending;
+  }
 
   /// Initializes subscriptions and connects realtime once. Idempotent.
   Future<void> initialize() async {
@@ -93,6 +100,13 @@ class ReadinessCoordinator {
   /// Hides the window to the tray while keeping realtime and durable queue
   /// alive.
   Future<void> hideToTray() async {
+    if (!desktop.capabilities.tray) {
+      diagnostics.record(
+        'tray',
+        'Skipped hide to tray because tray capability is unavailable',
+      );
+      return;
+    }
     await desktop.hide();
     _setHiddenToTray(true);
     diagnostics.record(
@@ -359,7 +373,11 @@ class ReadinessCoordinator {
     }
 
     if (!_activatedItemController.isClosed) {
-      _activatedItemController.add(itemId);
+      if (_activatedItemController.hasListener) {
+        _activatedItemController.add(itemId);
+      } else {
+        _pendingActivatedItemId = itemId;
+      }
     }
     diagnostics.record(
       'notification',

@@ -559,17 +559,21 @@ class ReadinessWorkStore implements ReadinessCursorStore, ReadinessReconciler {
     String? latestCursor = sinceCursor;
 
     for (final event in events) {
-      if (await hasProcessedEvent(event.id)) {
-        diagnostics.record(
-          'reconcile',
-          'Skipped duplicate realtime event',
-          metadata: {'eventId': event.id, 'cursor': event.cursor},
-        );
-        continue;
-      }
-
-      final existing = await findItem(event.item.id);
+      var applied = false;
       await database.db.transaction(() async {
+        final alreadyProcessed = await hasProcessedEvent(event.id);
+        if (alreadyProcessed) {
+          return;
+        }
+        await database.db.customStatement(
+          '''
+          INSERT INTO processed_events (event_id, cursor_value, processed_at)
+          VALUES (?, ?, ?)
+          ''',
+          [event.id, event.cursor, _now().toUtc().toIso8601String()],
+        );
+
+        final existing = await findItem(event.item.id);
         // Do not overwrite an active local pending/conflict item silently.
         if (existing == null ||
             (existing.syncStatus != SyncStatus.pending &&
@@ -599,15 +603,17 @@ class ReadinessWorkStore implements ReadinessCursorStore, ReadinessReconciler {
             ],
           );
         }
-
-        await database.db.customStatement(
-          '''
-          INSERT OR IGNORE INTO processed_events (event_id, cursor_value, processed_at)
-          VALUES (?, ?, ?)
-          ''',
-          [event.id, event.cursor, _now().toUtc().toIso8601String()],
-        );
+        applied = true;
       });
+
+      if (!applied) {
+        diagnostics.record(
+          'reconcile',
+          'Skipped duplicate realtime event',
+          metadata: {'eventId': event.id, 'cursor': event.cursor},
+        );
+        continue;
+      }
 
       latestCursor = event.cursor;
       appliedCount++;

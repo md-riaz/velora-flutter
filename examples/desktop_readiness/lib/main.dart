@@ -22,7 +22,11 @@ Future<void> main(List<String> args) async {
   const desktopConfig = VeloraDesktopConfig(
     appId: 'dev.velora.desktop_readiness',
     appName: 'Velora Desktop Readiness',
-    closeToTray: false,
+    tray: VeloraTrayConfig(
+      iconAsset: 'windows/runner/resources/app_icon.ico',
+      tooltip: 'Velora Desktop Readiness',
+    ),
+    closeToTray: true,
     singleInstance: false,
     minimumSize: Size(640, 480),
     initialSize: Size(1100, 760),
@@ -51,14 +55,11 @@ Future<void> main(List<String> args) async {
   if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
     try {
       notifications = FlutterLocalNotificationsNativeAdapter();
-      await notifications.initialize();
     } on Object {
       notifications = FakeNativeNotifications();
-      await notifications.initialize();
     }
   } else {
     notifications = FakeNativeNotifications();
-    await notifications.initialize();
   }
 
   final store = ReadinessWorkStore(
@@ -78,6 +79,11 @@ Future<void> main(List<String> args) async {
     diagnostics: diagnostics,
   );
   await coordinator.initialize();
+  try {
+    await notifications.initialize();
+  } on Object {
+    // Headless or unsupported environments continue with notifications inactive.
+  }
 
   final controller = Get.put(
     ReadinessController(

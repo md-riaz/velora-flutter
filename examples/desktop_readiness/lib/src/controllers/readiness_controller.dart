@@ -54,6 +54,10 @@ class ReadinessController extends VeloraController {
     endpointReachable.value = coordinator.endpointReachable;
     isHiddenToTray.value = coordinator.isHiddenToTray;
     diagnostics.assignAll(diagnosticsLog.entries);
+    final pendingActivation = coordinator.consumePendingActivatedItemId();
+    if (pendingActivation != null) {
+      lastActivatedItemId.value = pendingActivation;
+    }
 
     listenStream<List<WorkItem>>(store.watchItems(), _onItemsChanged);
     listenStream<ReadinessRealtimeState>(
